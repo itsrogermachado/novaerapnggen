@@ -216,7 +216,7 @@ function Index() {
                   top: `${t.y * 100}%`,
                   transform: "translate(-50%, -50%)",
                   color: t.color,
-                  fontSize: `${t.size * 0.5}px`,
+                  fontSize: `${t.size}px`,
                   fontWeight: 700,
                   textAlign: "center",
                   whiteSpace: "pre-wrap",
