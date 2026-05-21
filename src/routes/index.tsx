@@ -6,6 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Trash2, Plus, Download, LogOut, Upload, ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -89,6 +99,9 @@ function Index() {
   const previewRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ kind: "text" | "logo"; id?: string; offX: number; offY: number } | null>(null);
 
+  // Confirm delete dialog
+  const [confirmDelete, setConfirmDelete] = useState<{ type: "bg" | "logo"; id: string; name: string } | null>(null);
+
   // Carregar bibliotecas
   const loadLibraries = useCallback(async () => {
     if (!user) return;
@@ -146,9 +159,48 @@ function Index() {
     }
   };
 
-  const deleteBackground = async (id: string) => {
-    await supabase.from("backgrounds").delete().eq("id", id);
-    setBgLib((p) => p.filter((x) => x.id !== id));
+  const promptDeleteBackground = (id: string, name: string) => {
+    setConfirmDelete({ type: "bg", id, name });
+  };
+
+  const promptDeleteLogo = (id: string, name: string) => {
+    setConfirmDelete({ type: "logo", id, name });
+  };
+
+  const executeDelete = async () => {
+    if (!confirmDelete) return;
+    const { type, id } = confirmDelete;
+    const table = type === "bg" ? "backgrounds" : "logos";
+    const bucket = type === "bg" ? "backgrounds" : "logos";
+
+    try {
+      // Get image_url to remove from storage
+      const { data: row } = await supabase.from(table).select("image_url").eq("id", id).single();
+      if (row?.image_url) {
+        const url = new URL(row.image_url);
+        const pathParts = url.pathname.split(`/${bucket}/`);
+        const filePath = pathParts[1];
+        if (filePath) {
+          await supabase.storage.from(bucket).remove([filePath]);
+        }
+      }
+      await supabase.from(table).delete().eq("id", id);
+      if (type === "bg") {
+        setBgLib((p) => p.filter((x) => x.id !== id));
+        if (bgUrl === row?.image_url) {
+          setBgUrl(null);
+          setBgImg(null);
+        }
+      } else {
+        setLogoLib((p) => p.filter((x) => x.id !== id));
+        if (logo?.url === row?.image_url) setLogo(null);
+      }
+      toast.success(type === "bg" ? "Fundo removido" : "Logo removida");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao remover");
+    } finally {
+      setConfirmDelete(null);
+    }
   };
 
   // Logo upload + save
@@ -513,7 +565,7 @@ function Index() {
                       <img src={b.image_url} alt={b.name} className="w-full h-full object-cover" />
                     </button>
                     <button
-                      onClick={() => deleteBackground(b.id)}
+                      onClick={() => promptDeleteBackground(b.id, b.name)}
                       className="absolute top-1 right-1 bg-black/60 text-white rounded p-0.5 opacity-0 group-hover:opacity-100 transition"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -553,7 +605,7 @@ function Index() {
                       <img src={l.image_url} alt={l.name} className="w-full h-full object-contain" />
                     </button>
                     <button
-                      onClick={() => deleteLogo(l.id)}
+                      onClick={() => promptDeleteLogo(l.id, l.name)}
                       className="absolute top-1 right-1 bg-black/60 text-white rounded p-0.5 opacity-0 group-hover:opacity-100 transition"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -670,6 +722,23 @@ function Index() {
           </Button>
         </Card>
       </main>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover "{confirmDelete?.name}" da biblioteca? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
