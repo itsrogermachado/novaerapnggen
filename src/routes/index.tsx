@@ -565,7 +565,7 @@ function Index() {
                       <img src={b.image_url} alt={b.name} className="w-full h-full object-cover" />
                     </button>
                     <button
-                      onClick={() => deleteBackground(b.id)}
+                      onClick={() => promptDeleteBackground(b.id, b.name)}
                       className="absolute top-1 right-1 bg-black/60 text-white rounded p-0.5 opacity-0 group-hover:opacity-100 transition"
                     >
                       <Trash2 className="w-3 h-3" />
