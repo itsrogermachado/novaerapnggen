@@ -256,6 +256,61 @@ function Index() {
     setForegrounds((p) => p.filter((f) => f.id !== id));
   };
 
+  // Randomizers
+  const randomizeBackground = () => {
+    if (bgLib.length === 0) {
+      toast.error("Adicione fundos à biblioteca primeiro");
+      return;
+    }
+    const random = bgLib[Math.floor(Math.random() * bgLib.length)];
+    selectBackground(random.image_url);
+    toast.success("Fundo randomizado");
+  };
+
+  const randomizeForegrounds = () => {
+    if (foregrounds.length === 1) {
+      toast.info("Adicione pelo menos 2 imagens para randomizar o padrão");
+      return;
+    }
+    if (foregrounds.length === 1) return;
+    setForegrounds((prev) => {
+      const shuffled = [...prev];
+      for (let i = shuffled.length - 1; i > 1; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    });
+    toast.success("Padrão das imagens randomizado");
+  };
+
+  const randomizeAll = () => {
+    if (bgLib.length > 1) randomizeBackground();
+    if (foregrounds.length > 1) randomizeForegrounds();
+    // Randomize logo position if present
+    if (logo) {
+      setLogo({
+        ...logo,
+        x: 0.2 + Math.random() * 0.6,
+        y: 1.2 + Math.random() * 0.5,
+        size: 0.15 + Math.random() * 0.3,
+      });
+    }
+    // Randomize text positions
+    setTexts((prev) =>
+      prev.map((t) => ({
+        ...t,
+        x: 0.2 + Math.random() * 0.6,
+        y: 0.2 + Math.random() * 0.6,
+        size: Math.floor(32 + Math.random() * 80),
+        color: ["#ffffff", "#facc15", "#f87171", "#60a5fa", "#34d399", "#a78bfa", "#fb923c"][
+          Math.floor(Math.random() * 7)
+        ],
+      }))
+    );
+    toast.success("Tudo randomizado");
+  };
+
   // Texts
   const addText = () =>
     setTexts((t) => [
