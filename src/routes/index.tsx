@@ -99,6 +99,9 @@ function Index() {
   const previewRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ kind: "text" | "logo"; id?: string; offX: number; offY: number } | null>(null);
 
+  // Confirm delete dialog
+  const [confirmDelete, setConfirmDelete] = useState<{ type: "bg" | "logo"; id: string; name: string } | null>(null);
+
   // Carregar bibliotecas
   const loadLibraries = useCallback(async () => {
     if (!user) return;
