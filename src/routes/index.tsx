@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Plus, Download, LogOut, Upload, ImageIcon, Loader2 } from "lucide-react";
+import { Trash2, Plus, Download, LogOut, Upload, ImageIcon, Loader2, Shuffle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
