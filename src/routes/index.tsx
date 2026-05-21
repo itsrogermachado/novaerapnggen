@@ -772,6 +772,22 @@ function Index() {
             </div>
           </div>
 
+          {/* Randomizers */}
+          <div className="space-y-2">
+            <Label>Randomização</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button variant="secondary" size="sm" onClick={randomizeBackground}>
+                <Shuffle className="w-3 h-3 mr-1" /> Fundo
+              </Button>
+              <Button variant="secondary" size="sm" onClick={randomizeForegrounds}>
+                <Shuffle className="w-3 h-3 mr-1" /> Padrão
+              </Button>
+              <Button variant="secondary" size="sm" onClick={randomizeAll}>
+                <Shuffle className="w-3 h-3 mr-1" /> Tudo
+              </Button>
+            </div>
+          </div>
+
           <Button onClick={download} className="w-full" size="lg">
             <Download className="w-4 h-4 mr-2" /> Baixar Imagem
           </Button>
