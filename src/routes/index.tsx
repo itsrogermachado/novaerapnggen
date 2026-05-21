@@ -159,9 +159,48 @@ function Index() {
     }
   };
 
-  const deleteBackground = async (id: string) => {
-    await supabase.from("backgrounds").delete().eq("id", id);
-    setBgLib((p) => p.filter((x) => x.id !== id));
+  const promptDeleteBackground = (id: string, name: string) => {
+    setConfirmDelete({ type: "bg", id, name });
+  };
+
+  const promptDeleteLogo = (id: string, name: string) => {
+    setConfirmDelete({ type: "logo", id, name });
+  };
+
+  const executeDelete = async () => {
+    if (!confirmDelete) return;
+    const { type, id } = confirmDelete;
+    const table = type === "bg" ? "backgrounds" : "logos";
+    const bucket = type === "bg" ? "backgrounds" : "logos";
+
+    try {
+      // Get image_url to remove from storage
+      const { data: row } = await supabase.from(table).select("image_url").eq("id", id).single();
+      if (row?.image_url) {
+        const url = new URL(row.image_url);
+        const pathParts = url.pathname.split(`/${bucket}/`);
+        const filePath = pathParts[1];
+        if (filePath) {
+          await supabase.storage.from(bucket).remove([filePath]);
+        }
+      }
+      await supabase.from(table).delete().eq("id", id);
+      if (type === "bg") {
+        setBgLib((p) => p.filter((x) => x.id !== id));
+        if (bgUrl === row?.image_url) {
+          setBgUrl(null);
+          setBgImg(null);
+        }
+      } else {
+        setLogoLib((p) => p.filter((x) => x.id !== id));
+        if (logo?.url === row?.image_url) setLogo(null);
+      }
+      toast.success(type === "bg" ? "Fundo removido" : "Logo removida");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao remover");
+    } finally {
+      setConfirmDelete(null);
+    }
   };
 
   // Logo upload + save
