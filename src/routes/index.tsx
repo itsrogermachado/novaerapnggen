@@ -176,21 +176,66 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <header className="border-b bg-background">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold">Gerador de Resultados</h1>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
+      <header className="border-b bg-background sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
+          <h1 className="text-base sm:text-lg font-bold truncate">Gerador de Resultados</h1>
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <span className="text-xs sm:text-sm text-muted-foreground hidden md:inline truncate max-w-[180px]">{user.email}</span>
             <Button variant="outline" size="sm" onClick={logout}>
-              <LogOut className="w-4 h-4 mr-1" /> Sair
+              <LogOut className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4 grid lg:grid-cols-[380px_1fr] gap-6">
+      <main className="max-w-7xl mx-auto p-3 sm:p-4 grid lg:grid-cols-[380px_1fr] gap-4 sm:gap-6">
+        {/* Preview (mobile: shown first) */}
+        <div className="flex justify-center order-1 lg:order-2">
+          <div
+            ref={previewRef}
+            className={`relative ${aspectClass} w-full max-w-sm lg:max-w-md bg-neutral-900 rounded-lg overflow-hidden shadow-xl select-none touch-none`}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onClick={() => setSelectedId(null)}
+          >
+            {bgUrl ? (
+              <img src={bgUrl} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-neutral-500 text-sm p-4 text-center">
+                Faça upload de uma imagem de fundo
+              </div>
+            )}
+            {texts.map((t) => (
+              <div
+                key={t.id}
+                onPointerDown={(e) => onPointerDown(e, t.id)}
+                style={{
+                  position: "absolute",
+                  left: `${t.x * 100}%`,
+                  top: `${t.y * 100}%`,
+                  transform: "translate(-50%, -50%)",
+                  color: t.color,
+                  fontSize: `${t.size * 0.5}px`,
+                  fontWeight: 700,
+                  textAlign: "center",
+                  whiteSpace: "pre-wrap",
+                  textShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                  cursor: "grab",
+                  lineHeight: 1.15,
+                  userSelect: "none",
+                  touchAction: "none",
+                }}
+                className={selectedId === t.id ? "outline-2 outline-dashed outline-white/70" : ""}
+              >
+                {t.text}
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Controls */}
-        <Card className="p-5 space-y-5 h-fit">
+        <Card className="p-4 sm:p-5 space-y-5 h-fit order-2 lg:order-1">
           <div>
             <Label>Imagem de Fundo</Label>
             <label className="mt-2 flex items-center justify-center gap-2 border-2 border-dashed rounded-lg p-4 cursor-pointer hover:bg-muted/50">
