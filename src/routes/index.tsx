@@ -315,49 +315,6 @@ function Index() {
           </Button>
         </Card>
 
-        {/* Preview */}
-        <div className="flex justify-center">
-          <div
-            ref={previewRef}
-            className={`relative ${aspectClass} w-full max-w-md bg-neutral-900 rounded-lg overflow-hidden shadow-xl select-none touch-none`}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onClick={() => setSelectedId(null)}
-          >
-            {bgUrl ? (
-              <img src={bgUrl} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-neutral-500 text-sm">
-                Faça upload de uma imagem de fundo
-              </div>
-            )}
-            {texts.map((t) => (
-              <div
-                key={t.id}
-                onPointerDown={(e) => onPointerDown(e, t.id)}
-                style={{
-                  position: "absolute",
-                  left: `${t.x * 100}%`,
-                  top: `${t.y * 100}%`,
-                  transform: "translate(-50%, -50%)",
-                  color: t.color,
-                  fontSize: `${t.size}px`,
-                  fontWeight: 700,
-                  textAlign: "center",
-                  whiteSpace: "pre-wrap",
-                  textShadow: "0 2px 8px rgba(0,0,0,0.4)",
-                  cursor: "grab",
-                  lineHeight: 1.15,
-                  userSelect: "none",
-                }}
-                className={selectedId === t.id ? "outline-2 outline-dashed outline-white/70" : ""}
-              >
-                {t.text}
-              </div>
-            ))}
-          </div>
-        </div>
       </main>
     </div>
   );
