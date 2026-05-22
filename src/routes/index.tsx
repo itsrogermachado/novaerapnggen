@@ -38,6 +38,10 @@ import {
   ShieldAlert,
   Undo2,
   Redo2,
+  Palette,
+  Layers,
+  Type,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -59,7 +63,14 @@ type TextItem = {
 
 type LibraryItem = { id: string; name: string; image_url: string; signed_url?: string };
 type Foreground = { id: string; url: string; img: HTMLImageElement };
-type LogoState = { url: string; signedUrl: string; img: HTMLImageElement; x: number; y: number; size: number } | null;
+type LogoState = {
+  url: string;
+  signedUrl: string;
+  img: HTMLImageElement;
+  x: number;
+  y: number;
+  size: number;
+} | null;
 
 type CanvasState = {
   bgUrl: string | null;
@@ -233,7 +244,10 @@ function Index() {
     return `${bg}#${fgs}#${logoPart}#${txts}#${fmt}`;
   };
 
-  const getSignedUrlForStorageUrl = async (bucket: "backgrounds" | "logos", storageUrl: string): Promise<string> => {
+  const getSignedUrlForStorageUrl = async (
+    bucket: "backgrounds" | "logos",
+    storageUrl: string,
+  ): Promise<string> => {
     try {
       const url = new URL(storageUrl);
       const pathParts = url.pathname.split(`/storage/v1/object/public/${bucket}/`);
@@ -339,7 +353,8 @@ function Index() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
-      const isEditingText = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+      const isEditingText =
+        activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
       if (isEditingText) return;
 
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
@@ -375,7 +390,7 @@ function Index() {
         bgData.map(async (item) => {
           const signedUrl = await getSignedUrlForStorageUrl("backgrounds", item.image_url);
           return { ...item, signed_url: signedUrl };
-        })
+        }),
       );
       bgData = signedBgs;
     } catch (e) {
@@ -387,7 +402,7 @@ function Index() {
         lgData.map(async (item) => {
           const signedUrl = await getSignedUrlForStorageUrl("logos", item.image_url);
           return { ...item, signed_url: signedUrl };
-        })
+        }),
       );
       lgData = signedLgs;
     } catch (e) {
@@ -442,7 +457,8 @@ function Index() {
   const selectBackground = async (itemOrUrl: LibraryItem | string) => {
     try {
       const url = typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.image_url;
-      let signedUrl = typeof itemOrUrl === "string" ? itemOrUrl : (itemOrUrl.signed_url || itemOrUrl.image_url);
+      let signedUrl =
+        typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.signed_url || itemOrUrl.image_url;
 
       if (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/backgrounds/")) {
         signedUrl = await getSignedUrlForStorageUrl("backgrounds", url);
@@ -532,7 +548,8 @@ function Index() {
   const selectLogo = async (itemOrUrl: LibraryItem | string) => {
     try {
       const url = typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.image_url;
-      let signedUrl = typeof itemOrUrl === "string" ? itemOrUrl : (itemOrUrl.signed_url || itemOrUrl.image_url);
+      let signedUrl =
+        typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.signed_url || itemOrUrl.image_url;
 
       if (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/logos/")) {
         signedUrl = await getSignedUrlForStorageUrl("logos", url);
@@ -571,7 +588,15 @@ function Index() {
       return;
     }
 
-    const currentState: CanvasState = { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format };
+    const currentState: CanvasState = {
+      bgUrl,
+      bgUrlSigned,
+      bgImg,
+      foregrounds,
+      logo,
+      texts,
+      format,
+    };
     const existingSigs = new Set([
       ...past.map((s) => getStateSignature(s)),
       getStateSignature(currentState),
@@ -618,7 +643,15 @@ function Index() {
       return;
     }
 
-    const currentState: CanvasState = { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format };
+    const currentState: CanvasState = {
+      bgUrl,
+      bgUrlSigned,
+      bgImg,
+      foregrounds,
+      logo,
+      texts,
+      format,
+    };
     const existingSigs = new Set([
       ...past.map((s) => getStateSignature(s)),
       getStateSignature(currentState),
@@ -665,7 +698,15 @@ function Index() {
   };
 
   const randomizeAll = () => {
-    const currentState: CanvasState = { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format };
+    const currentState: CanvasState = {
+      bgUrl,
+      bgUrlSigned,
+      bgImg,
+      foregrounds,
+      logo,
+      texts,
+      format,
+    };
     const existingSigs = new Set([
       ...past.map((s) => getStateSignature(s)),
       getStateSignature(currentState),
@@ -690,7 +731,7 @@ function Index() {
         nextBgSigned = randomBg.signed_url || randomBg.image_url;
       }
 
-      let nextFgs = [...foregrounds];
+      const nextFgs = [...foregrounds];
       if (nextFgs.length > 1) {
         for (let i = nextFgs.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -708,7 +749,7 @@ function Index() {
         };
       }
 
-      let nextTexts = texts.map((t) => ({
+      const nextTexts = texts.map((t) => ({
         ...t,
         x: 0.2 + Math.random() * 0.6,
         y: 0.3 + Math.random() * 0.4,
@@ -919,14 +960,28 @@ function Index() {
 
   if (loading || checkingAccess) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 transition-colors duration-200">
-        <div className="relative flex items-center justify-center">
-          <div className="absolute w-20 h-20 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-6 transition-colors duration-200">
+        <div className="w-full max-w-sm p-6 bg-card border border-border/80 rounded-2xl shadow-2xl space-y-5 animate-fade-in">
+          {/* Skeleton header */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-muted/60 animate-shimmer" />
+            <div className="space-y-2 flex-1">
+              <div className="h-4 bg-muted/60 rounded-md w-3/4 animate-shimmer" />
+              <div className="h-3 bg-muted/40 rounded-md w-1/2 animate-shimmer" />
+            </div>
+          </div>
+          {/* Skeleton canvas */}
+          <div className="aspect-[4/5] bg-muted/30 rounded-xl border border-border/40 relative overflow-hidden flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-muted-foreground/5 to-transparent animate-shimmer"
+              style={{ backgroundSize: "200% 100%" }}
+            />
+            <Loader2 className="w-8 h-8 animate-spin text-primary/40 animate-duration-[2000ms]" />
+          </div>
+          <p className="text-center text-xs text-muted-foreground font-semibold tracking-wide animate-pulse">
+            Verificando credenciais de acesso...
+          </p>
         </div>
-        <p className="mt-6 text-sm text-muted-foreground font-medium tracking-wide animate-pulse">
-          Verificando credenciais de acesso...
-        </p>
       </div>
     );
   }
@@ -1021,64 +1076,103 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-200 font-sans">
-      <header className="border-b border-border bg-card/85 backdrop-blur-xl sticky top-0 z-10 transition-colors duration-200">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <span className="text-primary font-bold text-sm">NE</span>
+      <header className="border-b border-border/80 bg-card/75 backdrop-blur-md sticky top-0 z-50 transition-all duration-200">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
             </div>
-            <h1 className="text-base sm:text-lg font-bold truncate">Gerador de Resultados</h1>
+            <div>
+              <h1 className="text-sm sm:text-base font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground/95 to-primary bg-clip-text text-transparent">
+                Nova Era
+              </h1>
+              <p className="text-[10px] text-muted-foreground font-medium hidden sm:block">
+                Gerador de Resultados
+              </p>
+            </div>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <span className="text-xs sm:text-sm text-muted-foreground hidden md:inline truncate max-w-[180px]">
-              {user.email}
-            </span>
+            <div className="flex items-center gap-2 bg-muted/50 border border-border/40 rounded-full pl-2 pr-3 py-1 text-xs sm:text-sm font-medium text-muted-foreground hidden md:flex hover:text-foreground hover:bg-muted/80 transition-all cursor-default">
+              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-primary to-primary/70 text-primary-foreground flex items-center justify-center font-bold text-[10px] uppercase shadow-sm">
+                {(user.email || "U").slice(0, 1)}
+              </div>
+              <span className="truncate max-w-[140px]">{user.email}</span>
+            </div>
             <ThemeToggle />
             {isAdmin && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigate({ to: "/admin" })}
-                className="border-primary/20 hover:border-primary hover:bg-primary/10 text-primary font-semibold transition-all duration-200 cursor-pointer"
+                className="border-primary/20 hover:border-primary hover:bg-primary/10 text-primary font-semibold transition-all duration-200 cursor-pointer rounded-xl flex items-center gap-1.5"
               >
-                Painel Admin
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Painel Admin</span>
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={logout} className="border-border hover:bg-accent cursor-pointer">
-              <LogOut className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Sair</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={logout}
+              className="border-border hover:bg-accent cursor-pointer rounded-xl flex items-center gap-1"
+            >
+              <LogOut className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-3 sm:p-4 grid lg:grid-cols-[380px_1fr] gap-4 sm:gap-6">
+      <main className="max-w-7xl mx-auto p-4 grid lg:grid-cols-[380px_1fr] gap-6">
         {/* Controls Panel */}
-        <Card className="p-4 sm:p-5 space-y-5 h-fit order-2 lg:order-1 bg-card border-border shadow-md transition-colors duration-200">
-          <div>
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Formato</Label>
-            <Select value={format} onValueChange={(v) => { saveToHistory(); setFormat(v as Format); }}>
-              <SelectTrigger className="mt-2 bg-background border-border text-foreground rounded-xl">
+        <Card className="p-5 space-y-6 h-fit order-2 lg:order-1 bg-card border-border/90 shadow-lg transition-all duration-200 animate-slide-in-left rounded-2xl">
+          {/* Formato */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-primary" />
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Formato
+              </Label>
+            </div>
+            <Select
+              value={format}
+              onValueChange={(v) => {
+                saveToHistory();
+                setFormat(v as Format);
+              }}
+            >
+              <SelectTrigger className="bg-background border-border hover:border-primary/40 text-foreground rounded-xl transition-all duration-200">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-card border-border text-foreground">
-                <SelectItem value="feed">{FORMATS.feed.label}</SelectItem>
-                <SelectItem value="story">{FORMATS.story.label}</SelectItem>
+              <SelectContent className="bg-card border-border text-foreground rounded-xl shadow-xl">
+                <SelectItem value="feed" className="rounded-lg">
+                  {FORMATS.feed.label}
+                </SelectItem>
+                <SelectItem value="story" className="rounded-lg">
+                  {FORMATS.story.label}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
+          <hr className="border-border/60" />
+
           {/* Background library */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Biblioteca de Fundos</Label>
-              <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground transition-all duration-200 font-medium">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-primary" />
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Biblioteca de Fundos
+                </Label>
+              </div>
+              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
                 {uploadingBg ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                 ) : (
-                  <Upload className="w-3.5 h-3.5" />
+                  <Upload className="w-3.5 h-3.5 text-muted-foreground" />
                 )}
-                Adicionar
+                <span>Adicionar</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -1089,25 +1183,38 @@ function Index() {
               </label>
             </div>
             {bgLib.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Nenhum fundo salvo. Adicione um para começar.
-              </p>
+              <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10 animate-pulse duration-[3000ms]">
+                <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
+                <div>
+                  <p className="text-xs font-semibold text-foreground">Nenhum fundo salvo</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Faça upload de imagens de fundo para começar.
+                  </p>
+                </div>
+              </div>
             ) : (
-              <div className="grid grid-cols-3 gap-2 max-h-[160px] overflow-y-auto p-0.5">
+              <div className="grid grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto p-0.5">
                 {bgLib.map((b) => (
                   <div key={b.id} className="relative group">
                     <button
-                      onClick={() => { saveToHistory(); selectBackground(b); }}
-                      className={`block w-full aspect-square rounded-lg overflow-hidden border-2 transition ${bgUrl === b.image_url ? "border-primary scale-[0.98] shadow-inner" : "border-transparent opacity-80 hover:opacity-100"}`}
+                      onClick={() => {
+                        saveToHistory();
+                        selectBackground(b);
+                      }}
+                      className={`block w-full aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 ${bgUrl === b.image_url ? "border-primary scale-[0.98] shadow-md shadow-primary/20" : "border-transparent opacity-85 hover:opacity-100 hover:scale-[1.03] shadow-sm"}`}
                     >
-                      <img src={b.signed_url || b.image_url} alt={b.name} className="w-full h-full object-cover" />
+                      <img
+                        src={b.signed_url || b.image_url}
+                        alt={b.name}
+                        className="w-full h-full object-cover"
+                      />
                     </button>
                     <button
                       onClick={() => promptDeleteBackground(b.id, b.name)}
-                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow hover:bg-destructive/90 cursor-pointer"
+                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
                       title="Excluir fundo"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
@@ -1115,17 +1222,24 @@ function Index() {
             )}
           </div>
 
+          <hr className="border-border/60" />
+
           {/* Logo library */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Biblioteca de Logos</Label>
-              <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground transition-all duration-200 font-medium">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-primary" />
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Biblioteca de Logos
+                </Label>
+              </div>
+              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
                 {uploadingLogo ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                 ) : (
-                  <Upload className="w-3.5 h-3.5" />
+                  <Upload className="w-3.5 h-3.5 text-muted-foreground" />
                 )}
-                Adicionar
+                <span>Adicionar</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -1136,37 +1250,56 @@ function Index() {
               </label>
             </div>
             {logoLib.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhuma logo salva.</p>
+              <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
+                <Layers className="w-8 h-8 text-muted-foreground/50 mx-auto" />
+                <div>
+                  <p className="text-xs font-semibold text-foreground">Nenhuma logo salva</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Faça upload de suas logos corporativas.
+                  </p>
+                </div>
+              </div>
             ) : (
-              <div className="grid grid-cols-3 gap-2 max-h-[160px] overflow-y-auto p-0.5">
+              <div className="grid grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto p-0.5">
                 {logoLib.map((l) => (
                   <div key={l.id} className="relative group">
                     <button
-                      onClick={() => { saveToHistory(); selectLogo(l); }}
-                      className={`block w-full aspect-square rounded-lg overflow-hidden border-2 bg-muted transition ${logo?.url === l.image_url ? "border-primary scale-[0.98] shadow-inner" : "border-transparent opacity-80 hover:opacity-100"}`}
+                      onClick={() => {
+                        saveToHistory();
+                        selectLogo(l);
+                      }}
+                      className={`block w-full aspect-square rounded-xl overflow-hidden border-2 bg-muted/40 transition-all duration-300 ${logo?.url === l.image_url ? "border-primary scale-[0.98] shadow-md shadow-primary/20" : "border-transparent opacity-85 hover:opacity-100 hover:scale-[1.03] shadow-sm"}`}
                     >
                       <img
                         src={l.signed_url || l.image_url}
                         alt={l.name}
-                        className="w-full h-full object-contain p-1"
+                        className="w-full h-full object-contain p-1.5"
                       />
                     </button>
                     <button
                       onClick={() => promptDeleteLogo(l.id, l.name)}
-                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow hover:bg-destructive/90 cursor-pointer"
+                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
                       title="Excluir logo"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
               </div>
             )}
             {logo && (
-              <div className="mt-2 space-y-1 bg-muted/40 p-2.5 rounded-xl border border-border/50">
+              <div className="mt-3 space-y-2 bg-muted/40 p-3 rounded-xl border border-border/50 animate-fade-in">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground font-medium">Tamanho da logo</span>
-                  <button onClick={() => { saveToHistory(); setLogo(null); }} className="text-destructive font-semibold hover:underline cursor-pointer">
+                  <span className="text-muted-foreground font-semibold">
+                    Tamanho da logo: {Math.round(logo.size * 100)}%
+                  </span>
+                  <button
+                    onClick={() => {
+                      saveToHistory();
+                      setLogo(null);
+                    }}
+                    className="text-destructive font-semibold hover:text-destructive/80 hover:underline cursor-pointer"
+                  >
                     Remover
                   </button>
                 </div>
@@ -1184,12 +1317,20 @@ function Index() {
             )}
           </div>
 
+          <hr className="border-border/60" />
+
           {/* Foreground images */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Imagens em Destaque</Label>
-              <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground transition-all duration-200 font-medium">
-                <ImageIcon className="w-3.5 h-3.5" /> Adicionar
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-primary" />
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Imagens em Destaque
+                </Label>
+              </div>
+              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
+                <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                <span>Adicionar</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -1205,14 +1346,20 @@ function Index() {
               </label>
             </div>
             {foregrounds.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Faça upload de uma ou mais imagens. Elas são organizadas em grid automaticamente.
-              </p>
+              <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
+                <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
+                <div>
+                  <p className="text-xs font-semibold text-foreground">Sem imagens em destaque</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Faça upload de fotos para organizar em grid.
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="grid grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-0.5">
                 {foregrounds.map((f) => (
                   <div key={f.id} className="relative group">
-                    <div className="aspect-square rounded-lg overflow-hidden bg-muted/50 border border-border">
+                    <div className="aspect-square rounded-xl overflow-hidden bg-muted/50 border border-border/80 group-hover:scale-[1.03] transition-all">
                       <img src={f.url} alt="" className="w-full h-full object-contain p-1" />
                     </div>
                     <button
@@ -1220,7 +1367,7 @@ function Index() {
                         saveToHistory();
                         removeForeground(f.id);
                       }}
-                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow hover:bg-destructive/90 cursor-pointer"
+                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -1230,10 +1377,17 @@ function Index() {
             )}
           </div>
 
+          <hr className="border-border/60" />
+
           {/* Texts */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Textos</Label>
+              <div className="flex items-center gap-2">
+                <Type className="w-4 h-4 text-primary" />
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Textos
+                </Label>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
@@ -1241,110 +1395,147 @@ function Index() {
                   saveToHistory();
                   addText();
                 }}
-                className="border-border hover:bg-accent rounded-xl cursor-pointer"
+                className="border-border hover:border-primary/30 hover:bg-accent rounded-xl font-semibold shadow-sm cursor-pointer"
               >
-                <Plus className="w-4 h-4 mr-1" /> Adicionar
+                <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar
               </Button>
             </div>
-            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
-              {texts.map((t) => (
-                <div
-                  key={t.id}
-                  className={`border rounded-xl p-3 space-y-2 transition-all duration-250 ${selectedId === t.id ? "ring-2 ring-primary border-transparent" : "border-border bg-background/50"}`}
-                  onClick={() => setSelectedId(t.id)}
-                >
-                  <textarea
-                    className="w-full text-sm border border-border rounded-lg p-2 bg-background text-foreground focus-visible:ring-primary/50 focus-visible:outline-none"
-                    rows={2}
-                    value={t.text}
-                    onFocus={() => saveToHistory()}
-                    onChange={(e) => updateText(t.id, { text: e.target.value })}
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={t.color}
-                      onPointerDown={() => saveToHistory()}
-                      onChange={(e) => updateText(t.id, { color: e.target.value })}
-                      className="w-9 h-9 rounded-lg cursor-pointer border border-border"
+            {texts.length === 0 ? (
+              <div className="border border-dashed border-border/80 rounded-2xl p-4 text-center bg-muted/10">
+                <p className="text-[11px] text-muted-foreground">
+                  Nenhum texto no canvas. Adicione um acima.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                {texts.map((t) => (
+                  <div
+                    key={t.id}
+                    className={`border rounded-2xl p-3.5 space-y-3.5 transition-all duration-350 bg-background/40 hover:bg-background/60 shadow-sm ${selectedId === t.id ? "ring-2 ring-primary/80 border-transparent shadow-md" : "border-border/85"}`}
+                    onClick={() => setSelectedId(t.id)}
+                  >
+                    <textarea
+                      className="w-full text-xs font-medium border border-border/80 rounded-xl p-2.5 bg-background text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-transparent focus-visible:outline-none transition-all"
+                      rows={2}
+                      value={t.text}
+                      onFocus={() => saveToHistory()}
+                      onChange={(e) => updateText(t.id, { text: e.target.value })}
                     />
-                    <div className="flex-1">
+                    <div className="flex items-center gap-3">
                       <input
-                        type="range"
-                        min={16}
-                        max={200}
-                        value={t.size}
+                        type="color"
+                        value={t.color}
                         onPointerDown={() => saveToHistory()}
-                        onChange={(e) => updateText(t.id, { size: +e.target.value })}
-                        className="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+                        onChange={(e) => updateText(t.id, { color: e.target.value })}
+                        className="w-8 h-8 rounded-lg cursor-pointer border border-border/80 p-0.5 bg-background"
                       />
-                      <div className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t.size}px</div>
+                      <div className="flex-1">
+                        <input
+                          type="range"
+                          min={16}
+                          max={200}
+                          value={t.size}
+                          onPointerDown={() => saveToHistory()}
+                          onChange={(e) => updateText(t.id, { size: +e.target.value })}
+                          className="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+                        />
+                        <div className="text-[10px] text-muted-foreground font-bold mt-1">
+                          Tamanho: {t.size}px
+                        </div>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          saveToHistory();
+                          removeText(t.id);
+                        }}
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer rounded-xl h-8 w-8"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => {
-                        saveToHistory();
-                        removeText(t.id);
-                      }}
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
+
+          <hr className="border-border/60" />
 
           {/* Randomizers */}
-          <div className="space-y-2 bg-muted/30 p-3 rounded-2xl border border-border/50">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Randomização</Label>
+          <div className="space-y-3 bg-muted/30 p-4 rounded-2xl border border-border/50">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Randomização
+              </Label>
+            </div>
             <div className="grid grid-cols-3 gap-2 mt-1">
-              <Button variant="secondary" size="sm" onClick={randomizeBackground} className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer">
-                <Shuffle className="w-3 h-3 mr-1" /> Fundo
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={randomizeBackground}
+                className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all"
+              >
+                <Shuffle className="w-3.5 h-3.5 mr-1" /> Fundo
               </Button>
-              <Button variant="secondary" size="sm" onClick={randomizeForegrounds} className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer">
-                <Shuffle className="w-3 h-3 mr-1" /> Padrão
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={randomizeForegrounds}
+                className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all"
+              >
+                <Shuffle className="w-3.5 h-3.5 mr-1" /> Padrão
               </Button>
-              <Button variant="secondary" size="sm" onClick={randomizeAll} className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer">
-                <Shuffle className="w-3 h-3 mr-1" /> Tudo
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={randomizeAll}
+                className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all"
+              >
+                <Shuffle className="w-3.5 h-3.5 mr-1" /> Tudo
               </Button>
             </div>
           </div>
 
-          <Button onClick={download} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 cursor-pointer" size="lg">
+          <Button
+            onClick={download}
+            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/95 hover:to-primary/75 text-primary-foreground font-bold py-6 rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 cursor-pointer hover:scale-[1.01] hover:animate-pulse-glow"
+            size="lg"
+          >
             <Download className="w-4 h-4 mr-2" /> Baixar Imagem
           </Button>
         </Card>
 
         {/* Canvas Preview Area */}
-        <div className="flex flex-col items-center gap-3 order-1 lg:order-2 w-full max-w-sm lg:max-w-md">
+        <div className="flex flex-col items-center gap-4 order-1 lg:order-2 w-full max-w-sm lg:max-w-md mx-auto">
           {/* Undo/Redo Floating Bar */}
-          <div className="flex items-center gap-2 bg-card/90 border border-border rounded-full px-3 py-1.5 shadow-md backdrop-blur-sm">
+          <div className="flex items-center gap-2.5 bg-card/90 border border-border/80 rounded-full px-4 py-2 shadow-lg backdrop-blur-md animate-fade-in-scale">
             <Button
               variant="ghost"
               size="icon"
               disabled={past.length === 0}
               onClick={undo}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full cursor-pointer"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full hover:bg-accent transition cursor-pointer"
               title="Desfazer (Ctrl+Z)"
             >
               <Undo2 className="w-4 h-4" />
             </Button>
-            <div className="w-px h-4 bg-border" />
+            <div className="w-px h-4 bg-border/80" />
             <Button
               variant="ghost"
               size="icon"
               disabled={future.length === 0}
               onClick={redo}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full cursor-pointer"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full hover:bg-accent transition cursor-pointer"
               title="Refazer (Ctrl+Y)"
             >
               <Redo2 className="w-4 h-4" />
             </Button>
             {past.length > 0 && (
-              <span className="text-[10px] text-muted-foreground font-semibold px-1">
+              <span className="text-[10px] text-muted-foreground font-bold border-l border-border/80 pl-2.5 font-sans">
                 {past.length} {past.length === 1 ? "alteração" : "alterações"}
               </span>
             )}
@@ -1352,7 +1543,7 @@ function Index() {
 
           <div
             ref={previewRef}
-            className={`relative ${aspectClass} w-full bg-muted border border-border rounded-2xl overflow-hidden shadow-xl select-none touch-none transition-colors duration-200`}
+            className={`relative ${aspectClass} w-full bg-muted/45 border border-border/90 rounded-2xl overflow-hidden shadow-2xl shadow-primary/[0.03] hover:shadow-primary/[0.06] transition-all duration-500 select-none touch-none`}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
@@ -1365,15 +1556,19 @@ function Index() {
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm p-4 text-center">
-                Escolha um fundo da biblioteca ou faça upload
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-muted/30 border-2 border-dashed border-border/60 rounded-2xl m-3.5 animate-pulse duration-[3000ms]">
+                <ImageIcon className="w-12 h-12 text-muted-foreground/30 mb-3" />
+                <p className="text-sm font-semibold text-foreground">Visualização do Canvas</p>
+                <p className="text-xs text-muted-foreground max-w-[220px] mt-1.5 leading-relaxed">
+                  Selecione um fundo na biblioteca ou faça upload para começar a sua arte.
+                </p>
               </div>
             )}
 
             {/* Foregrounds grid */}
             {fgGrid && (
               <div
-                className="absolute pointer-events-none"
+                className="absolute pointer-events-none animate-fade-in"
                 style={{
                   left: `${((1 - fgGrid.areaW) / 2) * 100}%`,
                   top: `${((1 - fgGrid.areaH) / 2) * 100}%`,
@@ -1408,6 +1603,7 @@ function Index() {
                   cursor: "grab",
                   touchAction: "none",
                 }}
+                className="animate-fade-in-scale"
               />
             )}
 
@@ -1432,7 +1628,11 @@ function Index() {
                   userSelect: "none",
                   touchAction: "none",
                 }}
-                className={selectedId === t.id ? "outline-2 outline-dashed outline-white/80" : ""}
+                className={
+                  selectedId === t.id
+                    ? "outline-2 outline-dashed outline-white/80 animate-pulse duration-[1500ms]"
+                    : ""
+                }
               >
                 {t.text}
               </div>
@@ -1445,18 +1645,21 @@ function Index() {
         <AlertDialogContent className="bg-card border-border text-foreground rounded-2xl max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground">
+            <AlertDialogDescription className="text-muted-foreground text-xs leading-relaxed">
               Tem certeza que deseja remover "{confirmDelete?.name}" da biblioteca? Esta ação não
               pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel onClick={() => setConfirmDelete(null)} className="border-border hover:bg-accent rounded-xl text-foreground cursor-pointer">
+          <AlertDialogFooter className="gap-2 mt-4">
+            <AlertDialogCancel
+              onClick={() => setConfirmDelete(null)}
+              className="border-border hover:bg-accent rounded-xl text-foreground text-xs font-semibold py-2 px-4 cursor-pointer"
+            >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={executeDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl cursor-pointer"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-semibold py-2 px-4 cursor-pointer"
             >
               Excluir
             </AlertDialogAction>

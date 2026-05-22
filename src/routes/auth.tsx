@@ -125,24 +125,26 @@ function AuthPage() {
   const isCurrentEmailAdmin = HARDCODED_ADMINS.includes(email.trim().toLowerCase());
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden transition-colors duration-200 selection:bg-primary selection:text-primary-foreground font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden transition-colors duration-200 selection:bg-primary/20 selection:text-foreground font-sans">
       {/* Dynamic Glows */}
-      <div className="absolute top-0 right-1/4 w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[8000ms]" />
+      <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[150px] pointer-events-none animate-pulse duration-[10000ms]" />
 
       {/* Floating Theme Switcher */}
       <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
 
-      <Card className="w-full max-w-md p-8 bg-card border-border shadow-xl relative z-10 transition-colors duration-200 rounded-2xl">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
+      <Card className="w-full max-w-md p-8 bg-card border-border/80 shadow-2xl relative z-10 transition-colors duration-200 rounded-2xl animate-fade-in">
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-sm shadow-primary/20">
+            <Sparkles className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-bold tracking-tight text-lg text-foreground">Nova Era</span>
+          <span className="font-extrabold tracking-tight text-lg bg-gradient-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent">
+            Nova Era
+          </span>
         </div>
-        
+
         <h1 className="text-2xl font-extrabold tracking-tight mb-1 text-foreground">
           Gerador de Resultados
         </h1>
@@ -152,7 +154,10 @@ function AuthPage() {
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1">
-            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Label
+              htmlFor="email"
+              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            >
               E-mail
             </Label>
             <div className="relative">
@@ -170,7 +175,10 @@ function AuthPage() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Label
+              htmlFor="password"
+              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            >
               Senha
             </Label>
             <div className="relative">
@@ -191,7 +199,10 @@ function AuthPage() {
           {mode === "signup" && (
             <div className="space-y-1 animate-fade-in">
               <div className="flex justify-between items-center mb-1">
-                <Label htmlFor="token" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Label
+                  htmlFor="token"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                >
                   Token de Convite
                 </Label>
                 {isCurrentEmailAdmin && (
@@ -257,7 +268,9 @@ function AuthPage() {
           }}
           className="mt-5 text-sm text-primary hover:text-primary/80 transition-colors hover:underline w-full text-center cursor-pointer font-medium"
         >
-          {mode === "login" ? "Não tem conta? Cadastre-se com um convite" : "Já tem uma conta? Entrar"}
+          {mode === "login"
+            ? "Não tem conta? Cadastre-se com um convite"
+            : "Já tem uma conta? Entrar"}
         </button>
       </Card>
     </div>

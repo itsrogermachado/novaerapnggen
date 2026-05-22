@@ -169,7 +169,7 @@ function AdminPage() {
               .select("is_admin")
               .eq("id", user.id)
               .single();
-            
+
             if (data?.is_admin) {
               setIsAdmin(true);
               loadData();
@@ -559,13 +559,22 @@ function AdminPage() {
                           <SelectValue placeholder="Selecione o tempo de validade" />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border text-foreground">
-                          <SelectItem value="24h" className="focus:bg-primary focus:text-primary-foreground">
+                          <SelectItem
+                            value="24h"
+                            className="focus:bg-primary focus:text-primary-foreground"
+                          >
                             24 Horas
                           </SelectItem>
-                          <SelectItem value="7d" className="focus:bg-primary focus:text-primary-foreground">
+                          <SelectItem
+                            value="7d"
+                            className="focus:bg-primary focus:text-primary-foreground"
+                          >
                             7 Dias
                           </SelectItem>
-                          <SelectItem value="30d" className="focus:bg-primary focus:text-primary-foreground">
+                          <SelectItem
+                            value="30d"
+                            className="focus:bg-primary focus:text-primary-foreground"
+                          >
                             30 Dias
                           </SelectItem>
                         </SelectContent>
@@ -663,7 +672,9 @@ function AdminPage() {
                               >
                                 <TableCell className="font-medium text-foreground py-4 max-w-[200px] truncate">
                                   {t.description || (
-                                    <span className="text-muted-foreground/60 italic text-xs">Nenhuma nota</span>
+                                    <span className="text-muted-foreground/60 italic text-xs">
+                                      Nenhuma nota
+                                    </span>
                                   )}
                                 </TableCell>
                                 <TableCell className="font-mono text-sm py-4">
@@ -685,7 +696,9 @@ function AdminPage() {
                                       {getEmailFromId(t.used_by)}
                                     </span>
                                   ) : (
-                                    <span className="text-muted-foreground/60 italic text-xs">Pendente</span>
+                                    <span className="text-muted-foreground/60 italic text-xs">
+                                      Pendente
+                                    </span>
                                   )}
                                 </TableCell>
                                 <TableCell className="py-4 text-right">
