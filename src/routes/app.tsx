@@ -129,22 +129,23 @@ function getForegroundSpace(
   let fgMinY = isStory ? 0.18 : 0.16;
   let fgMaxY = isStory ? 0.88 : 0.85;
 
-  const hasTopText = currentTexts.some((t) => t.y < 0.35);
-  const hasBottomText = currentTexts.some((t) => t.y > 0.65);
+  const activeTexts = currentTexts.filter((t) => t.text.trim() !== "");
+  const hasTopText = activeTexts.some((t) => t.y < 0.35);
+  const hasBottomText = activeTexts.some((t) => t.y > 0.65);
   const hasLogo = !!currentLogo;
 
   if (hasTopText && hasBottomText) {
-    const topTexts = currentTexts.filter((t) => t.y < 0.35);
-    const bottomTexts = currentTexts.filter((t) => t.y > 0.65);
+    const topTexts = activeTexts.filter((t) => t.y < 0.35);
+    const bottomTexts = activeTexts.filter((t) => t.y > 0.65);
     const maxTopY = Math.max(...topTexts.map((t) => t.y), hasLogo ? currentLogo.y : 0);
     const minBottomY = Math.min(...bottomTexts.map((t) => t.y));
     fgMinY = maxTopY + 0.12;
     fgMaxY = minBottomY - 0.12;
   } else if (hasTopText) {
-    const maxTopY = Math.max(...currentTexts.map((t) => t.y), hasLogo ? currentLogo.y : 0);
+    const maxTopY = Math.max(...activeTexts.map((t) => t.y), hasLogo ? currentLogo.y : 0);
     fgMinY = maxTopY + 0.12;
   } else if (hasBottomText) {
-    const minBottomY = Math.min(...currentTexts.map((t) => t.y));
+    const minBottomY = Math.min(...activeTexts.map((t) => t.y));
     fgMaxY = minBottomY - 0.12;
     if (hasLogo) {
       fgMinY = currentLogo.y + 0.12;
@@ -173,29 +174,30 @@ function getForegroundCoordinates(
 
   // Betting tickets/coupons are generally vertical with ~1.4 ratio
   const aspectRatio = 1.4;
+  const layoutAspectRatio = 1.05;
 
   if (num === 1) {
     coords.push({
       x: 0.5,
       y: fgCenterY,
-      size: Math.min(0.45, fgHeightRange / aspectRatio),
+      size: Math.min(0.48, fgHeightRange / layoutAspectRatio),
     });
   } else if (num === 2) {
     const style = styleType % 3;
     if (style === 0) {
       // Columns (side-by-side)
-      const size = Math.min(0.35, fgHeightRange / aspectRatio);
+      const size = Math.min(0.42, fgHeightRange / layoutAspectRatio);
       coords.push({ x: 0.28, y: fgCenterY, size });
       coords.push({ x: 0.72, y: fgCenterY, size });
     } else if (style === 1) {
       // Diagonal staggered (no overlap)
-      const size = Math.min(0.33, (fgHeightRange * 0.8) / aspectRatio);
+      const size = Math.min(0.38, (fgHeightRange * 0.85) / layoutAspectRatio);
       const dy = fgHeightRange * 0.16;
       coords.push({ x: 0.28, y: fgCenterY - dy, size });
       coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else {
       // Stacked vertically (single column, no overlap)
-      const size = Math.min(0.35, (fgHeightRange * 0.45) / aspectRatio);
+      const size = Math.min(0.42, (fgHeightRange * 0.5) / layoutAspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
@@ -204,27 +206,27 @@ function getForegroundCoordinates(
     const style = styleType % 4;
     if (style === 0) {
       // 3 Columns (side-by-side)
-      const size = Math.min(0.24, fgHeightRange / aspectRatio);
+      const size = Math.min(0.28, fgHeightRange / layoutAspectRatio);
       coords.push({ x: 0.2, y: fgCenterY, size });
       coords.push({ x: 0.5, y: fgCenterY, size });
       coords.push({ x: 0.8, y: fgCenterY, size });
     } else if (style === 1) {
       // Pyramid (1 top, 2 bottom)
-      const size = Math.min(0.26, (fgHeightRange * 0.7) / aspectRatio);
+      const size = Math.min(0.32, (fgHeightRange * 0.75) / layoutAspectRatio);
       const dy = fgHeightRange * 0.2;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
       coords.push({ x: 0.28, y: fgCenterY + dy, size });
       coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else if (style === 2) {
       // Staircase diagonal
-      const size = Math.min(0.24, (fgHeightRange * 0.6) / aspectRatio);
+      const size = Math.min(0.28, (fgHeightRange * 0.65) / layoutAspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.22, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY, size });
       coords.push({ x: 0.78, y: fgCenterY + dy, size });
     } else {
       // Reverse Pyramid (2 top, 1 bottom)
-      const size = Math.min(0.26, (fgHeightRange * 0.7) / aspectRatio);
+      const size = Math.min(0.32, (fgHeightRange * 0.75) / layoutAspectRatio);
       const dy = fgHeightRange * 0.2;
       coords.push({ x: 0.28, y: fgCenterY - dy, size });
       coords.push({ x: 0.72, y: fgCenterY - dy, size });
@@ -234,7 +236,7 @@ function getForegroundCoordinates(
     const style = styleType % 4;
     if (style === 0) {
       // 2x2 Grid (perfectly spaced, minimal overlap)
-      const size = Math.min(0.28, (fgHeightRange * 0.65) / aspectRatio);
+      const size = Math.min(0.34, (fgHeightRange * 0.7) / layoutAspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.28, y: fgCenterY - dy, size });
       coords.push({ x: 0.72, y: fgCenterY - dy, size });
@@ -242,7 +244,7 @@ function getForegroundCoordinates(
       coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else if (style === 1) {
       // Diamond
-      const size = Math.min(0.26, (fgHeightRange * 0.65) / aspectRatio);
+      const size = Math.min(0.30, (fgHeightRange * 0.7) / layoutAspectRatio);
       const dy = fgHeightRange * 0.24;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
       coords.push({ x: 0.26, y: fgCenterY, size });
@@ -250,7 +252,7 @@ function getForegroundCoordinates(
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
     } else if (style === 2) {
       // 1 Top, 3 Bottom
-      const size = Math.min(0.22, (fgHeightRange * 0.6) / aspectRatio);
+      const size = Math.min(0.26, (fgHeightRange * 0.65) / layoutAspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
       coords.push({ x: 0.2, y: fgCenterY + dy, size });
@@ -258,7 +260,7 @@ function getForegroundCoordinates(
       coords.push({ x: 0.8, y: fgCenterY + dy, size });
     } else {
       // 3 Top, 1 Bottom
-      const size = Math.min(0.22, (fgHeightRange * 0.6) / aspectRatio);
+      const size = Math.min(0.26, (fgHeightRange * 0.65) / layoutAspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.2, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
@@ -270,11 +272,13 @@ function getForegroundCoordinates(
     const cols = Math.ceil(Math.sqrt(num));
     const rows = Math.ceil(num / cols);
 
-    const sizeX = 0.75 / cols;
-    const sizeY = fgHeightRange / (rows * aspectRatio);
-    const size = Math.max(0.12, Math.min(sizeX, sizeY, 0.22));
+    const layoutGridWidth = 0.88;
 
-    const spacingX = cols > 1 ? (0.75 - size) / (cols - 1) : 0;
+    const sizeX = layoutGridWidth / cols;
+    const sizeY = fgHeightRange / (rows * layoutAspectRatio);
+    const size = Math.max(0.12, Math.min(sizeX, sizeY, 0.28));
+
+    const spacingX = cols > 1 ? (layoutGridWidth - size) / (cols - 1) : 0;
     const spacingY = rows > 1 ? (fgHeightRange - size * aspectRatio) / (rows - 1) : 0;
 
     const startY = fgCenterY - ((rows - 1) * spacingY) / 2;
@@ -637,7 +641,7 @@ function Index() {
         };
       });
     });
-  }, [foregrounds.length, format]);
+  }, [foregrounds.length, format, texts.length, !!logo]);
 
   // Helper for generating state signature
   const getStateSignature = (state: Omit<CanvasState, "bgImg">) => {
