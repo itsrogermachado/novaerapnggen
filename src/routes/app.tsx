@@ -42,6 +42,17 @@ import {
   Layers,
   Type,
   Sparkles,
+  Settings,
+  ChevronDown,
+  MousePointer,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -60,6 +71,10 @@ type TextItem = {
   x: number;
   y: number;
   font?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  align?: "left" | "center" | "right" | "justify";
 };
 
 type LibraryItem = { id: string; name: string; image_url: string; signed_url?: string };
@@ -121,11 +136,7 @@ interface ElementLayouts {
   texts: { x: number; y: number; size: number }[];
 }
 
-function getForegroundSpace(
-  currentTexts: TextItem[],
-  currentLogo: LogoState,
-  isStory: boolean
-) {
+function getForegroundSpace(currentTexts: TextItem[], currentLogo: LogoState, isStory: boolean) {
   let fgMinY = isStory ? 0.18 : 0.16;
   let fgMaxY = isStory ? 0.88 : 0.85;
 
@@ -154,7 +165,7 @@ function getForegroundSpace(
   }
 
   if (fgMinY > fgMaxY - 0.15) {
-    fgMinY = isStory ? 0.22 : 0.20;
+    fgMinY = isStory ? 0.22 : 0.2;
     fgMaxY = isStory ? 0.82 : 0.78;
   }
 
@@ -165,7 +176,7 @@ function getForegroundCoordinates(
   num: number,
   styleType: number,
   fgMinY: number,
-  fgMaxY: number
+  fgMaxY: number,
 ): { x: number; y: number; size: number }[] {
   const coords: { x: number; y: number; size: number }[] = [];
   const fgCenterY = (fgMinY + fgMaxY) / 2;
@@ -178,24 +189,24 @@ function getForegroundCoordinates(
     coords.push({
       x: 0.5,
       y: fgCenterY,
-      size: Math.min(0.42, fgHeightRange / aspectRatio),
+      size: Math.min(0.45, fgHeightRange / aspectRatio),
     });
   } else if (num === 2) {
     const style = styleType % 3;
     if (style === 0) {
       // Columns (side-by-side)
-      const size = Math.min(0.38, fgHeightRange / aspectRatio);
-      coords.push({ x: 0.26, y: fgCenterY, size });
-      coords.push({ x: 0.74, y: fgCenterY, size });
+      const size = Math.min(0.35, fgHeightRange / aspectRatio);
+      coords.push({ x: 0.28, y: fgCenterY, size });
+      coords.push({ x: 0.72, y: fgCenterY, size });
     } else if (style === 1) {
       // Diagonal staggered (no overlap)
-      const size = Math.min(0.35, (fgHeightRange * 0.8) / aspectRatio);
+      const size = Math.min(0.33, (fgHeightRange * 0.8) / aspectRatio);
       const dy = fgHeightRange * 0.16;
-      coords.push({ x: 0.3, y: fgCenterY - dy, size });
-      coords.push({ x: 0.7, y: fgCenterY + dy, size });
+      coords.push({ x: 0.28, y: fgCenterY - dy, size });
+      coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else {
       // Stacked vertically (single column, no overlap)
-      const size = Math.min(0.38, (fgHeightRange * 0.45) / aspectRatio);
+      const size = Math.min(0.35, (fgHeightRange * 0.45) / aspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
@@ -204,30 +215,30 @@ function getForegroundCoordinates(
     const style = styleType % 4;
     if (style === 0) {
       // 3 Columns (side-by-side)
-      const size = Math.min(0.26, fgHeightRange / aspectRatio);
-      coords.push({ x: 0.18, y: fgCenterY, size });
+      const size = Math.min(0.24, fgHeightRange / aspectRatio);
+      coords.push({ x: 0.2, y: fgCenterY, size });
       coords.push({ x: 0.5, y: fgCenterY, size });
-      coords.push({ x: 0.82, y: fgCenterY, size });
+      coords.push({ x: 0.8, y: fgCenterY, size });
     } else if (style === 1) {
       // Pyramid (1 top, 2 bottom)
-      const size = Math.min(0.28, (fgHeightRange * 0.7) / aspectRatio);
+      const size = Math.min(0.26, (fgHeightRange * 0.7) / aspectRatio);
       const dy = fgHeightRange * 0.2;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.26, y: fgCenterY + dy, size });
-      coords.push({ x: 0.74, y: fgCenterY + dy, size });
+      coords.push({ x: 0.28, y: fgCenterY + dy, size });
+      coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else if (style === 2) {
       // Staircase diagonal
-      const size = Math.min(0.25, (fgHeightRange * 0.6) / aspectRatio);
+      const size = Math.min(0.24, (fgHeightRange * 0.6) / aspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.22, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY, size });
       coords.push({ x: 0.78, y: fgCenterY + dy, size });
     } else {
       // Reverse Pyramid (2 top, 1 bottom)
-      const size = Math.min(0.28, (fgHeightRange * 0.7) / aspectRatio);
+      const size = Math.min(0.26, (fgHeightRange * 0.7) / aspectRatio);
       const dy = fgHeightRange * 0.2;
-      coords.push({ x: 0.26, y: fgCenterY - dy, size });
-      coords.push({ x: 0.74, y: fgCenterY - dy, size });
+      coords.push({ x: 0.28, y: fgCenterY - dy, size });
+      coords.push({ x: 0.72, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
     }
   } else if (num === 4) {
@@ -236,33 +247,33 @@ function getForegroundCoordinates(
       // 2x2 Grid (perfectly spaced, minimal overlap)
       const size = Math.min(0.28, (fgHeightRange * 0.65) / aspectRatio);
       const dy = fgHeightRange * 0.22;
-      coords.push({ x: 0.26, y: fgCenterY - dy, size });
-      coords.push({ x: 0.74, y: fgCenterY - dy, size });
-      coords.push({ x: 0.26, y: fgCenterY + dy, size });
-      coords.push({ x: 0.74, y: fgCenterY + dy, size });
+      coords.push({ x: 0.28, y: fgCenterY - dy, size });
+      coords.push({ x: 0.72, y: fgCenterY - dy, size });
+      coords.push({ x: 0.28, y: fgCenterY + dy, size });
+      coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else if (style === 1) {
       // Diamond
       const size = Math.min(0.26, (fgHeightRange * 0.65) / aspectRatio);
       const dy = fgHeightRange * 0.24;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.24, y: fgCenterY, size });
-      coords.push({ x: 0.76, y: fgCenterY, size });
+      coords.push({ x: 0.26, y: fgCenterY, size });
+      coords.push({ x: 0.74, y: fgCenterY, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
     } else if (style === 2) {
       // 1 Top, 3 Bottom
-      const size = Math.min(0.24, (fgHeightRange * 0.6) / aspectRatio);
+      const size = Math.min(0.22, (fgHeightRange * 0.6) / aspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.18, y: fgCenterY + dy, size });
+      coords.push({ x: 0.2, y: fgCenterY + dy, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
-      coords.push({ x: 0.82, y: fgCenterY + dy, size });
+      coords.push({ x: 0.8, y: fgCenterY + dy, size });
     } else {
       // 3 Top, 1 Bottom
-      const size = Math.min(0.24, (fgHeightRange * 0.6) / aspectRatio);
+      const size = Math.min(0.22, (fgHeightRange * 0.6) / aspectRatio);
       const dy = fgHeightRange * 0.22;
-      coords.push({ x: 0.18, y: fgCenterY - dy, size });
+      coords.push({ x: 0.2, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.82, y: fgCenterY - dy, size });
+      coords.push({ x: 0.8, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
     }
   } else {
@@ -270,11 +281,11 @@ function getForegroundCoordinates(
     const cols = Math.ceil(Math.sqrt(num));
     const rows = Math.ceil(num / cols);
 
-    const sizeX = 0.8 / cols;
+    const sizeX = 0.75 / cols;
     const sizeY = fgHeightRange / (rows * aspectRatio);
-    const size = Math.max(0.12, Math.min(sizeX, sizeY, 0.24));
+    const size = Math.max(0.12, Math.min(sizeX, sizeY, 0.22));
 
-    const spacingX = cols > 1 ? (0.8 - size) / (cols - 1) : 0;
+    const spacingX = cols > 1 ? (0.75 - size) / (cols - 1) : 0;
     const spacingY = rows > 1 ? (fgHeightRange - size * aspectRatio) / (rows - 1) : 0;
 
     const startY = fgCenterY - ((rows - 1) * spacingY) / 2;
@@ -294,20 +305,42 @@ function getForegroundCoordinates(
     }
   }
 
-  return coords;
+  // Double-check sizes and keep within 0.05-0.95 margins of the canvas width and height
+  return coords.map((c) => {
+    let size = c.size;
+    let x = c.x;
+    let y = c.y;
+
+    const halfW = size / 2;
+    if (x - halfW < 0.05) {
+      x = 0.05 + halfW;
+    }
+    if (x + halfW > 0.95) {
+      x = 0.95 - halfW;
+    }
+
+    const halfH = (size * aspectRatio) / 2;
+    if (y - halfH < 0.05) {
+      y = 0.05 + halfH;
+    }
+    if (y + halfH > 0.95) {
+      y = 0.95 - halfH;
+    }
+
+    const maxW = Math.min(x - 0.05, 0.95 - x) * 2;
+    const maxH = (Math.min(y - 0.05, 0.95 - y) * 2) / aspectRatio;
+    size = Math.min(size, maxW, maxH);
+
+    return { x, y, size };
+  });
 }
 
-function generateForegroundLayouts(
-  num: number,
-  styleType: number,
-  fgMinY: number,
-  fgMaxY: number
-) {
+function generateForegroundLayouts(num: number, styleType: number, fgMinY: number, fgMaxY: number) {
   const coords = getForegroundCoordinates(num, styleType, fgMinY, fgMaxY);
   return coords.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x + (Math.random() - 0.5) * 0.015)),
-    y: Math.max(0.05, Math.min(0.95, c.y + (Math.random() - 0.5) * 0.015)),
-    size: Math.max(0.05, Math.min(0.9, c.size + (Math.random() - 0.5) * 0.01)),
+    x: Math.max(0.05, Math.min(0.95, c.x)),
+    y: Math.max(0.05, Math.min(0.95, c.y)),
+    size: Math.max(0.05, Math.min(0.9, c.size)),
   }));
 }
 
@@ -316,7 +349,7 @@ function generateCohesiveLayout(
   numForegrounds: number,
   numTexts: number,
   logoExists: boolean,
-  presetIndex: number
+  presetIndex: number,
 ): ElementLayouts {
   const isStory = format === "story";
   const layout: ElementLayouts = {
@@ -330,7 +363,7 @@ function generateCohesiveLayout(
   if (logoExists) {
     if (preset === 0) {
       layout.logo = {
-        x: Math.random() > 0.5 ? 0.5 : 0.15,
+        x: 0.5,
         y: isStory ? 0.08 : 0.07,
         size: 0.22,
       };
@@ -342,7 +375,7 @@ function generateCohesiveLayout(
       };
     } else {
       layout.logo = {
-        x: Math.random() > 0.5 ? 0.85 : 0.5,
+        x: 0.5,
         y: isStory ? 0.08 : 0.07,
         size: 0.22,
       };
@@ -352,24 +385,24 @@ function generateCohesiveLayout(
   if (numTexts > 0) {
     if (preset === 0) {
       const logoTopCenter = layout.logo && Math.abs(layout.logo.x - 0.5) < 0.05;
-      const startY = logoTopCenter ? (isStory ? 0.22 : 0.20) : (isStory ? 0.16 : 0.14);
+      const startY = logoTopCenter ? (isStory ? 0.22 : 0.2) : isStory ? 0.16 : 0.14;
       const spacing = isStory ? 0.07 : 0.06;
 
       for (let i = 0; i < numTexts; i++) {
         layout.texts.push({
           x: 0.5,
           y: startY + i * spacing,
-          size: i === 0 ? (isStory ? 56 : 48) : (isStory ? 38 : 32),
+          size: i === 0 ? (isStory ? 56 : 48) : isStory ? 38 : 32,
         });
       }
     } else if (preset === 1) {
-      const startY = isStory ? 0.82 : 0.80;
+      const startY = isStory ? 0.82 : 0.8;
       const spacing = isStory ? 0.07 : 0.06;
       for (let i = 0; i < numTexts; i++) {
         layout.texts.push({
           x: 0.5,
           y: startY + i * spacing,
-          size: i === 0 ? (isStory ? 56 : 48) : (isStory ? 38 : 32),
+          size: i === 0 ? (isStory ? 56 : 48) : isStory ? 38 : 32,
         });
       }
     } else {
@@ -421,31 +454,28 @@ function generateCohesiveLayout(
   }
 
   if (fgMinY > fgMaxY - 0.15) {
-    fgMinY = isStory ? 0.22 : 0.20;
+    fgMinY = isStory ? 0.22 : 0.2;
     fgMaxY = isStory ? 0.82 : 0.78;
   }
-
-  const fgCenterY = (fgMinY + fgMaxY) / 2;
-  const fgHeightRange = fgMaxY - fgMinY;
 
   layout.foregrounds = getForegroundCoordinates(numForegrounds, presetIndex, fgMinY, fgMaxY);
 
   layout.foregrounds = layout.foregrounds.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x + (Math.random() - 0.5) * 0.015)),
-    y: Math.max(0.05, Math.min(0.95, c.y + (Math.random() - 0.5) * 0.015)),
-    size: Math.max(0.05, Math.min(0.9, c.size + (Math.random() - 0.5) * 0.01)),
+    x: Math.max(0.05, Math.min(0.95, c.x)),
+    y: Math.max(0.05, Math.min(0.95, c.y)),
+    size: Math.max(0.05, Math.min(0.9, c.size)),
   }));
 
   if (layout.logo) {
-    layout.logo.x = Math.max(0.05, Math.min(0.95, layout.logo.x + (Math.random() - 0.5) * 0.015));
-    layout.logo.y = Math.max(0.03, Math.min(0.97, layout.logo.y + (Math.random() - 0.5) * 0.015));
-    layout.logo.size = Math.max(0.05, Math.min(0.9, layout.logo.size + (Math.random() - 0.5) * 0.01));
+    layout.logo.x = Math.max(0.05, Math.min(0.95, layout.logo.x));
+    layout.logo.y = Math.max(0.03, Math.min(0.97, layout.logo.y));
+    layout.logo.size = Math.max(0.05, Math.min(0.9, layout.logo.size));
   }
 
   layout.texts = layout.texts.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x + (Math.random() - 0.5) * 0.015)),
-    y: Math.max(0.05, Math.min(0.95, c.y + (Math.random() - 0.5) * 0.015)),
-    size: Math.max(16, Math.min(200, c.size + Math.floor((Math.random() - 0.5) * 4))),
+    x: Math.max(0.05, Math.min(0.95, c.x)),
+    y: Math.max(0.05, Math.min(0.95, c.y)),
+    size: Math.max(16, Math.min(200, c.size)),
   }));
 
   return layout;
@@ -547,6 +577,10 @@ function Index() {
       x: 0.5,
       y: 0.5,
       font: "inter",
+      bold: true,
+      italic: false,
+      underline: false,
+      align: "center",
     },
   ]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -571,6 +605,33 @@ function Index() {
   // History Undo/Redo States
   const [past, setPast] = useState<CanvasState[]>([]);
   const [future, setFuture] = useState<CanvasState[]>([]);
+
+  const [activeTab, setActiveTab] = useState<
+    "elementos" | "texto" | "uploads" | "modelos" | "ia" | "ajustes" | null
+  >("elementos");
+  const [workspaceSize, setWorkspaceSize] = useState({ width: 400, height: 600 });
+  const workspaceRef = useRef<HTMLDivElement>(null);
+
+  // ResizeObserver for workspace size
+  useEffect(() => {
+    const el = workspaceRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setWorkspaceSize({
+          width: entries[0].contentRect.width || 400,
+          height: entries[0].contentRect.height || 600,
+        });
+      }
+    });
+    observer.observe(el);
+    const rect = el.getBoundingClientRect();
+    setWorkspaceSize({
+      width: rect.width || 400,
+      height: rect.height || 600,
+    });
+    return () => observer.disconnect();
+  }, [isActive]);
 
   // ResizeObserver for dynamic text scaling
   useEffect(() => {
@@ -598,7 +659,7 @@ function Index() {
     const txts = state.texts
       .map(
         (t) =>
-          `${t.id}:${t.text}:${t.color}:${t.size}:${t.x.toFixed(3)}:${t.y.toFixed(3)}:${t.font || "inter"}`,
+          `${t.id}:${t.text}:${t.color}:${t.size}:${t.x.toFixed(3)}:${t.y.toFixed(3)}:${t.font || "inter"}:${t.bold ? "1" : "0"}:${t.italic ? "1" : "0"}:${t.underline ? "1" : "0"}:${t.align || "center"}`,
       )
       .sort()
       .join("|");
@@ -1118,7 +1179,7 @@ function Index() {
         foregrounds.length,
         texts.length,
         !!logo,
-        presetIndex
+        presetIndex,
       );
 
       const nextFgs = foregrounds.map((fg, idx) => ({
@@ -1139,9 +1200,20 @@ function Index() {
       }
 
       const randomFont = FONTS[Math.floor(Math.random() * FONTS.length)].id;
-      const highlightColors = ["#ffffff", "#facc15", "#f87171", "#60a5fa", "#34d399", "#a78bfa", "#fb923c"];
+      const highlightColors = [
+        "#ffffff",
+        "#facc15",
+        "#f87171",
+        "#60a5fa",
+        "#34d399",
+        "#a78bfa",
+        "#fb923c",
+      ];
       const mainColor = highlightColors[Math.floor(Math.random() * highlightColors.length)];
-      const subColor = mainColor === "#ffffff" ? highlightColors[Math.floor(1 + Math.random() * (highlightColors.length - 1))] : "#ffffff";
+      const subColor =
+        mainColor === "#ffffff"
+          ? highlightColors[Math.floor(1 + Math.random() * (highlightColors.length - 1))]
+          : "#ffffff";
 
       const nextTexts = texts.map((t, idx) => {
         const layoutText = layout.texts[idx];
@@ -1203,7 +1275,19 @@ function Index() {
     const newId = crypto.randomUUID();
     setTexts((t) => [
       ...t,
-      { id: newId, text: "Novo texto", color: "#ffffff", size: 48, x: 0.5, y: 0.6, font: "inter" },
+      {
+        id: newId,
+        text: "Novo texto",
+        color: "#ffffff",
+        size: 48,
+        x: 0.5,
+        y: 0.6,
+        font: "inter",
+        bold: false,
+        italic: false,
+        underline: false,
+        align: "center",
+      },
     ]);
     setSelectedId(newId);
   };
@@ -1328,8 +1412,12 @@ function Index() {
     texts.forEach((t) => {
       const selectedFont = FONTS.find((f) => f.id === (t.font || "inter")) || FONTS[0];
       ctx.fillStyle = t.color;
-      ctx.font = `700 ${t.size * exportScale}px ${selectedFont.family}`;
-      ctx.textAlign = "center";
+
+      const fontStyle = t.italic ? "italic" : "normal";
+      const fontWeight = t.bold ? "bold" : "normal";
+      ctx.font = `${fontStyle} ${fontWeight} ${t.size * exportScale}px ${selectedFont.family}`;
+
+      ctx.textAlign = t.align === "justify" ? "center" : t.align || "center";
       ctx.textBaseline = "middle";
       ctx.shadowColor = "rgba(0,0,0,0.4)";
       ctx.shadowBlur = 8 * exportScale;
@@ -1338,11 +1426,28 @@ function Index() {
       const lineH = t.size * exportScale * 1.15;
       const totalH = lineH * lines.length;
       lines.forEach((line, i) => {
-        ctx.fillText(
-          line,
-          t.x * canvas.width,
-          t.y * canvas.height - totalH / 2 + lineH / 2 + i * lineH,
-        );
+        const textX = t.x * canvas.width;
+        const textY = t.y * canvas.height - totalH / 2 + lineH / 2 + i * lineH;
+        ctx.fillText(line, textX, textY);
+
+        if (t.underline) {
+          const textWidth = ctx.measureText(line).width;
+          ctx.strokeStyle = t.color;
+          ctx.lineWidth = Math.max(1, (t.size * exportScale) / 15);
+          ctx.beginPath();
+          let lineStartX = textX;
+          if (ctx.textAlign === "center") {
+            lineStartX = textX - textWidth / 2;
+          } else if (ctx.textAlign === "right") {
+            lineStartX = textX - textWidth;
+          } else {
+            lineStartX = textX;
+          }
+          const underlineY = textY + (t.size * exportScale) / 2;
+          ctx.moveTo(lineStartX, underlineY);
+          ctx.lineTo(lineStartX + textWidth, underlineY);
+          ctx.stroke();
+        }
       });
     });
 
@@ -1462,68 +1567,837 @@ function Index() {
 
   const aspectClass = format === "feed" ? "aspect-[4/5]" : "aspect-[9/16]";
 
+  const formatSize = FORMATS[format];
+  const canvasRatio = formatSize.w / formatSize.h;
+  const workspaceRatio = workspaceSize.width / workspaceSize.height;
+
+  let previewDisplayWidth = workspaceSize.width * 0.95;
+  let previewDisplayHeight = previewDisplayWidth / canvasRatio;
+
+  if (previewDisplayHeight > workspaceSize.height * 0.82) {
+    previewDisplayHeight = workspaceSize.height * 0.82;
+    previewDisplayWidth = previewDisplayHeight * canvasRatio;
+  }
+
+  const activeTextItem = selectedId ? texts.find((t) => t.id === selectedId) : null;
+  const activeFgItem = selectedId ? foregrounds.find((f) => f.id === selectedId) : null;
+
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-200 font-sans">
-      <header className="border-b border-border/80 bg-card/75 backdrop-blur-md sticky top-0 z-50 transition-all duration-200">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
-              <Sparkles className="w-4 h-4 text-primary-foreground" />
+    <div className="dark bg-[#06060a] text-foreground min-h-screen font-sans flex flex-col antialiased selection:bg-violet-500/30 select-none overflow-hidden">
+      {/* Header Premium */}
+      <header className="h-14 border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-50">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-md shadow-violet-500/20">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h1 className="text-sm font-extrabold tracking-tight text-white flex items-center gap-1.5">
+              <span>Nova Era</span>
+              <span className="w-[1px] h-3 bg-white/10" />
+              <span className="text-[10px] text-white/40 font-medium">Gerador de Resultados</span>
+            </h1>
+          </div>
+          <div className="h-4 w-[1px] bg-white/10 mx-2 hidden sm:block" />
+          <div className="hidden sm:flex items-center gap-4 text-xs font-medium text-white/50">
+            <button className="hover:text-white transition">Arquivo</button>
+            <button className="hover:text-white transition">Editar</button>
+            <button className="relative text-violet-400 font-semibold transition">
+              Design
+              <span className="absolute bottom-[-19px] left-0 right-0 h-[2px] bg-violet-500 shadow-md shadow-violet-500/50" />
+            </button>
+            <button className="hover:text-white transition">Publicar</button>
+          </div>
+        </div>
+
+        {/* Center Search Bar */}
+        <div className="relative max-w-xs w-64 hidden md:block">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+          <input
+            type="text"
+            placeholder="Buscar imagens ou ferramentas..."
+            className="w-full pl-9 pr-4 py-1.5 bg-white/5 border border-white/5 rounded-full text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-white/5 border border-white/5 rounded-full pl-2 pr-3 py-1 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all cursor-default">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 text-white flex items-center justify-center font-bold text-[10px] uppercase shadow-sm">
+              {(user.email || "U").slice(0, 1)}
             </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground/95 to-primary bg-clip-text text-transparent">
-                Nova Era
-              </h1>
-              <p className="text-[10px] text-muted-foreground font-medium hidden sm:block">
-                Gerador de Resultados
-              </p>
-            </div>
+            <span className="truncate max-w-[120px]">{user.email}</span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="flex items-center gap-2 bg-muted/50 border border-border/40 rounded-full pl-2 pr-3 py-1 text-xs sm:text-sm font-medium text-muted-foreground hidden md:flex hover:text-foreground hover:bg-muted/80 transition-all cursor-default">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-primary to-primary/70 text-primary-foreground flex items-center justify-center font-bold text-[10px] uppercase shadow-sm">
-                {(user.email || "U").slice(0, 1)}
-              </div>
-              <span className="truncate max-w-[140px]">{user.email}</span>
-            </div>
-            <ThemeToggle />
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate({ to: "/admin" })}
-                className="border-primary/20 hover:border-primary hover:bg-primary/10 text-primary font-semibold transition-all duration-200 cursor-pointer rounded-xl flex items-center gap-1.5"
-              >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Painel Admin</span>
-              </Button>
-            )}
+          {isAdmin && (
             <Button
               variant="outline"
               size="sm"
-              onClick={logout}
-              className="border-border hover:bg-accent cursor-pointer rounded-xl flex items-center gap-1"
+              onClick={() => navigate({ to: "/admin" })}
+              className="border-violet-500/20 hover:border-violet-500 hover:bg-violet-500/10 text-violet-400 font-semibold transition-all duration-200 cursor-pointer rounded-xl flex items-center gap-1.5 h-8 text-xs bg-transparent"
             >
-              <LogOut className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Sair</span>
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Admin</span>
             </Button>
-          </div>
+          )}
+
+          <Button
+            onClick={download}
+            className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 h-8 rounded-xl shadow-lg shadow-violet-600/20 transition-all duration-300 cursor-pointer text-xs"
+          >
+            <Download className="w-3.5 h-3.5 mr-1.5" />
+            EXPORTAR
+          </Button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4 grid lg:grid-cols-[380px_1fr] gap-6">
-        {/* Controls Panel */}
-        <Card className="p-5 space-y-6 h-fit order-2 lg:order-1 bg-card border-border/90 shadow-lg transition-all duration-200 animate-slide-in-left rounded-2xl">
-          {/* Active Layer Editor */}
+      {/* Main workspace frame */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Column 1: Left thin navigation bar */}
+        <nav className="w-16 border-r border-white/5 bg-[#0a0a0f] flex flex-col items-center py-4 gap-4 shrink-0 z-40">
+          {[
+            { id: "elementos", label: "Fundos", icon: ImageIcon },
+            { id: "texto", label: "Texto", icon: Type },
+            { id: "uploads", label: "Uploads", icon: Upload },
+            { id: "modelos", label: "Modelos", icon: Layers },
+            { id: "ia", label: "IA", icon: Sparkles },
+            { id: "ajustes", label: "Ajustes", icon: Settings },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isCurrent = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(activeTab === tab.id ? null : (tab.id as any))}
+                className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                  isCurrent
+                    ? "bg-violet-600/10 text-violet-400 border border-violet-500/20 shadow-md shadow-violet-500/5"
+                    : "text-white/40 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                }`}
+                title={tab.label}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[9px] font-medium">{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Column 2: Sliding Contextual Drawer */}
+        <div
+          style={{ width: activeTab ? "300px" : "0px", opacity: activeTab ? 1 : 0 }}
+          className="h-full bg-[#0a0a0f]/95 border-r border-white/5 backdrop-blur-md transition-all duration-300 overflow-hidden flex flex-col shrink-0 z-30"
+        >
+          {activeTab && (
+            <>
+              {/* Drawer Header */}
+              <div className="p-4 border-b border-white/5 flex items-center justify-between shrink-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                  {activeTab === "elementos" && "Biblioteca de Fundos"}
+                  {activeTab === "texto" && "Ferramenta de Texto"}
+                  {activeTab === "uploads" && "Meus Uploads"}
+                  {activeTab === "modelos" && "Proporção do Canvas"}
+                  {activeTab === "ia" && "IA Criativa"}
+                  {activeTab === "ajustes" && "Configurações"}
+                </span>
+                <button
+                  onClick={() => setActiveTab(null)}
+                  className="text-white/40 hover:text-white/80 text-xs font-semibold cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+
+              {/* Drawer Body */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-5">
+                {/* 1. Elementos / Fundos */}
+                {activeTab === "elementos" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white/60">Selecionar Fundo</span>
+                      <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-white/5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold transition-all">
+                        {uploadingBg ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5 text-white/60" />
+                        )}
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingBg}
+                          onChange={(e) => e.target.files?.[0] && handleBgUpload(e.target.files[0])}
+                        />
+                      </label>
+                    </div>
+
+                    {bgLib.length === 0 ? (
+                      <div className="border border-dashed border-white/5 rounded-2xl p-6 text-center space-y-2 bg-white/[0.01]">
+                        <ImageIcon className="w-8 h-8 text-white/20 mx-auto" />
+                        <div>
+                          <p className="text-xs font-semibold text-white/80">Sem fundos</p>
+                          <p className="text-[10px] text-white/40 mt-0.5">
+                            Faça upload para preencher sua galeria.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {bgLib.map((b) => (
+                          <div key={b.id} className="relative group">
+                            <button
+                              onClick={() => {
+                                saveToHistory();
+                                selectBackground(b);
+                              }}
+                              className={`block w-full aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                                bgUrl === b.image_url
+                                  ? "border-violet-500 scale-[0.98] shadow-md shadow-violet-500/20"
+                                  : "border-transparent opacity-80 hover:opacity-100 hover:scale-[1.03]"
+                              }`}
+                            >
+                              <img
+                                src={b.signed_url || b.image_url}
+                                alt={b.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </button>
+                            <button
+                              onClick={() => promptDeleteBackground(b.id, b.name)}
+                              className="absolute top-1 right-1 bg-red-600/90 text-white rounded-lg p-1 opacity-0 group-hover:opacity-100 transition hover:bg-red-600 cursor-pointer"
+                              title="Excluir fundo"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 2. Ferramentas de Texto */}
+                {activeTab === "texto" && (
+                  <div className="space-y-4">
+                    <Button
+                      onClick={() => {
+                        saveToHistory();
+                        addText();
+                      }}
+                      className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> Adicionar Bloco de Texto
+                    </Button>
+
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-white/50 block">
+                        Textos no Canvas
+                      </span>
+                      {texts.length === 0 ? (
+                        <p className="text-[10px] text-white/30 italic">Nenhum texto adicionado</p>
+                      ) : (
+                        <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                          {texts.map((t) => (
+                            <div
+                              key={t.id}
+                              onClick={() => setSelectedId(t.id)}
+                              className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                                selectedId === t.id
+                                  ? "border-violet-500 bg-violet-600/10"
+                                  : "border-white/5 bg-white/[0.01] hover:bg-white/5"
+                              }`}
+                            >
+                              <span className="text-xs font-semibold text-white/80 truncate flex-1">
+                                {t.text || "(Texto vazio)"}
+                              </span>
+                              <div
+                                className="w-3 h-3 rounded-full border border-white/20 shrink-0"
+                                style={{ backgroundColor: t.color }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Uploads de Logos / Imagens */}
+                {activeTab === "uploads" && (
+                  <div className="space-y-5">
+                    {/* Logos Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-white/60">Logomarcas</span>
+                        <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 border border-white/5 rounded-lg bg-white/5 hover:bg-white/10 text-white font-semibold transition-all">
+                          {uploadingLogo ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />
+                          ) : (
+                            <Upload className="w-3 h-3 text-white/60" />
+                          )}
+                          <span>Upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingLogo}
+                            onChange={(e) =>
+                              e.target.files?.[0] && handleLogoUpload(e.target.files[0])
+                            }
+                          />
+                        </label>
+                      </div>
+
+                      {logoLib.length === 0 ? (
+                        <div className="border border-dashed border-white/5 rounded-xl p-4 text-center bg-white/[0.01]">
+                          <p className="text-[10px] text-white/40">Nenhuma logo salva</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {logoLib.map((l) => (
+                            <div key={l.id} className="relative group">
+                              <button
+                                onClick={() => {
+                                  saveToHistory();
+                                  selectLogo(l);
+                                }}
+                                className={`block w-full aspect-square rounded-xl overflow-hidden border-2 bg-white/5 p-1 transition-all ${
+                                  logo?.url === l.image_url
+                                    ? "border-violet-500 scale-[0.98]"
+                                    : "border-transparent opacity-80 hover:opacity-100"
+                                }`}
+                              >
+                                <img
+                                  src={l.signed_url || l.image_url}
+                                  alt={l.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              </button>
+                              <button
+                                onClick={() => promptDeleteLogo(l.id, l.name)}
+                                className="absolute top-1 right-1 bg-red-600/90 text-white rounded-lg p-1 opacity-0 group-hover:opacity-100 transition hover:bg-red-600 cursor-pointer"
+                                title="Excluir logo"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="h-[1px] bg-white/5" />
+
+                    {/* Highlights Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-white/60">
+                          Destaques (Imagens)
+                        </span>
+                        <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 border border-white/5 rounded-lg bg-white/5 hover:bg-white/10 text-white font-semibold transition-all">
+                          <Plus className="w-3 h-3 text-white/60" />
+                          <span>Adicionar</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files) {
+                                saveToHistory();
+                                handleForegroundsUpload(e.target.files);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {foregrounds.length === 0 ? (
+                        <div className="border border-dashed border-white/5 rounded-xl p-4 text-center bg-white/[0.01]">
+                          <p className="text-[10px] text-white/40 font-semibold">
+                            Sem destaques no canvas
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {foregrounds.map((f, index) => (
+                            <div key={f.id} className="relative group">
+                              <button
+                                onClick={() => setSelectedId(f.id)}
+                                className={`block w-full aspect-square rounded-xl overflow-hidden bg-white/5 p-1 transition-all border-2 ${
+                                  selectedId === f.id
+                                    ? "border-violet-500 scale-[0.98]"
+                                    : "border-transparent"
+                                }`}
+                              >
+                                <img src={f.url} alt="" className="w-full h-full object-contain" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  saveToHistory();
+                                  removeForeground(f.id);
+                                }}
+                                className="absolute top-1 right-1 bg-red-600/90 text-white rounded-lg p-1 opacity-0 group-hover:opacity-100 transition hover:bg-red-600 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Modelos / Formatos */}
+                {activeTab === "modelos" && (
+                  <div className="space-y-3">
+                    <span className="text-xs font-semibold text-white/60 block mb-1">
+                      Selecionar Proporção
+                    </span>
+                    <div className="space-y-2">
+                      {[
+                        { id: "feed", name: "Feed do Instagram", desc: "4:5 • 1080 x 1350 px" },
+                        { id: "story", name: "Instagram Stories", desc: "9:16 • 1080 x 1920 px" },
+                      ].map((fmt) => (
+                        <button
+                          key={fmt.id}
+                          onClick={() => {
+                            saveToHistory();
+                            setFormat(fmt.id as any);
+                          }}
+                          className={`w-full text-left p-3 rounded-xl border flex flex-col transition-all cursor-pointer ${
+                            format === fmt.id
+                              ? "border-violet-500 bg-violet-600/10 text-white"
+                              : "border-white/5 bg-white/[0.01] hover:bg-white/5 text-white/60"
+                          }`}
+                        >
+                          <span className="text-xs font-bold">{fmt.name}</span>
+                          <span className="text-[10px] text-white/40 font-mono mt-0.5">
+                            {fmt.desc}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. IA Criativa Randomizer */}
+                {activeTab === "ia" && (
+                  <div className="space-y-3">
+                    <span className="text-xs font-semibold text-white/60 block mb-1">
+                      Lógica Coesiva Nova Era
+                    </span>
+                    <div className="space-y-2.5">
+                      <Button
+                        onClick={() => {
+                          saveToHistory();
+                          randomizeBackground();
+                        }}
+                        className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/5 py-4 rounded-xl transition-all cursor-pointer flex items-center justify-between text-xs px-4"
+                      >
+                        <span className="font-semibold">Randomizar Fundo</span>
+                        <Shuffle className="w-3.5 h-3.5 text-violet-400" />
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          saveToHistory();
+                          randomizeForegrounds();
+                        }}
+                        className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/5 py-4 rounded-xl transition-all cursor-pointer flex items-center justify-between text-xs px-4"
+                      >
+                        <span className="font-semibold">Randomizar Grade</span>
+                        <Layers className="w-3.5 h-3.5 text-violet-400" />
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          saveToHistory();
+                          randomizeAll();
+                        }}
+                        className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white py-4 rounded-xl transition-all cursor-pointer flex items-center justify-between text-xs px-4 shadow-lg shadow-violet-500/20"
+                      >
+                        <span className="font-bold">Randomizar Tudo</span>
+                        <Sparkles className="w-3.5 h-3.5 text-white animate-pulse" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Ajustes de Sistema */}
+                {activeTab === "ajustes" && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-white/60 block">
+                        Upscale de Exportação
+                      </span>
+                      <Select
+                        value={exportScale.toString()}
+                        onValueChange={(v) => setExportScale(Number(v))}
+                      >
+                        <SelectTrigger className="bg-white/5 border border-white/5 text-white rounded-xl h-9 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0a0a0f] border border-white/5 text-white rounded-xl">
+                          <SelectItem value="1">Padrão (1x - HD)</SelectItem>
+                          <SelectItem value="2">Alta Resolução (2x - 2K)</SelectItem>
+                          <SelectItem value="3">Ultra HD (3x - 4K)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="h-[1px] bg-white/5" />
+
+                    <div className="flex flex-col gap-2">
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          onClick={() => navigate({ to: "/admin" })}
+                          className="w-full border-white/5 hover:border-violet-500/30 hover:bg-violet-600/10 text-violet-400 text-xs py-2 rounded-xl transition-all"
+                        >
+                          Ir para o Painel Admin
+                        </Button>
+                      )}
+                      <Button
+                        onClick={logout}
+                        className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs py-2 rounded-xl transition-all"
+                      >
+                        Sair da Conta
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Column 3: Center Canvas Workspace */}
+        <main
+          className="flex-1 bg-[#06060a] flex flex-col items-center justify-center p-6 relative overflow-hidden"
+          ref={workspaceRef}
+        >
+          <div className="relative flex flex-col items-center justify-center select-none">
+            {/* Top horizontal ruler */}
+            <div
+              className="absolute left-0 right-0 h-5 bg-[#0a0a0f]/80 border border-white/5 rounded-t-lg flex items-center justify-between px-3 text-[10px] text-violet-400 font-mono select-none"
+              style={{ top: "-22px", width: previewDisplayWidth }}
+            >
+              <span>0 px</span>
+              <div className="flex-1 mx-2 h-[1px] bg-gradient-to-r from-violet-500/20 via-violet-500 to-violet-500/20 shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
+              <span>{formatSize.w} px</span>
+            </div>
+
+            {/* Left vertical ruler */}
+            <div
+              className="absolute top-0 bottom-0 w-5 bg-[#0a0a0f]/80 border border-white/5 rounded-l-lg flex flex-col items-center justify-between py-3 text-[10px] text-violet-400 font-mono select-none"
+              style={{ left: "-22px", height: previewDisplayHeight }}
+            >
+              <span>0</span>
+              <div className="flex-grow my-2 w-[1px] bg-gradient-to-b from-violet-500/20 via-violet-500 to-violet-500/20 shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
+              <span>{formatSize.h}</span>
+            </div>
+
+            {/* Floating Actions Toolbar (Left of Canvas) */}
+            <div
+              className="absolute flex flex-col gap-2 bg-[#0a0a0f]/90 border border-white/5 rounded-xl p-1.5 shadow-xl backdrop-blur-md z-30"
+              style={{ left: "-56px", top: "50%", transform: "translateY(-50%)" }}
+            >
+              <button
+                onClick={() => setSelectedId(null)}
+                className={`p-2 rounded-lg transition-all cursor-pointer ${
+                  !selectedId
+                    ? "bg-violet-600 text-white"
+                    : "text-white/45 hover:text-white/80 hover:bg-white/5"
+                }`}
+                title="Seleção"
+              >
+                <MousePointer className="w-4 h-4" />
+              </button>
+              <div className="w-full h-[1px] bg-white/5 my-0.5" />
+              <button
+                onClick={undo}
+                disabled={past.length === 0}
+                className="p-2 rounded-lg text-white/45 hover:text-white/80 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
+                title="Desfazer (Ctrl+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={redo}
+                disabled={future.length === 0}
+                className="p-2 rounded-lg text-white/45 hover:text-white/80 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
+                title="Refazer (Ctrl+Y)"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+              <div className="w-full h-[1px] bg-white/5 my-0.5" />
+              <button
+                onClick={() => {
+                  saveToHistory();
+                  randomizeForegrounds();
+                }}
+                className="p-2 rounded-lg text-white/45 hover:text-white/80 hover:bg-white/5 transition-all cursor-pointer"
+                title="Grade de Destaque Inteligente"
+              >
+                <Layers className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  saveToHistory();
+                  addText();
+                }}
+                className="p-2 rounded-lg text-white/45 hover:text-white/80 hover:bg-white/5 transition-all cursor-pointer"
+                title="Novo Bloco de Texto"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              {selectedId && (
+                <>
+                  <div className="w-full h-[1px] bg-white/5 my-0.5" />
+                  <button
+                    onClick={() => {
+                      saveToHistory();
+                      if (selectedId === "logo") {
+                        setLogo(null);
+                      } else if (foregrounds.some((f) => f.id === selectedId)) {
+                        removeForeground(selectedId);
+                      } else {
+                        removeText(selectedId);
+                      }
+                      setSelectedId(null);
+                    }}
+                    className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                    title="Excluir Elemento"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Floating Text Formatting Toolbar (Above Canvas) */}
+            {selectedId && texts.some((t) => t.id === selectedId) && (
+              <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-[#0a0a0f]/95 border border-white/5 rounded-xl px-3 py-1.5 shadow-xl backdrop-blur-md z-30">
+                {(() => {
+                  const activeText = texts.find((t) => t.id === selectedId)!;
+                  return (
+                    <>
+                      {/* Bold Toggle */}
+                      <button
+                        onClick={() => updateText(selectedId, { bold: !activeText.bold })}
+                        className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                          activeText.bold
+                            ? "bg-violet-600 text-white"
+                            : "text-white/50 hover:text-white hover:bg-white/5"
+                        }`}
+                        title="Negrito"
+                      >
+                        <Bold className="w-3.5 h-3.5" />
+                      </button>
+                      {/* Italic Toggle */}
+                      <button
+                        onClick={() => updateText(selectedId, { italic: !activeText.italic })}
+                        className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                          activeText.italic
+                            ? "bg-violet-600 text-white"
+                            : "text-white/50 hover:text-white hover:bg-white/5"
+                        }`}
+                        title="Itálico"
+                      >
+                        <Italic className="w-3.5 h-3.5" />
+                      </button>
+                      {/* Underline Toggle */}
+                      <button
+                        onClick={() => updateText(selectedId, { underline: !activeText.underline })}
+                        className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                          activeText.underline
+                            ? "bg-violet-600 text-white"
+                            : "text-white/50 hover:text-white hover:bg-white/5"
+                        }`}
+                        title="Sublinhado"
+                      >
+                        <Underline className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+                      {/* Alignment options */}
+                      {(["left", "center", "right", "justify"] as const).map((alignOpt) => {
+                        const AlignIcon =
+                          alignOpt === "left"
+                            ? AlignLeft
+                            : alignOpt === "center"
+                              ? AlignCenter
+                              : alignOpt === "right"
+                                ? AlignRight
+                                : AlignJustify;
+                        return (
+                          <button
+                            key={alignOpt}
+                            onClick={() => updateText(selectedId, { align: alignOpt })}
+                            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                              (activeText.align || "center") === alignOpt
+                                ? "bg-violet-600 text-white"
+                                : "text-white/50 hover:text-white hover:bg-white/5"
+                            }`}
+                            title={`Alinhar à ${alignOpt}`}
+                          >
+                            <AlignIcon className="w-3.5 h-3.5" />
+                          </button>
+                        );
+                      })}
+
+                      <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+                      {/* Text Size Display */}
+                      <div className="flex items-center gap-1 text-[11px] text-white/50 font-bold px-1 select-none">
+                        <span>{activeText.size}px</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Canvas Preview Container */}
+            <div
+              ref={previewRef}
+              style={{
+                width: previewDisplayWidth,
+                height: previewDisplayHeight,
+              }}
+              className="relative bg-[#0d0d12] border border-white/10 rounded-xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8),0_0_20px_rgba(139,92,246,0.1)] transition-all duration-300 select-none touch-none"
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+              onClick={() => setSelectedId(null)}
+            >
+              {bgUrlSigned ? (
+                <img
+                  src={bgUrlSigned}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-white/[0.02] border-2 border-dashed border-white/5 rounded-xl m-4 animate-pulse">
+                  <ImageIcon className="w-10 h-10 text-white/20 mb-3" />
+                  <p className="text-sm font-semibold text-white">Visualização do Canvas</p>
+                  <p className="text-xs text-white/40 max-w-[200px] mt-1.5 leading-relaxed">
+                    Selecione um fundo na biblioteca de fundos para iniciar o design.
+                  </p>
+                </div>
+              )}
+
+              {/* Draggable Highlights */}
+              {foregrounds.map((fg) => (
+                <img
+                  key={fg.id}
+                  src={fg.url}
+                  alt=""
+                  onPointerDown={(e) => onPointerDown(e, "foreground", fg.id)}
+                  style={{
+                    position: "absolute",
+                    left: `${fg.x * 100}%`,
+                    top: `${fg.y * 100}%`,
+                    width: `${fg.size * 100}%`,
+                    transform: "translate(-50%, -50%)",
+                    cursor: "grab",
+                    touchAction: "none",
+                  }}
+                  className={`animate-fade-in-scale select-none transition-shadow ${
+                    selectedId === fg.id
+                      ? "outline-2 outline-solid outline-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.6)] z-20"
+                      : "z-10"
+                  }`}
+                />
+              ))}
+
+              {/* Draggable Logo */}
+              {logo && (
+                <img
+                  src={logo.signedUrl}
+                  alt=""
+                  onPointerDown={(e) => onPointerDown(e, "logo")}
+                  style={{
+                    position: "absolute",
+                    left: `${logo.x * 100}%`,
+                    top: `${logo.y * 100}%`,
+                    width: `${logo.size * 100}%`,
+                    transform: "translate(-50%, -50%)",
+                    cursor: "grab",
+                    touchAction: "none",
+                  }}
+                  className={`animate-fade-in-scale select-none transition-shadow ${
+                    selectedId === "logo"
+                      ? "outline-2 outline-solid outline-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.6)] z-20"
+                      : "z-10"
+                  }`}
+                />
+              )}
+
+              {/* Draggable Texts */}
+              {texts.map((t) => {
+                const selectedFont = FONTS.find((f) => f.id === (t.font || "inter")) || FONTS[0];
+                const scaledSize = (t.size * previewDisplayWidth) / 1080;
+                return (
+                  <div
+                    key={t.id}
+                    onPointerDown={(e) => onPointerDown(e, "text", t.id)}
+                    style={{
+                      position: "absolute",
+                      left: `${t.x * 100}%`,
+                      top: `${t.y * 100}%`,
+                      transform: "translate(-50%, -50%)",
+                      color: t.color,
+                      fontSize: `${scaledSize}px`,
+                      fontFamily: selectedFont.family,
+                      fontWeight: t.bold ? "bold" : "normal",
+                      fontStyle: t.italic ? "italic" : "normal",
+                      textDecoration: t.underline ? "underline" : "none",
+                      textAlign: t.align || "center",
+                      whiteSpace: "pre-wrap",
+                      textShadow: "0 2px 8px rgba(0,0,0,0.45)",
+                      cursor: "grab",
+                      lineHeight: 1.15,
+                      userSelect: "none",
+                      touchAction: "none",
+                    }}
+                    className={
+                      selectedId === t.id
+                        ? "outline-2 outline-solid outline-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.6)] animate-pulse z-20"
+                        : "z-10"
+                    }
+                  >
+                    {t.text}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom "Publicar Agora" Action */}
+            <div className="mt-4 flex flex-col items-center">
+              <Button
+                onClick={download}
+                className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 py-5 rounded-full shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] hover:scale-[1.02] transition-all duration-300 cursor-pointer text-xs"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Publicar Agora
+              </Button>
+            </div>
+          </div>
+        </main>
+
+        {/* Column 4: Right Sidebar Style / Layers Panel */}
+        <aside className="w-72 border-l border-white/5 bg-[#0a0a0f] flex flex-col p-4 gap-5 overflow-y-auto shrink-0 z-10">
+          {/* Active Layer Customizer Card */}
           {selectedId && (
-            <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 space-y-3.5 animate-fade-in">
-              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                <span className="text-primary font-bold">
-                  Elemento Selecionado:{" "}
+            <div className="bg-white/[0.02] p-4 rounded-xl border border-white/5 space-y-4 animate-fade-in shrink-0">
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-white/40">
+                <span className="text-violet-400">
+                  Ajustes:{" "}
                   {selectedId === "logo"
                     ? "Logomarca"
                     : foregrounds.some((f) => f.id === selectedId)
-                      ? "Imagem Destaque"
+                      ? "Destaque"
                       : "Texto"}
                 </span>
                 <button
@@ -1538,7 +2412,7 @@ function Index() {
                     }
                     setSelectedId(null);
                   }}
-                  className="text-destructive font-semibold hover:underline cursor-pointer"
+                  className="text-red-400 font-semibold hover:underline cursor-pointer"
                 >
                   Excluir
                 </button>
@@ -1546,9 +2420,9 @@ function Index() {
 
               {selectedId === "logo" && logo && (
                 <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-medium text-foreground">
-                    <span>Tamanho da Logo</span>
-                    <span>{Math.round(logo.size * 100)}%</span>
+                  <div className="flex justify-between text-xs font-semibold text-white/70">
+                    <span>Escala da Logo</span>
+                    <span className="font-mono text-[11px]">{Math.round(logo.size * 100)}%</span>
                   </div>
                   <input
                     type="range"
@@ -1558,590 +2432,292 @@ function Index() {
                     value={logo.size}
                     onPointerDown={() => saveToHistory()}
                     onChange={(e) => setLogo({ ...logo, size: +e.target.value })}
-                    className="w-full accent-primary h-1.5 bg-background rounded-lg cursor-pointer"
+                    className="w-full accent-violet-500 h-1 bg-white/10 rounded-lg cursor-pointer"
                   />
                 </div>
               )}
 
-              {foregrounds.find((f) => f.id === selectedId) && (
+              {activeFgItem && (
                 <div className="space-y-2">
-                  {(() => {
-                    const fgItem = foregrounds.find((f) => f.id === selectedId)!;
-                    return (
-                      <>
-                        <div className="flex justify-between text-xs font-medium text-foreground">
-                          <span>Tamanho do Destaque</span>
-                          <span>{Math.round(fgItem.size * 100)}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0.05}
-                          max={0.9}
-                          step={0.01}
-                          value={fgItem.size}
-                          onPointerDown={() => saveToHistory()}
-                          onChange={(e) => updateForeground(selectedId, { size: +e.target.value })}
-                          className="w-full accent-primary h-1.5 bg-background rounded-lg cursor-pointer"
-                        />
-                      </>
-                    );
-                  })()}
+                  <div className="flex justify-between text-xs font-semibold text-white/70">
+                    <span>Escala do Destaque</span>
+                    <span className="font-mono text-[11px]">
+                      {Math.round(activeFgItem.size * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.05}
+                    max={0.9}
+                    step={0.01}
+                    value={activeFgItem.size}
+                    onPointerDown={() => saveToHistory()}
+                    onChange={(e) => updateForeground(selectedId, { size: +e.target.value })}
+                    className="w-full accent-violet-500 h-1 bg-white/10 rounded-lg cursor-pointer"
+                  />
                 </div>
               )}
 
-              {texts.find((t) => t.id === selectedId) && (
-                <div className="space-y-3">
-                  {(() => {
-                    const txtItem = texts.find((t) => t.id === selectedId)!;
-                    return (
-                      <>
-                        <textarea
-                          className="w-full text-xs font-medium border border-border/80 rounded-xl p-2.5 bg-background text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-transparent focus-visible:outline-none transition-all"
-                          rows={2}
-                          value={txtItem.text}
-                          onFocus={() => saveToHistory()}
-                          onChange={(e) => updateText(selectedId, { text: e.target.value })}
-                        />
-                        <div className="flex items-center gap-2.5">
-                          <input
-                            type="color"
-                            value={txtItem.color}
-                            onPointerDown={() => saveToHistory()}
-                            onChange={(e) => updateText(selectedId, { color: e.target.value })}
-                            className="w-8 h-8 rounded-lg cursor-pointer border border-border/80 p-0.5 bg-background"
-                          />
-                          <div className="flex-1">
-                            <Select
-                              value={txtItem.font || "inter"}
-                              onValueChange={(val) => {
-                                saveToHistory();
-                                updateText(selectedId, { font: val });
-                              }}
-                            >
-                              <SelectTrigger className="bg-background border-border text-xs rounded-xl h-8">
-                                <SelectValue placeholder="Fonte" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-card border-border text-foreground">
-                                {FONTS.map((f) => (
-                                  <SelectItem
-                                    key={f.id}
-                                    value={f.id}
-                                    style={{ fontFamily: f.family }}
-                                  >
-                                    {f.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <input
-                            type="range"
-                            min={16}
-                            max={200}
-                            value={txtItem.size}
-                            onPointerDown={() => saveToHistory()}
-                            onChange={(e) => updateText(selectedId, { size: +e.target.value })}
-                            className="w-full accent-primary h-1.5 bg-background rounded-lg cursor-pointer"
-                          />
-                          <div className="text-[10px] text-muted-foreground font-bold">
-                            Tamanho: {txtItem.size}px
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
+              {activeTextItem && (
+                <div className="space-y-3.5">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-white/40 block">Texto</span>
+                    <textarea
+                      className="w-full text-xs font-semibold border border-white/5 rounded-xl p-2.5 bg-[#06060a] text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
+                      rows={2}
+                      value={activeTextItem.text}
+                      onFocus={() => saveToHistory()}
+                      onChange={(e) => updateText(selectedId, { text: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold text-white/70">
+                      <span>Tamanho da Fonte</span>
+                      <span className="font-mono text-[11px]">{activeTextItem.size}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={16}
+                      max={200}
+                      value={activeTextItem.size}
+                      onPointerDown={() => saveToHistory()}
+                      onChange={(e) => updateText(selectedId, { size: +e.target.value })}
+                      className="w-full accent-violet-500 h-1 bg-white/10 rounded-lg cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold text-white/70">Cor Personalizada</span>
+                    <input
+                      type="color"
+                      value={activeTextItem.color}
+                      onPointerDown={() => saveToHistory()}
+                      onChange={(e) => updateText(selectedId, { color: e.target.value })}
+                      className="w-8 h-8 rounded-lg cursor-pointer border border-white/10 p-0.5 bg-[#06060a]"
+                    />
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Formato */}
-          <div className="space-y-3">
+          {/* Camadas (Layers List) */}
+          <div className="space-y-3 shrink-0">
             <div className="flex items-center gap-2">
-              <Palette className="w-4 h-4 text-primary" />
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Formato
-              </Label>
-            </div>
-            <Select
-              value={format}
-              onValueChange={(v) => {
-                saveToHistory();
-                setFormat(v as Format);
-              }}
-            >
-              <SelectTrigger className="bg-background border-border hover:border-primary/40 text-foreground rounded-xl transition-all duration-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border text-foreground rounded-xl shadow-xl">
-                <SelectItem value="feed" className="rounded-lg">
-                  {FORMATS.feed.label}
-                </SelectItem>
-                <SelectItem value="story" className="rounded-lg">
-                  {FORMATS.story.label}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <hr className="border-border/60" />
-
-          {/* Background library */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-primary" />
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Biblioteca de Fundos
-                </Label>
-              </div>
-              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
-                {uploadingBg ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                ) : (
-                  <Upload className="w-3.5 h-3.5 text-muted-foreground" />
-                )}
-                <span>Adicionar</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingBg}
-                  onChange={(e) => e.target.files?.[0] && handleBgUpload(e.target.files[0])}
-                />
-              </label>
-            </div>
-            {bgLib.length === 0 ? (
-              <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
-                <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
-                <div>
-                  <p className="text-xs font-semibold text-foreground">Nenhum fundo salvo</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Faça upload de imagens de fundo para começar.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto p-0.5">
-                {bgLib.map((b) => (
-                  <div key={b.id} className="relative group">
-                    <button
-                      onClick={() => {
-                        saveToHistory();
-                        selectBackground(b);
-                      }}
-                      className={`block w-full aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 ${bgUrl === b.image_url ? "border-primary scale-[0.98] shadow-md shadow-primary/20" : "border-transparent opacity-85 hover:opacity-100 hover:scale-[1.03] shadow-sm"}`}
-                    >
-                      <img
-                        src={b.signed_url || b.image_url}
-                        alt={b.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                    <button
-                      onClick={() => promptDeleteBackground(b.id, b.name)}
-                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
-                      title="Excluir fundo"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <hr className="border-border/60" />
-
-          {/* Logo library */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-primary" />
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Biblioteca de Logos
-                </Label>
-              </div>
-              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
-                {uploadingLogo ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                ) : (
-                  <Upload className="w-3.5 h-3.5 text-muted-foreground" />
-                )}
-                <span>Adicionar</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingLogo}
-                  onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
-                />
-              </label>
-            </div>
-            {logoLib.length === 0 ? (
-              <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
-                <Layers className="w-8 h-8 text-muted-foreground/50 mx-auto" />
-                <div>
-                  <p className="text-xs font-semibold text-foreground">Nenhuma logo salva</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Faça upload de suas logos corporativas.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto p-0.5">
-                {logoLib.map((l) => (
-                  <div key={l.id} className="relative group">
-                    <button
-                      onClick={() => {
-                        saveToHistory();
-                        selectLogo(l);
-                      }}
-                      className={`block w-full aspect-square rounded-xl overflow-hidden border-2 bg-muted/40 transition-all duration-300 ${logo?.url === l.image_url ? "border-primary scale-[0.98] shadow-md shadow-primary/20" : "border-transparent opacity-85 hover:opacity-100 hover:scale-[1.03] shadow-sm"}`}
-                    >
-                      <img
-                        src={l.signed_url || l.image_url}
-                        alt={l.name}
-                        className="w-full h-full object-contain p-1.5"
-                      />
-                    </button>
-                    <button
-                      onClick={() => promptDeleteLogo(l.id, l.name)}
-                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
-                      title="Excluir logo"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <hr className="border-border/60" />
-
-          {/* Foreground images */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-primary" />
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Imagens em Destaque
-                </Label>
-              </div>
-              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
-                <Plus className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>Adicionar</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) {
-                      saveToHistory();
-                      handleForegroundsUpload(e.target.files);
-                    }
-                  }}
-                />
-              </label>
-            </div>
-            {foregrounds.length === 0 ? (
-              <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
-                <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
-                <div>
-                  <p className="text-xs font-semibold text-foreground">Sem imagens em destaque</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Adicione imagens para arrastar e redimensionar livremente no canvas.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-0.5">
-                {foregrounds.map((f) => (
-                  <div key={f.id} className="relative group">
-                    <button
-                      onClick={() => setSelectedId(f.id)}
-                      className={`block w-full aspect-square rounded-xl overflow-hidden bg-muted/50 border transition-all ${selectedId === f.id ? "border-primary scale-[0.98]" : "border-border/80 hover:scale-[1.03]"}`}
-                    >
-                      <img src={f.url} alt="" className="w-full h-full object-contain p-1" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        saveToHistory();
-                        removeForeground(f.id);
-                      }}
-                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <hr className="border-border/60" />
-
-          {/* Texts */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Type className="w-4 h-4 text-primary" />
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Textos
-                </Label>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  saveToHistory();
-                  addText();
-                }}
-                className="border-border hover:border-primary/30 hover:bg-accent rounded-xl font-semibold shadow-sm cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar
-              </Button>
-            </div>
-            {texts.length === 0 ? (
-              <div className="border border-dashed border-border/80 rounded-2xl p-4 text-center bg-muted/10">
-                <p className="text-[11px] text-muted-foreground">
-                  Nenhum texto no canvas. Adicione um acima.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
-                {texts.map((t) => (
-                  <div
-                    key={t.id}
-                    className={`border rounded-xl p-2.5 flex items-center justify-between gap-2.5 transition-all bg-background/40 hover:bg-background/60 shadow-sm cursor-pointer ${selectedId === t.id ? "ring-2 ring-primary border-transparent" : "border-border/85"}`}
-                    onClick={() => setSelectedId(t.id)}
-                  >
-                    <span className="text-xs font-semibold truncate flex-1 pr-2">
-                      {t.text || "(Texto vazio)"}
-                    </span>
-                    <span
-                      className="w-4 h-4 rounded-full border border-border"
-                      style={{ backgroundColor: t.color }}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <hr className="border-border/60" />
-
-          {/* Randomizers */}
-          <div className="space-y-3 bg-muted/30 p-4 rounded-2xl border border-border/50">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Randomização
-              </Label>
-            </div>
-            <div className="grid grid-cols-3 gap-2 mt-1">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={randomizeBackground}
-                className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all text-xs"
-              >
-                <Shuffle className="w-3.5 h-3.5 mr-1" /> Fundo
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={randomizeForegrounds}
-                className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all text-xs"
-              >
-                <Shuffle className="w-3.5 h-3.5 mr-1" /> Posição
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={randomizeAll}
-                className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all text-xs"
-              >
-                <Shuffle className="w-3.5 h-3.5 mr-1" /> Tudo
-              </Button>
-            </div>
-          </div>
-
-          {/* Export upscale scale option */}
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Qualidade de Exportação
-            </Label>
-            <Select value={exportScale.toString()} onValueChange={(v) => setExportScale(Number(v))}>
-              <SelectTrigger className="bg-background border border-border text-foreground rounded-xl transition-all">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border border-border text-foreground rounded-xl shadow-lg">
-                <SelectItem value="1" className="rounded-lg">
-                  Padrão (1x - HD)
-                </SelectItem>
-                <SelectItem value="2" className="rounded-lg">
-                  Alta Resolução (2x - 2K)
-                </SelectItem>
-                <SelectItem value="3" className="rounded-lg">
-                  Ultra HD (3x - 4K)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button
-            onClick={download}
-            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary text-primary-foreground font-bold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-300 cursor-pointer hover:scale-[1.01]"
-            size="lg"
-          >
-            <Download className="w-4 h-4 mr-2" /> Baixar Imagem
-          </Button>
-        </Card>
-
-        {/* Canvas Preview Area */}
-        <div className="flex flex-col items-center gap-4 order-1 lg:order-2 w-full max-w-sm lg:max-w-md mx-auto">
-          {/* Undo/Redo Floating Bar */}
-          <div className="flex items-center gap-2.5 bg-card/90 border border-border/80 rounded-full px-4 py-2 shadow-lg backdrop-blur-md animate-fade-in-scale">
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled={past.length === 0}
-              onClick={undo}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full hover:bg-accent transition cursor-pointer"
-              title="Desfazer (Ctrl+Z)"
-            >
-              <Undo2 className="w-4 h-4" />
-            </Button>
-            <div className="w-px h-4 bg-border/80" />
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled={future.length === 0}
-              onClick={redo}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full hover:bg-accent transition cursor-pointer"
-              title="Refazer (Ctrl+Y)"
-            >
-              <Redo2 className="w-4 h-4" />
-            </Button>
-            {past.length > 0 && (
-              <span className="text-[10px] text-muted-foreground font-bold border-l border-border/80 pl-2.5 font-sans">
-                {past.length} {past.length === 1 ? "alteração" : "alterações"}
+              <Layers className="w-4 h-4 text-violet-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-white/50">
+                Camadas
               </span>
-            )}
-          </div>
+            </div>
+            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+              {logo && (
+                <div
+                  onClick={() => setSelectedId("logo")}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition-all cursor-pointer ${
+                    selectedId === "logo"
+                      ? "border-violet-500 bg-violet-600/10 shadow-[0_0_10px_rgba(139,92,246,0.15)]"
+                      : "border-white/5 bg-white/[0.01] hover:bg-white/5"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <img
+                      src={logo.signedUrl}
+                      className="w-6 h-6 object-contain rounded bg-white/5 p-0.5"
+                    />
+                    <span className="text-xs font-semibold text-white/80 truncate">Logomarca</span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      saveToHistory();
+                      setLogo(null);
+                      if (selectedId === "logo") setSelectedId(null);
+                    }}
+                    className="text-red-400 hover:text-red-300 p-1 cursor-pointer shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
 
-          <div
-            ref={previewRef}
-            className={`relative ${aspectClass} w-full bg-muted/45 border border-border/90 rounded-2xl overflow-hidden shadow-2xl transition-all duration-500 select-none touch-none`}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onClick={() => setSelectedId(null)}
-          >
-            {bgUrlSigned ? (
-              <img
-                src={bgUrlSigned}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-muted/30 border-2 border-dashed border-border/60 rounded-2xl m-3.5 animate-pulse">
-                <ImageIcon className="w-12 h-12 text-muted-foreground/30 mb-3" />
-                <p className="text-sm font-semibold text-foreground">Visualização do Canvas</p>
-                <p className="text-xs text-muted-foreground max-w-[220px] mt-1.5 leading-relaxed">
-                  Selecione um fundo na biblioteca ou faça upload para começar a sua arte.
-                </p>
-              </div>
-            )}
+              {foregrounds.map((fg, idx) => (
+                <div
+                  key={fg.id}
+                  onClick={() => setSelectedId(fg.id)}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition-all cursor-pointer ${
+                    selectedId === fg.id
+                      ? "border-violet-500 bg-violet-600/10 shadow-[0_0_10px_rgba(139,92,246,0.15)]"
+                      : "border-white/5 bg-white/[0.01] hover:bg-white/5"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <img src={fg.url} className="w-6 h-6 object-contain rounded bg-white/5 p-0.5" />
+                    <span className="text-xs font-semibold text-white/80 truncate">
+                      Imagem Destaque {idx + 1}
+                    </span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      saveToHistory();
+                      removeForeground(fg.id);
+                    }}
+                    className="text-red-400 hover:text-red-300 p-1 cursor-pointer shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
 
-            {/* Draggable Highlights */}
-            {foregrounds.map((fg) => (
-              <img
-                key={fg.id}
-                src={fg.url}
-                alt=""
-                onPointerDown={(e) => onPointerDown(e, "foreground", fg.id)}
-                style={{
-                  position: "absolute",
-                  left: `${fg.x * 100}%`,
-                  top: `${fg.y * 100}%`,
-                  width: `${fg.size * 100}%`,
-                  transform: "translate(-50%, -50%)",
-                  cursor: "grab",
-                  touchAction: "none",
-                }}
-                className={`animate-fade-in-scale select-none ${selectedId === fg.id ? "outline-2 outline-dashed outline-white ring-2 ring-primary/80" : ""}`}
-              />
-            ))}
-
-            {/* Draggable Logo */}
-            {logo && (
-              <img
-                src={logo.signedUrl}
-                alt=""
-                onPointerDown={(e) => onPointerDown(e, "logo")}
-                style={{
-                  position: "absolute",
-                  left: `${logo.x * 100}%`,
-                  top: `${logo.y * 100}%`,
-                  width: `${logo.size * 100}%`,
-                  transform: "translate(-50%, -50%)",
-                  cursor: "grab",
-                  touchAction: "none",
-                }}
-                className={`animate-fade-in-scale select-none ${selectedId === "logo" ? "outline-2 outline-dashed outline-white ring-2 ring-primary/80" : ""}`}
-              />
-            )}
-
-            {/* Draggable Texts with observer scaled font size */}
-            {texts.map((t) => {
-              const selectedFont = FONTS.find((f) => f.id === (t.font || "inter")) || FONTS[0];
-              const scaledSize = (t.size * previewWidth) / 1080;
-              return (
+              {texts.map((t, idx) => (
                 <div
                   key={t.id}
-                  onPointerDown={(e) => onPointerDown(e, "text", t.id)}
-                  style={{
-                    position: "absolute",
-                    left: `${t.x * 100}%`,
-                    top: `${t.y * 100}%`,
-                    transform: "translate(-50%, -50%)",
-                    color: t.color,
-                    fontSize: `${scaledSize}px`,
-                    fontFamily: selectedFont.family,
-                    fontWeight: 700,
-                    textAlign: "center",
-                    whiteSpace: "pre-wrap",
-                    textShadow: "0 2px 8px rgba(0,0,0,0.45)",
-                    cursor: "grab",
-                    lineHeight: 1.15,
-                    userSelect: "none",
-                    touchAction: "none",
-                  }}
-                  className={
+                  onClick={() => setSelectedId(t.id)}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition-all cursor-pointer ${
                     selectedId === t.id
-                      ? "outline-2 outline-dashed outline-white ring-2 ring-primary/80 animate-pulse duration-[1500ms]"
-                      : ""
-                  }
+                      ? "border-violet-500 bg-violet-600/10 shadow-[0_0_10px_rgba(139,92,246,0.15)]"
+                      : "border-white/5 bg-white/[0.01] hover:bg-white/5"
+                  }`}
                 >
-                  {t.text}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded bg-violet-600/10 flex items-center justify-center text-violet-400 font-bold text-xs shrink-0">
+                      T
+                    </div>
+                    <span className="text-xs font-semibold text-white/80 truncate">
+                      {t.text || "(Texto vazio)"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      saveToHistory();
+                      removeText(t.id);
+                    }}
+                    className="text-red-400 hover:text-red-300 p-1 cursor-pointer shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              );
-            })}
+              ))}
+
+              <div
+                className={`p-2.5 rounded-xl border flex items-center gap-2.5 ${
+                  bgUrl
+                    ? "border-white/5 bg-white/[0.01]"
+                    : "border-dashed border-white/5 bg-transparent"
+                }`}
+              >
+                {bgUrlSigned ? (
+                  <img src={bgUrlSigned} className="w-6 h-6 object-cover rounded" />
+                ) : (
+                  <div className="w-6 h-6 rounded bg-white/5 flex items-center justify-center text-white/30 text-[10px] shrink-0 font-bold">
+                    BG
+                  </div>
+                )}
+                <span className="text-xs font-semibold text-white/40 truncate">
+                  Camada de Fundo
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-      </main>
+
+          {/* Design Tools color swatches */}
+          <div className="space-y-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-violet-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-white/50">
+                Paletas de Cores
+              </span>
+            </div>
+            <div className="space-y-3 bg-white/[0.01] border border-white/5 p-3 rounded-xl">
+              <div>
+                <span className="text-[10px] text-white/40 font-semibold block mb-1.5">
+                  Matizes Violeta & Indigo
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {["#8b5cf6", "#a78bfa", "#c084fc", "#6366f1", "#818cf8"].map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        if (selectedId && texts.some((t) => t.id === selectedId)) {
+                          saveToHistory();
+                          updateText(selectedId, { color: c });
+                        }
+                      }}
+                      className="w-5.5 h-5.5 rounded-full border border-white/10 shadow-sm hover:scale-110 transition-all cursor-pointer"
+                      style={{ backgroundColor: c }}
+                      title={c}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="text-[10px] text-white/40 font-semibold block mb-1.5">
+                  Destaques Fluorescentes
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {["#ffffff", "#facc15", "#f87171", "#34d399", "#2dd4bf"].map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        if (selectedId && texts.some((t) => t.id === selectedId)) {
+                          saveToHistory();
+                          updateText(selectedId, { color: c });
+                        }
+                      }}
+                      className="w-5.5 h-5.5 rounded-full border border-white/10 shadow-sm hover:scale-110 transition-all cursor-pointer"
+                      style={{ backgroundColor: c }}
+                      title={c}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Typography drop accordion style */}
+          <div className="space-y-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <Type className="w-4 h-4 text-violet-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-white/50">
+                Tipografias Disponíveis
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+              {FONTS.map((font) => {
+                const isSelected =
+                  selectedId && texts.find((t) => t.id === selectedId)?.font === font.id;
+                return (
+                  <button
+                    key={font.id}
+                    onClick={() => {
+                      if (selectedId && texts.some((t) => t.id === selectedId)) {
+                        saveToHistory();
+                        updateText(selectedId, { font: font.id });
+                      }
+                    }}
+                    style={{ fontFamily: font.family }}
+                    className={`text-left px-2 py-2 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer truncate ${
+                      isSelected
+                        ? "border-violet-500 bg-violet-600/10 text-white shadow-sm shadow-violet-500/10"
+                        : "border-white/5 hover:bg-white/5 text-white/60"
+                    }`}
+                  >
+                    {font.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+      </div>
 
       <AlertDialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
-        <AlertDialogContent className="bg-card border border-border text-foreground rounded-2xl max-w-sm">
+        <AlertDialogContent className="bg-[#0a0a0f] border border-white/5 text-white rounded-2xl max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground text-xs leading-relaxed">
+            <AlertDialogTitle className="text-white">Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/40 text-xs leading-relaxed">
               Tem certeza que deseja remover "{confirmDelete?.name}" da biblioteca? Esta ação não
               pode ser desfeita.
             </AlertDialogDescription>
@@ -2149,13 +2725,13 @@ function Index() {
           <AlertDialogFooter className="gap-2 mt-4">
             <AlertDialogCancel
               onClick={() => setConfirmDelete(null)}
-              className="border-border hover:bg-accent rounded-xl text-foreground text-xs font-semibold py-2 px-4 cursor-pointer"
+              className="border-white/5 hover:bg-white/5 rounded-xl text-white text-xs font-semibold py-2 px-4 cursor-pointer"
             >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={executeDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-semibold py-2 px-4 cursor-pointer"
+              className="bg-red-600 text-white hover:bg-red-500 rounded-xl text-xs font-semibold py-2 px-4 cursor-pointer"
             >
               Excluir
             </AlertDialogAction>
