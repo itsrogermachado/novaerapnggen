@@ -34,11 +34,11 @@ import {
   Mail,
   Copy,
   Check,
-  Lock,
   RefreshCw,
   ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -98,14 +98,18 @@ function Index() {
   const [checkingAccess, setCheckingAccess] = useState<boolean>(true);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
+  const HARDCODED_ADMINS = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"];
+
   const checkAccess = useCallback(async () => {
     if (!user) return;
     try {
       setCheckingAccess(true);
+      const isHardcodedAdmin = HARDCODED_ADMINS.includes(user.email || "");
+
+      // RPC to check access
       const { data: active, error: activeErr } = await supabase.rpc("is_user_active", {
         user_uuid: user.id,
       });
-      if (activeErr) throw activeErr;
 
       const { data: profile, error: profileErr } = await supabase
         .from("profiles")
@@ -113,14 +117,29 @@ function Index() {
         .eq("id", user.id)
         .single();
 
-      if (profileErr) throw profileErr;
-
-      setIsActive(!!active);
-      setIsAdmin(!!profile?.is_admin);
+      if (isHardcodedAdmin) {
+        setIsActive(true);
+        setIsAdmin(true);
+        // Sync administrative privileges on profiles table if necessary
+        if (profile && !profile.is_admin) {
+          await supabase.from("profiles").update({ is_admin: true }).eq("id", user.id);
+        }
+      } else {
+        if (activeErr) throw activeErr;
+        if (profileErr) throw profileErr;
+        setIsActive(!!active);
+        setIsAdmin(!!profile?.is_admin);
+      }
     } catch (err) {
       console.error("Erro ao verificar acesso:", err);
-      setIsActive(false);
-      setIsAdmin(false);
+      // Hardcoded admin safety net fallback on network / database error
+      if (user.email && HARDCODED_ADMINS.includes(user.email)) {
+        setIsActive(true);
+        setIsAdmin(true);
+      } else {
+        setIsActive(false);
+        setIsAdmin(false);
+      }
     } finally {
       setCheckingAccess(false);
     }
@@ -314,11 +333,6 @@ function Index() {
     }
   };
 
-  const deleteLogo = async (id: string) => {
-    await supabase.from("logos").delete().eq("id", id);
-    setLogoLib((p) => p.filter((x) => x.id !== id));
-  };
-
   // Foregrounds (local apenas)
   const handleForegroundsUpload = async (files: FileList) => {
     const items: Foreground[] = [];
@@ -350,14 +364,13 @@ function Index() {
   };
 
   const randomizeForegrounds = () => {
-    if (foregrounds.length === 1) {
+    if (foregrounds.length <= 1) {
       toast.info("Adicione pelo menos 2 imagens para randomizar o padrão");
       return;
     }
-    if (foregrounds.length === 1) return;
     setForegrounds((prev) => {
       const shuffled = [...prev];
-      for (let i = shuffled.length - 1; i > 1; i--) {
+      for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
@@ -374,8 +387,8 @@ function Index() {
       setLogo({
         ...logo,
         x: 0.2 + Math.random() * 0.6,
-        y: 1.2 + Math.random() * 0.5,
-        size: 0.15 + Math.random() * 0.3,
+        y: 0.1 + Math.random() * 0.1,
+        size: 0.15 + Math.random() * 0.15,
       });
     }
     // Randomize text positions
@@ -383,7 +396,7 @@ function Index() {
       prev.map((t) => ({
         ...t,
         x: 0.2 + Math.random() * 0.6,
-        y: 0.2 + Math.random() * 0.6,
+        y: 0.3 + Math.random() * 0.4,
         size: Math.floor(32 + Math.random() * 80),
         color: ["#ffffff", "#facc15", "#f87171", "#60a5fa", "#34d399", "#a78bfa", "#fb923c"][
           Math.floor(Math.random() * 7)
@@ -550,12 +563,12 @@ function Index() {
 
   if (loading || checkingAccess) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-radial from-neutral-900 via-neutral-950 to-black text-white p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 transition-colors duration-200">
         <div className="relative flex items-center justify-center">
-          <div className="absolute w-20 h-20 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+          <div className="absolute w-20 h-20 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-        <p className="mt-6 text-sm text-neutral-400 font-medium tracking-wide animate-pulse">
+        <p className="mt-6 text-sm text-muted-foreground font-medium tracking-wide animate-pulse">
           Verificando credenciais de acesso...
         </p>
       </div>
@@ -568,19 +581,19 @@ function Index() {
 
   if (isActive === false) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-radial from-neutral-900 via-neutral-950 to-black text-white p-4 font-sans">
-        <div className="w-full max-w-md bg-neutral-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl shadow-black/80 text-center relative overflow-hidden animate-fade-in">
-          <div className="absolute -top-16 -right-16 w-36 h-36 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-4 font-sans relative overflow-hidden transition-colors duration-200">
+        <div className="absolute top-0 right-1/4 w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
-          <div className="mx-auto w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mb-6 shadow-inner animate-pulse">
-            <ShieldAlert className="w-8 h-8 text-red-500" />
+        <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-2xl text-center relative overflow-hidden animate-fade-in transition-colors duration-200">
+          <div className="mx-auto w-16 h-16 bg-destructive/10 border border-destructive/20 rounded-2xl flex items-center justify-center mb-6 shadow-inner animate-pulse">
+            <ShieldAlert className="w-8 h-8 text-destructive" />
           </div>
 
-          <h2 className="text-2xl font-bold tracking-tight mb-2 bg-gradient-to-r from-red-400 to-indigo-400 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold tracking-tight mb-2 bg-gradient-to-r from-destructive to-primary bg-clip-text text-transparent">
             Acesso Expirado ou Bloqueado
           </h2>
-          <p className="text-sm text-neutral-400 mb-8 leading-relaxed">
+          <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
             Seu período de teste ou convite expirou. Para reativar seu acesso e continuar gerando
             imagens de alta conversão, entre em contato com nossos administradores:
           </p>
@@ -589,22 +602,22 @@ function Index() {
             {["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].map((email) => (
               <div
                 key={email}
-                className="flex items-center justify-between p-3.5 bg-neutral-950/50 border border-white/5 rounded-xl hover:border-indigo-500/30 transition-all duration-300 group"
+                className="flex items-center justify-between p-3.5 bg-background border border-border rounded-xl hover:border-primary/40 transition-all duration-300 group"
               >
                 <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-indigo-400" />
-                  <span className="text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
+                  <Mail className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                     {email}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(email)}
-                  className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition"
+                  className="p-1.5 hover:bg-accent rounded-lg text-muted-foreground hover:text-foreground transition cursor-pointer"
                   title="Copiar e-mail"
                 >
                   {copiedEmail === email ? (
-                    <Check className="w-4 h-4 text-emerald-400" />
+                    <Check className="w-4 h-4 text-primary" />
                   ) : (
                     <Copy className="w-4 h-4" />
                   )}
@@ -616,7 +629,7 @@ function Index() {
           <div className="flex flex-col gap-3">
             <Button
               onClick={checkAccess}
-              className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-6 rounded-xl shadow-lg shadow-indigo-500/20 transition-all duration-300 group"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-300 group cursor-pointer"
             >
               <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
               Verificar Novamente
@@ -624,7 +637,7 @@ function Index() {
             <Button
               variant="outline"
               onClick={logout}
-              className="w-full border-white/10 hover:bg-white/5 text-neutral-400 hover:text-white py-6 rounded-xl transition-all duration-300"
+              className="w-full border-border hover:bg-accent text-muted-foreground hover:text-foreground py-6 rounded-xl transition-all duration-300 cursor-pointer"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sair da Conta
@@ -651,25 +664,32 @@ function Index() {
       : null;
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="border-b bg-background sticky top-0 z-10">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-200 font-sans">
+      <header className="border-b border-border bg-card/85 backdrop-blur-xl sticky top-0 z-10 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
-          <h1 className="text-base sm:text-lg font-bold truncate">Gerador de Resultados</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <span className="text-primary font-bold text-sm">NE</span>
+            </div>
+            <h1 className="text-base sm:text-lg font-bold truncate">Gerador de Resultados</h1>
+          </div>
+          
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <span className="text-xs sm:text-sm text-muted-foreground hidden md:inline truncate max-w-[180px]">
               {user.email}
             </span>
+            <ThemeToggle />
             {isAdmin && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigate({ to: "/admin" })}
-                className="border-indigo-500/30 hover:border-indigo-500 hover:bg-indigo-50/10 text-indigo-400 font-medium"
+                className="border-primary/20 hover:border-primary hover:bg-primary/10 text-primary font-semibold transition-all duration-200 cursor-pointer"
               >
                 Painel Admin
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={logout}>
+            <Button variant="outline" size="sm" onClick={logout} className="border-border hover:bg-accent cursor-pointer">
               <LogOut className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
@@ -677,11 +697,248 @@ function Index() {
       </header>
 
       <main className="max-w-7xl mx-auto p-3 sm:p-4 grid lg:grid-cols-[380px_1fr] gap-4 sm:gap-6">
-        {/* Preview */}
-        <div className="flex justify-center order-1 lg:order-2">
+        {/* Controls Panel */}
+        <Card className="p-4 sm:p-5 space-y-5 h-fit order-2 lg:order-1 bg-card border-border shadow-md transition-colors duration-200">
+          <div>
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Formato</Label>
+            <Select value={format} onValueChange={(v) => setFormat(v as Format)}>
+              <SelectTrigger className="mt-2 bg-background border-border text-foreground rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border text-foreground">
+                <SelectItem value="feed">{FORMATS.feed.label}</SelectItem>
+                <SelectItem value="story">{FORMATS.story.label}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Background library */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Biblioteca de Fundos</Label>
+              <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground transition-all duration-200 font-medium">
+                {uploadingBg ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5" />
+                )}
+                Adicionar
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingBg}
+                  onChange={(e) => e.target.files?.[0] && handleBgUpload(e.target.files[0])}
+                />
+              </label>
+            </div>
+            {bgLib.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Nenhum fundo salvo. Adicione um para começar.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 max-h-[160px] overflow-y-auto p-0.5">
+                {bgLib.map((b) => (
+                  <div key={b.id} className="relative group">
+                    <button
+                      onClick={() => selectBackground(b.image_url)}
+                      className={`block w-full aspect-square rounded-lg overflow-hidden border-2 transition ${bgUrl === b.image_url ? "border-primary scale-[0.98] shadow-inner" : "border-transparent opacity-80 hover:opacity-100"}`}
+                    >
+                      <img src={b.image_url} alt={b.name} className="w-full h-full object-cover" />
+                    </button>
+                    <button
+                      onClick={() => promptDeleteBackground(b.id, b.name)}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow hover:bg-destructive/90 cursor-pointer"
+                      title="Excluir fundo"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Logo library */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Biblioteca de Logos</Label>
+              <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground transition-all duration-200 font-medium">
+                {uploadingLogo ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5" />
+                )}
+                Adicionar
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingLogo}
+                  onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
+                />
+              </label>
+            </div>
+            {logoLib.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nenhuma logo salva.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 max-h-[160px] overflow-y-auto p-0.5">
+                {logoLib.map((l) => (
+                  <div key={l.id} className="relative group">
+                    <button
+                      onClick={() => selectLogo(l.image_url)}
+                      className={`block w-full aspect-square rounded-lg overflow-hidden border-2 bg-muted transition ${logo?.url === l.image_url ? "border-primary scale-[0.98] shadow-inner" : "border-transparent opacity-80 hover:opacity-100"}`}
+                    >
+                      <img
+                        src={l.image_url}
+                        alt={l.name}
+                        className="w-full h-full object-contain p-1"
+                      />
+                    </button>
+                    <button
+                      onClick={() => promptDeleteLogo(l.id, l.name)}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow hover:bg-destructive/90 cursor-pointer"
+                      title="Excluir logo"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {logo && (
+              <div className="mt-2 space-y-1 bg-muted/40 p-2.5 rounded-xl border border-border/50">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground font-medium">Tamanho da logo</span>
+                  <button onClick={() => setLogo(null)} className="text-destructive font-semibold hover:underline cursor-pointer">
+                    Remover
+                  </button>
+                </div>
+                <input
+                  type="range"
+                  min={0.05}
+                  max={0.6}
+                  step={0.01}
+                  value={logo.size}
+                  onChange={(e) => setLogo({ ...logo, size: +e.target.value })}
+                  className="w-full accent-primary h-1.5 bg-background rounded-lg cursor-pointer"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Foreground images */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Imagens em Destaque</Label>
+              <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground transition-all duration-200 font-medium">
+                <ImageIcon className="w-3.5 h-3.5" /> Adicionar
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => e.target.files && handleForegroundsUpload(e.target.files)}
+                />
+              </label>
+            </div>
+            {foregrounds.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Faça upload de uma ou mais imagens. Elas são organizadas em grid automaticamente.
+              </p>
+            ) : (
+              <div className="grid grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-0.5">
+                {foregrounds.map((f) => (
+                  <div key={f.id} className="relative group">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-muted/50 border border-border">
+                      <img src={f.url} alt="" className="w-full h-full object-contain p-1" />
+                    </div>
+                    <button
+                      onClick={() => removeForeground(f.id)}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow hover:bg-destructive/90 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Texts */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Textos</Label>
+              <Button size="sm" variant="outline" onClick={addText} className="border-border hover:bg-accent rounded-xl cursor-pointer">
+                <Plus className="w-4 h-4 mr-1" /> Adicionar
+              </Button>
+            </div>
+            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+              {texts.map((t) => (
+                <div
+                  key={t.id}
+                  className={`border rounded-xl p-3 space-y-2 transition-all duration-250 ${selectedId === t.id ? "ring-2 ring-primary border-transparent" : "border-border bg-background/50"}`}
+                  onClick={() => setSelectedId(t.id)}
+                >
+                  <textarea
+                    className="w-full text-sm border border-border rounded-lg p-2 bg-background text-foreground focus-visible:ring-primary/50 focus-visible:outline-none"
+                    rows={2}
+                    value={t.text}
+                    onChange={(e) => updateText(t.id, { text: e.target.value })}
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={t.color}
+                      onChange={(e) => updateText(t.id, { color: e.target.value })}
+                      className="w-9 h-9 rounded-lg cursor-pointer border border-border"
+                    />
+                    <div className="flex-1">
+                      <input
+                        type="range"
+                        min={16}
+                        max={200}
+                        value={t.size}
+                        onChange={(e) => updateText(t.id, { size: +e.target.value })}
+                        className="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+                      />
+                      <div className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t.size}px</div>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => removeText(t.id)} className="text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Randomizers */}
+          <div className="space-y-2 bg-muted/30 p-3 rounded-2xl border border-border/50">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Randomização</Label>
+            <div className="grid grid-cols-3 gap-2 mt-1">
+              <Button variant="secondary" size="sm" onClick={randomizeBackground} className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer">
+                <Shuffle className="w-3 h-3 mr-1" /> Fundo
+              </Button>
+              <Button variant="secondary" size="sm" onClick={randomizeForegrounds} className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer">
+                <Shuffle className="w-3 h-3 mr-1" /> Padrão
+              </Button>
+              <Button variant="secondary" size="sm" onClick={randomizeAll} className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer">
+                <Shuffle className="w-3 h-3 mr-1" /> Tudo
+              </Button>
+            </div>
+          </div>
+
+          <Button onClick={download} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 cursor-pointer" size="lg">
+            <Download className="w-4 h-4 mr-2" /> Baixar Imagem
+          </Button>
+        </Card>
+
+        {/* Canvas Preview Area */}
+        <div className="flex justify-center items-start order-1 lg:order-2">
           <div
             ref={previewRef}
-            className={`relative ${aspectClass} w-full max-w-sm lg:max-w-md bg-neutral-900 rounded-lg overflow-hidden shadow-xl select-none touch-none`}
+            className={`relative ${aspectClass} w-full max-w-sm lg:max-w-md bg-muted border border-border rounded-2xl overflow-hidden shadow-xl select-none touch-none transition-colors duration-200`}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
@@ -694,7 +951,7 @@ function Index() {
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-neutral-500 text-sm p-4 text-center">
+              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm p-4 text-center">
                 Escolha um fundo da biblioteca ou faça upload
               </div>
             )}
@@ -755,270 +1012,37 @@ function Index() {
                   fontWeight: 700,
                   textAlign: "center",
                   whiteSpace: "pre-wrap",
-                  textShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                  textShadow: "0 2px 8px rgba(0,0,0,0.45)",
                   cursor: "grab",
                   lineHeight: 1.15,
                   userSelect: "none",
                   touchAction: "none",
                 }}
-                className={selectedId === t.id ? "outline-2 outline-dashed outline-white/70" : ""}
+                className={selectedId === t.id ? "outline-2 outline-dashed outline-white/80" : ""}
               >
                 {t.text}
               </div>
             ))}
           </div>
         </div>
-
-        {/* Controls */}
-        <Card className="p-4 sm:p-5 space-y-5 h-fit order-2 lg:order-1">
-          <div>
-            <Label>Formato</Label>
-            <Select value={format} onValueChange={(v) => setFormat(v as Format)}>
-              <SelectTrigger className="mt-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="feed">{FORMATS.feed.label}</SelectItem>
-                <SelectItem value="story">{FORMATS.story.label}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Background library */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Biblioteca de Fundos</Label>
-              <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1 border rounded hover:bg-muted">
-                {uploadingBg ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Upload className="w-3 h-3" />
-                )}
-                Adicionar
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingBg}
-                  onChange={(e) => e.target.files?.[0] && handleBgUpload(e.target.files[0])}
-                />
-              </label>
-            </div>
-            {bgLib.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Nenhum fundo salvo. Adicione um para começar.
-              </p>
-            ) : (
-              <div className="grid grid-cols-3 gap-2">
-                {bgLib.map((b) => (
-                  <div key={b.id} className="relative group">
-                    <button
-                      onClick={() => selectBackground(b.image_url)}
-                      className={`block w-full aspect-square rounded overflow-hidden border-2 ${bgUrl === b.image_url ? "border-primary" : "border-transparent"}`}
-                    >
-                      <img src={b.image_url} alt={b.name} className="w-full h-full object-cover" />
-                    </button>
-                    <button
-                      onClick={() => promptDeleteBackground(b.id, b.name)}
-                      className="absolute top-1 right-1 bg-black/60 text-white rounded p-0.5 opacity-0 group-hover:opacity-100 transition"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Logo library */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Biblioteca de Logos</Label>
-              <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1 border rounded hover:bg-muted">
-                {uploadingLogo ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Upload className="w-3 h-3" />
-                )}
-                Adicionar
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingLogo}
-                  onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
-                />
-              </label>
-            </div>
-            {logoLib.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhuma logo salva.</p>
-            ) : (
-              <div className="grid grid-cols-3 gap-2">
-                {logoLib.map((l) => (
-                  <div key={l.id} className="relative group">
-                    <button
-                      onClick={() => selectLogo(l.image_url)}
-                      className={`block w-full aspect-square rounded overflow-hidden border-2 bg-muted ${logo?.url === l.image_url ? "border-primary" : "border-transparent"}`}
-                    >
-                      <img
-                        src={l.image_url}
-                        alt={l.name}
-                        className="w-full h-full object-contain"
-                      />
-                    </button>
-                    <button
-                      onClick={() => promptDeleteLogo(l.id, l.name)}
-                      className="absolute top-1 right-1 bg-black/60 text-white rounded p-0.5 opacity-0 group-hover:opacity-100 transition"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {logo && (
-              <div className="mt-2 space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Tamanho da logo</span>
-                  <button onClick={() => setLogo(null)} className="text-destructive">
-                    Remover
-                  </button>
-                </div>
-                <input
-                  type="range"
-                  min={0.05}
-                  max={0.6}
-                  step={0.01}
-                  value={logo.size}
-                  onChange={(e) => setLogo({ ...logo, size: +e.target.value })}
-                  className="w-full"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Foreground images */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Imagens em Destaque</Label>
-              <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1 border rounded hover:bg-muted">
-                <ImageIcon className="w-3 h-3" /> Adicionar
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => e.target.files && handleForegroundsUpload(e.target.files)}
-                />
-              </label>
-            </div>
-            {foregrounds.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Faça upload de uma ou mais imagens. Elas são organizadas automaticamente.
-              </p>
-            ) : (
-              <div className="grid grid-cols-4 gap-2">
-                {foregrounds.map((f) => (
-                  <div key={f.id} className="relative group">
-                    <div className="aspect-square rounded overflow-hidden bg-muted">
-                      <img src={f.url} alt="" className="w-full h-full object-contain" />
-                    </div>
-                    <button
-                      onClick={() => removeForeground(f.id)}
-                      className="absolute top-1 right-1 bg-black/60 text-white rounded p-0.5 opacity-0 group-hover:opacity-100 transition"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Texts */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Textos</Label>
-              <Button size="sm" variant="outline" onClick={addText}>
-                <Plus className="w-4 h-4 mr-1" /> Adicionar
-              </Button>
-            </div>
-            <div className="space-y-3">
-              {texts.map((t) => (
-                <div
-                  key={t.id}
-                  className={`border rounded-lg p-3 space-y-2 ${selectedId === t.id ? "ring-2 ring-primary" : ""}`}
-                  onClick={() => setSelectedId(t.id)}
-                >
-                  <textarea
-                    className="w-full text-sm border rounded p-2 bg-background"
-                    rows={2}
-                    value={t.text}
-                    onChange={(e) => updateText(t.id, { text: e.target.value })}
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={t.color}
-                      onChange={(e) => updateText(t.id, { color: e.target.value })}
-                      className="w-9 h-9 rounded cursor-pointer border"
-                    />
-                    <div className="flex-1">
-                      <input
-                        type="range"
-                        min={16}
-                        max={200}
-                        value={t.size}
-                        onChange={(e) => updateText(t.id, { size: +e.target.value })}
-                        className="w-full"
-                      />
-                      <div className="text-xs text-muted-foreground">{t.size}px</div>
-                    </div>
-                    <Button size="icon" variant="ghost" onClick={() => removeText(t.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Randomizers */}
-          <div className="space-y-2">
-            <Label>Randomização</Label>
-            <div className="grid grid-cols-3 gap-2">
-              <Button variant="secondary" size="sm" onClick={randomizeBackground}>
-                <Shuffle className="w-3 h-3 mr-1" /> Fundo
-              </Button>
-              <Button variant="secondary" size="sm" onClick={randomizeForegrounds}>
-                <Shuffle className="w-3 h-3 mr-1" /> Padrão
-              </Button>
-              <Button variant="secondary" size="sm" onClick={randomizeAll}>
-                <Shuffle className="w-3 h-3 mr-1" /> Tudo
-              </Button>
-            </div>
-          </div>
-
-          <Button onClick={download} className="w-full" size="lg">
-            <Download className="w-4 h-4 mr-2" /> Baixar Imagem
-          </Button>
-        </Card>
       </main>
 
       <AlertDialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card border-border text-foreground rounded-2xl max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Tem certeza que deseja remover "{confirmDelete?.name}" da biblioteca? Esta ação não
               pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setConfirmDelete(null)}>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel onClick={() => setConfirmDelete(null)} className="border-border hover:bg-accent rounded-xl text-foreground cursor-pointer">
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={executeDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl cursor-pointer"
             >
               Excluir
             </AlertDialogAction>

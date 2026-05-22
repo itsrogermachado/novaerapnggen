@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Key, Mail, Lock, Loader2, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -27,6 +29,8 @@ function AuthPage() {
     description?: string;
     error?: string;
   }>({ checked: false, valid: false });
+
+  const HARDCODED_ADMINS = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"];
 
   useEffect(() => {
     if (!loading && user) navigate({ to: "/" });
@@ -81,11 +85,9 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     try {
+      const trimmedEmail = email.trim().toLowerCase();
       if (mode === "signup") {
-        const trimmedEmail = email.trim().toLowerCase();
-        const isAdminEmail = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(
-          trimmedEmail,
-        );
+        const isAdminEmail = HARDCODED_ADMINS.includes(trimmedEmail);
 
         if (!isAdminEmail && !inviteToken) {
           toast.error("O token de convite é obrigatório.");
@@ -104,10 +106,10 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Conta criada com sucesso!");
+        toast.success("Conta criada com sucesso! Verifique seu acesso.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
+          email: trimmedEmail,
           password,
         });
         if (error) throw error;
@@ -120,69 +122,106 @@ function AuthPage() {
     }
   };
 
+  const isCurrentEmailAdmin = HARDCODED_ADMINS.includes(email.trim().toLowerCase());
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <Card className="w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold mb-1">Gerador de Resultados</h1>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden transition-colors duration-200 selection:bg-primary selection:text-primary-foreground font-sans">
+      {/* Dynamic Glows */}
+      <div className="absolute top-0 right-1/4 w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Floating Theme Switcher */}
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-md p-8 bg-card border-border shadow-xl relative z-10 transition-colors duration-200 rounded-2xl">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-primary" />
+          </div>
+          <span className="font-bold tracking-tight text-lg text-foreground">Nova Era</span>
+        </div>
+        
+        <h1 className="text-2xl font-extrabold tracking-tight mb-1 text-foreground">
+          Gerador de Resultados
+        </h1>
         <p className="text-sm text-muted-foreground mb-6">
-          {mode === "login" ? "Entre para acessar a ferramenta" : "Crie sua conta"}
+          {mode === "login" ? "Entre para acessar a ferramenta" : "Crie sua conta de membro"}
         </p>
+
         <form onSubmit={submit} className="space-y-4">
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+          <div className="space-y-1">
+            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              E-mail
+            </Label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-background border-border text-foreground pl-10 py-5 rounded-xl focus-visible:ring-primary/50"
+                placeholder="nome@exemplo.com"
+              />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+
+          <div className="space-y-1">
+            <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Senha
+            </Label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="password"
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="bg-background border-border text-foreground pl-10 py-5 rounded-xl focus-visible:ring-primary/50"
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
           </div>
+
           {mode === "signup" && (
-            <div>
+            <div className="space-y-1 animate-fade-in">
               <div className="flex justify-between items-center mb-1">
-                <Label htmlFor="token">Token de Convite</Label>
-                {["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(
-                  email.trim().toLowerCase(),
-                ) && (
-                  <span className="text-xs text-emerald-500 font-medium animate-pulse">
+                <Label htmlFor="token" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Token de Convite
+                </Label>
+                {isCurrentEmailAdmin && (
+                  <span className="text-[10px] text-primary font-medium animate-pulse">
                     Opcional para Admin
                   </span>
                 )}
               </div>
-              <Input
-                id="token"
-                type="text"
-                placeholder="Insira o seu token de convite"
-                required={
-                  !["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(
-                    email.trim().toLowerCase(),
-                  )
-                }
-                value={inviteToken}
-                onChange={(e) => {
-                  setInviteToken(e.target.value);
-                  checkToken(e.target.value);
-                }}
-                onBlur={() => checkToken(inviteToken)}
-              />
+              <div className="relative">
+                <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="token"
+                  type="text"
+                  placeholder="NE-XXXXXXXXXXXX"
+                  required={!isCurrentEmailAdmin}
+                  value={inviteToken}
+                  onChange={(e) => {
+                    setInviteToken(e.target.value);
+                    checkToken(e.target.value);
+                  }}
+                  onBlur={() => checkToken(inviteToken)}
+                  className="bg-background border-border text-foreground pl-10 py-5 rounded-xl focus-visible:ring-primary/50 font-mono"
+                />
+              </div>
               {inviteToken && tokenStatus.checked && (
                 <div className="mt-1 text-xs">
                   {tokenStatus.valid ? (
-                    <span className="text-emerald-500 font-medium">
-                      ✓ Token válido{" "}
-                      {tokenStatus.description ? `(Destinado a: ${tokenStatus.description})` : ""}
+                    <span className="text-primary font-medium">
+                      ✓ Convite válido{" "}
+                      {tokenStatus.description ? `(${tokenStatus.description})` : ""}
                     </span>
                   ) : (
                     <span className="text-destructive font-medium">✗ {tokenStatus.error}</span>
@@ -191,15 +230,34 @@ function AuthPage() {
               )}
             </div>
           )}
-          <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Aguarde..." : mode === "login" ? "Entrar" : "Cadastrar"}
+
+          <Button
+            type="submit"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 cursor-pointer"
+            disabled={busy}
+          >
+            {busy ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processando...
+              </span>
+            ) : mode === "login" ? (
+              "Entrar"
+            ) : (
+              "Cadastrar"
+            )}
           </Button>
         </form>
+
         <button
-          onClick={() => setMode(mode === "login" ? "signup" : "login")}
-          className="mt-4 text-sm text-primary hover:underline w-full text-center"
+          onClick={() => {
+            setMode(mode === "login" ? "signup" : "login");
+            setTokenStatus({ checked: false, valid: false });
+            setInviteToken("");
+          }}
+          className="mt-5 text-sm text-primary hover:text-primary/80 transition-colors hover:underline w-full text-center cursor-pointer font-medium"
         >
-          {mode === "login" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
+          {mode === "login" ? "Não tem conta? Cadastre-se com um convite" : "Já tem uma conta? Entrar"}
         </button>
       </Card>
     </div>

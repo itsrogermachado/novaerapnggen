@@ -127,7 +127,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m=window.matchMedia('(prefers-color-scheme: dark)');var apply=function(e){document.documentElement.classList.toggle('dark', e.matches);};apply(m);m.addEventListener&&m.addEventListener('change',apply);}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');var dark=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dark);}catch(e){}})();`,
           }}
         />
       </head>

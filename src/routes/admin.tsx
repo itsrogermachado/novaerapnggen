@@ -59,6 +59,7 @@ import {
   RefreshCw,
   Loader2,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -152,14 +153,23 @@ function AdminPage() {
       if (!user) {
         navigate({ to: "/auth" });
       } else {
-        // verify admin status
+        // verify admin status with safety net fallback
         const verifyAdmin = async () => {
           try {
+            const isHardcodedAdmin = HARDCODED_ADMINS.includes(user.email || "");
+
+            if (isHardcodedAdmin) {
+              setIsAdmin(true);
+              loadData();
+              return;
+            }
+
             const { data } = await supabase
               .from("profiles")
               .select("is_admin")
               .eq("id", user.id)
               .single();
+            
             if (data?.is_admin) {
               setIsAdmin(true);
               loadData();
@@ -169,8 +179,13 @@ function AdminPage() {
               navigate({ to: "/" });
             }
           } catch {
-            setIsAdmin(false);
-            navigate({ to: "/" });
+            if (user.email && HARDCODED_ADMINS.includes(user.email)) {
+              setIsAdmin(true);
+              loadData();
+            } else {
+              setIsAdmin(false);
+              navigate({ to: "/" });
+            }
           }
         };
         verifyAdmin();
@@ -332,25 +347,21 @@ function AdminPage() {
     if (t.is_revoked)
       return {
         label: "Revogado",
-        variant: "destructive" as const,
-        colorClass: "bg-neutral-850 text-neutral-400 border-neutral-700",
+        colorClass: "bg-muted text-muted-foreground border-border",
       };
     if (new Date(t.expires_at) < new Date())
       return {
         label: "Expirado",
-        variant: "destructive" as const,
-        colorClass: "bg-red-500/10 text-red-400 border-red-500/20",
+        colorClass: "bg-destructive/10 text-destructive border-destructive/20",
       };
     if (t.used_by)
       return {
         label: "Usado",
-        variant: "secondary" as const,
-        colorClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+        colorClass: "bg-secondary text-secondary-foreground border-border",
       };
     return {
       label: "Ativo",
-      variant: "default" as const,
-      colorClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+      colorClass: "bg-primary/10 text-primary border-primary/20",
     };
   };
 
@@ -359,7 +370,7 @@ function AdminPage() {
       return {
         label: "Ativo (Admin)",
         isWebActive: true,
-        badgeClass: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+        badgeClass: "bg-primary/15 text-primary border-primary/20",
       };
     }
 
@@ -367,23 +378,23 @@ function AdminPage() {
     const token = tokens.find((t) => t.used_by === p.id);
     if (!token) {
       return {
-        label: "Sem Acesso (Sem Token)",
+        label: "Sem Acesso",
         isWebActive: false,
-        badgeClass: "bg-neutral-500/10 text-neutral-400 border-neutral-500/20",
+        badgeClass: "bg-muted text-muted-foreground border-border",
       };
     }
     if (token.is_revoked) {
       return {
-        label: "Bloqueado (Revogado)",
+        label: "Bloqueado",
         isWebActive: false,
-        badgeClass: "bg-neutral-800 text-neutral-400 border-neutral-700",
+        badgeClass: "bg-muted text-muted-foreground border-border",
       };
     }
     if (new Date(token.expires_at) < new Date()) {
       return {
         label: "Expirado",
         isWebActive: false,
-        badgeClass: "bg-red-500/10 text-red-400 border-red-500/20",
+        badgeClass: "bg-destructive/10 text-destructive border-destructive/20",
         expiresAt: token.expires_at,
       };
     }
@@ -391,7 +402,7 @@ function AdminPage() {
     return {
       label: "Ativo",
       isWebActive: true,
-      badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+      badgeClass: "bg-primary/10 text-primary border-primary/20",
       expiresAt: token.expires_at,
     };
   };
@@ -423,9 +434,9 @@ function AdminPage() {
 
   if (loading || isAdmin === null) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-radial from-neutral-900 via-neutral-950 to-black text-white p-4">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
-        <p className="text-sm text-neutral-400 font-medium tracking-wide">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+        <p className="text-sm text-muted-foreground font-medium tracking-wide">
           Autenticando painel de controle...
         </p>
       </div>
@@ -433,40 +444,41 @@ function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-indigo-500 selection:text-white">
-      {/* Glow backgrounds */}
-      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-violet-500/5 rounded-full blur-[150px] pointer-events-none" />
+    <div className="min-h-screen bg-background text-foreground font-sans transition-colors duration-200">
+      {/* Subtle background glow */}
+      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px] pointer-events-none" />
 
       {/* Header */}
-      <header className="border-b border-white/5 bg-neutral-900/60 backdrop-blur-xl sticky top-0 z-20">
+      <header className="border-b border-border bg-card/85 backdrop-blur-xl sticky top-0 z-20 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate({ to: "/" })}
-              className="p-2 hover:bg-neutral-800 rounded-xl text-neutral-400 hover:text-white transition-all duration-300"
+              className="p-2 hover:bg-accent hover:text-accent-foreground rounded-xl text-muted-foreground transition-all duration-200"
               title="Voltar ao Gerador"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-indigo-400 via-violet-400 to-emerald-400 bg-clip-text text-transparent">
+              <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                 Painel Administrativo
               </h1>
-              <p className="text-xs text-neutral-400 hidden sm:block">
+              <p className="text-xs text-muted-foreground hidden sm:block">
                 Controle de tokens, convites e acesso de usuários
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-neutral-400 font-medium hidden md:inline-block px-3 py-1.5 bg-white/5 border border-white/5 rounded-lg">
-              Logado como: <span className="text-indigo-400 font-semibold">{user?.email}</span>
+            <span className="text-xs text-muted-foreground font-medium hidden md:inline-block px-3 py-1.5 bg-muted border border-border rounded-lg">
+              Logado como: <span className="text-primary font-semibold">{user?.email}</span>
             </span>
+            <ThemeToggle />
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate({ to: "/" })}
-              className="border-white/10 hover:bg-white/5 text-neutral-300 hover:text-white animate-fade-in"
+              className="border-border hover:bg-accent text-foreground transition-all duration-200"
             >
               Acessar Gerador
             </Button>
@@ -476,25 +488,25 @@ function AdminPage() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         <Tabs defaultValue="tokens" className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
-            <TabsList className="bg-neutral-900 border border-white/5 p-1 rounded-xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-4">
+            <TabsList className="bg-muted border border-border p-1 rounded-xl">
               <TabsTrigger
                 value="tokens"
-                className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/10 text-neutral-400 font-medium px-4 py-2 flex items-center gap-2 transition-all duration-300 cursor-pointer"
+                className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:shadow-primary/10 text-muted-foreground font-medium px-4 py-2 flex items-center gap-2 transition-all duration-200 cursor-pointer"
               >
                 <Key className="w-4 h-4" />
                 Gerenciar Convites
               </TabsTrigger>
               <TabsTrigger
                 value="users"
-                className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/10 text-neutral-400 font-medium px-4 py-2 flex items-center gap-2 transition-all duration-300 cursor-pointer"
+                className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:shadow-primary/10 text-muted-foreground font-medium px-4 py-2 flex items-center gap-2 transition-all duration-200 cursor-pointer"
               >
                 <Users className="w-4 h-4" />
                 Usuários Registrados
               </TabsTrigger>
             </TabsList>
 
-            <div className="text-xs text-neutral-500 font-medium">
+            <div className="text-xs text-muted-foreground font-medium">
               Última atualização: {new Date().toLocaleTimeString()}
             </div>
           </div>
@@ -503,14 +515,14 @@ function AdminPage() {
           <TabsContent value="tokens" className="space-y-6 outline-none">
             <div className="grid lg:grid-cols-[380px_1fr] gap-6">
               {/* Token Generator Card */}
-              <Card className="bg-neutral-900/60 backdrop-blur-md border-white/5 h-fit shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+              <Card className="bg-card border-border h-fit shadow-xl relative overflow-hidden transition-colors duration-200">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold flex items-center gap-2 text-white">
-                    <Plus className="w-5 h-5 text-indigo-400" />
+                  <CardTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
+                    <Plus className="w-5 h-5 text-primary" />
                     Gerar Novo Convite
                   </CardTitle>
-                  <CardDescription className="text-neutral-400">
+                  <CardDescription className="text-muted-foreground">
                     Crie um token único de uso único para cadastrar novos usuários.
                   </CardDescription>
                 </CardHeader>
@@ -519,7 +531,7 @@ function AdminPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="tokenDesc"
-                        className="text-neutral-300 text-xs font-semibold uppercase tracking-wider"
+                        className="text-foreground text-xs font-semibold uppercase tracking-wider"
                       >
                         Identificação / Notas
                       </Label>
@@ -528,14 +540,14 @@ function AdminPage() {
                         placeholder="Ex: Roger Cliente Gold ou Nome do Usuário"
                         value={tokenDesc}
                         onChange={(e) => setTokenDesc(e.target.value)}
-                        className="bg-neutral-950 border-white/10 text-white rounded-xl focus-visible:ring-indigo-500/50 py-5"
+                        className="bg-background border-border text-foreground rounded-xl focus-visible:ring-primary/50 py-5"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label
                         htmlFor="tokenDuration"
-                        className="text-neutral-300 text-xs font-semibold uppercase tracking-wider"
+                        className="text-foreground text-xs font-semibold uppercase tracking-wider"
                       >
                         Tempo de Validade
                       </Label>
@@ -543,22 +555,22 @@ function AdminPage() {
                         value={tokenDuration}
                         onValueChange={(v) => setTokenDuration(v as TokenDuration)}
                       >
-                        <SelectTrigger className="bg-neutral-950 border-white/10 text-white rounded-xl focus:ring-indigo-500/50 py-5 h-auto">
+                        <SelectTrigger className="bg-background border-border text-foreground rounded-xl focus:ring-primary/50 py-5 h-auto">
                           <SelectValue placeholder="Selecione o tempo de validade" />
                         </SelectTrigger>
-                        <SelectContent className="bg-neutral-900 border-white/5 text-white">
-                          <SelectItem value="24h" className="focus:bg-indigo-600 focus:text-white">
+                        <SelectContent className="bg-card border-border text-foreground">
+                          <SelectItem value="24h" className="focus:bg-primary focus:text-primary-foreground">
                             24 Horas
                           </SelectItem>
-                          <SelectItem value="7d" className="focus:bg-indigo-600 focus:text-white">
+                          <SelectItem value="7d" className="focus:bg-primary focus:text-primary-foreground">
                             7 Dias
                           </SelectItem>
-                          <SelectItem value="30d" className="focus:bg-indigo-600 focus:text-white">
+                          <SelectItem value="30d" className="focus:bg-primary focus:text-primary-foreground">
                             30 Dias
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                      <span className="text-[10px] text-neutral-500 block">
+                      <span className="text-[10px] text-muted-foreground block">
                         O usuário terá este período de acesso liberado após ativar a conta.
                       </span>
                     </div>
@@ -566,7 +578,7 @@ function AdminPage() {
                     <Button
                       type="submit"
                       disabled={generatingToken}
-                      className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-6 rounded-xl shadow-lg shadow-indigo-600/20 transition-all duration-300 cursor-pointer"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 cursor-pointer"
                     >
                       {generatingToken ? (
                         <>
@@ -585,58 +597,58 @@ function AdminPage() {
               </Card>
 
               {/* Tokens Table List */}
-              <Card className="bg-neutral-900/60 backdrop-blur-md border-white/5 shadow-xl">
+              <Card className="bg-card border-border shadow-xl transition-colors duration-200">
                 <CardHeader className="pb-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-                      <Key className="w-5 h-5 text-indigo-400" />
+                    <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                      <Key className="w-5 h-5 text-primary" />
                       Lista de Convites Gerados
                     </CardTitle>
-                    <CardDescription className="text-neutral-400">
+                    <CardDescription className="text-muted-foreground">
                       Visualize os tokens que foram gerados, seu status e quem os usou.
                     </CardDescription>
                   </div>
                   <div className="relative w-full md:w-72">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="Pesquisar token, notas ou email..."
                       value={tokenSearch}
                       onChange={(e) => setTokenSearch(e.target.value)}
-                      className="bg-neutral-950 border-white/10 text-white rounded-xl pl-10 focus-visible:ring-indigo-500/50"
+                      className="bg-background border-border text-foreground rounded-xl pl-10 focus-visible:ring-primary/50"
                     />
                   </div>
                 </CardHeader>
                 <CardContent>
                   {loadingData ? (
                     <div className="py-20 flex flex-col items-center justify-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-2" />
-                      <span className="text-sm text-neutral-400">Carregando tokens...</span>
+                      <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
+                      <span className="text-sm text-muted-foreground">Carregando tokens...</span>
                     </div>
                   ) : filteredTokens.length === 0 ? (
-                    <div className="py-20 text-center text-neutral-500">
+                    <div className="py-20 text-center text-muted-foreground">
                       Nenhum token encontrado.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-xl border border-white/5 bg-neutral-950/40">
+                    <div className="overflow-x-auto rounded-xl border border-border bg-background/50">
                       <Table>
-                        <TableHeader className="bg-neutral-950 border-b border-white/5">
+                        <TableHeader className="bg-background border-b border-border">
                           <TableRow>
-                            <TableHead className="text-neutral-400 font-semibold py-4">
+                            <TableHead className="text-muted-foreground font-semibold py-4">
                               Notas / Identificação
                             </TableHead>
-                            <TableHead className="text-neutral-400 font-semibold py-4">
+                            <TableHead className="text-muted-foreground font-semibold py-4">
                               Token
                             </TableHead>
-                            <TableHead className="text-neutral-400 font-semibold py-4">
+                            <TableHead className="text-muted-foreground font-semibold py-4">
                               Status
                             </TableHead>
-                            <TableHead className="text-neutral-400 font-semibold py-4">
+                            <TableHead className="text-muted-foreground font-semibold py-4">
                               Expiração
                             </TableHead>
-                            <TableHead className="text-neutral-400 font-semibold py-4">
+                            <TableHead className="text-muted-foreground font-semibold py-4">
                               Utilizado Por
                             </TableHead>
-                            <TableHead className="text-neutral-400 font-semibold py-4 text-right">
+                            <TableHead className="text-muted-foreground font-semibold py-4 text-right">
                               Ações
                             </TableHead>
                           </TableRow>
@@ -647,15 +659,15 @@ function AdminPage() {
                             return (
                               <TableRow
                                 key={t.id}
-                                className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                                className="border-b border-border hover:bg-muted/50 transition-colors"
                               >
-                                <TableCell className="font-medium text-neutral-200 py-4 max-w-[200px] truncate">
+                                <TableCell className="font-medium text-foreground py-4 max-w-[200px] truncate">
                                   {t.description || (
-                                    <span className="text-neutral-600 italic">Nenhuma nota</span>
+                                    <span className="text-muted-foreground/60 italic text-xs">Nenhuma nota</span>
                                   )}
                                 </TableCell>
                                 <TableCell className="font-mono text-sm py-4">
-                                  <span className="text-indigo-400 font-semibold">{t.token}</span>
+                                  <span className="text-primary font-semibold">{t.token}</span>
                                 </TableCell>
                                 <TableCell className="py-4">
                                   <span
@@ -664,16 +676,16 @@ function AdminPage() {
                                     {status.label}
                                   </span>
                                 </TableCell>
-                                <TableCell className="text-neutral-400 text-xs py-4">
+                                <TableCell className="text-muted-foreground text-xs py-4">
                                   {formatDate(t.expires_at)}
                                 </TableCell>
-                                <TableCell className="py-4 text-xs font-medium text-neutral-300">
+                                <TableCell className="py-4 text-xs font-medium text-foreground">
                                   {t.used_by ? (
-                                    <span className="bg-white/5 border border-white/5 px-2 py-1 rounded text-neutral-300">
+                                    <span className="bg-muted border border-border px-2 py-1 rounded text-muted-foreground">
                                       {getEmailFromId(t.used_by)}
                                     </span>
                                   ) : (
-                                    <span className="text-neutral-600 italic">Pendente</span>
+                                    <span className="text-muted-foreground/60 italic text-xs">Pendente</span>
                                   )}
                                 </TableCell>
                                 <TableCell className="py-4 text-right">
@@ -682,11 +694,11 @@ function AdminPage() {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => copyInviteLink(t.token, t.id)}
-                                      className="h-8 w-8 p-0 text-neutral-400 hover:text-white cursor-pointer"
+                                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
                                       title="Copiar link de cadastro"
                                     >
                                       {copiedTokenId === t.id ? (
-                                        <Check className="w-4 h-4 text-emerald-400" />
+                                        <Check className="w-4 h-4 text-primary" />
                                       ) : (
                                         <Copy className="w-4 h-4" />
                                       )}
@@ -696,7 +708,7 @@ function AdminPage() {
                                         size="sm"
                                         variant="ghost"
                                         onClick={() => handleRevokeToken(t.id)}
-                                        className="h-8 w-8 p-0 text-red-400 hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
+                                        className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
                                         title="Revogar token"
                                       >
                                         <Ban className="w-4 h-4" />
@@ -718,59 +730,59 @@ function AdminPage() {
 
           {/* Users Tab */}
           <TabsContent value="users" className="outline-none">
-            <Card className="bg-neutral-900/60 backdrop-blur-md border-white/5 shadow-xl">
+            <Card className="bg-card border-border shadow-xl transition-colors duration-200">
               <CardHeader className="pb-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-indigo-400" />
+                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" />
                     Lista de Usuários Registrados
                   </CardTitle>
-                  <CardDescription className="text-neutral-400">
+                  <CardDescription className="text-muted-foreground">
                     Acompanhe todos os usuários, verifique se possuem acesso ativo e realize
                     renovações diretas.
                   </CardDescription>
                 </div>
                 <div className="relative w-full md:w-72">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Pesquisar usuário por e-mail..."
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
-                    className="bg-neutral-950 border-white/10 text-white rounded-xl pl-10 focus-visible:ring-indigo-500/50"
+                    className="bg-background border-border text-foreground rounded-xl pl-10 focus-visible:ring-primary/50"
                   />
                 </div>
               </CardHeader>
               <CardContent>
                 {loadingData ? (
                   <div className="py-20 flex flex-col items-center justify-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-2" />
-                    <span className="text-sm text-neutral-400">Carregando usuários...</span>
+                    <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
+                    <span className="text-sm text-muted-foreground">Carregando usuários...</span>
                   </div>
                 ) : filteredUsers.length === 0 ? (
-                  <div className="py-20 text-center text-neutral-500">
+                  <div className="py-20 text-center text-muted-foreground">
                     Nenhum usuário encontrado.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-white/5 bg-neutral-950/40">
+                  <div className="overflow-x-auto rounded-xl border border-border bg-background/50">
                     <Table>
-                      <TableHeader className="bg-neutral-950 border-b border-white/5">
+                      <TableHeader className="bg-background border-b border-border">
                         <TableRow>
-                          <TableHead className="text-neutral-400 font-semibold py-4">
+                          <TableHead className="text-muted-foreground font-semibold py-4">
                             E-mail
                           </TableHead>
-                          <TableHead className="text-neutral-400 font-semibold py-4">
+                          <TableHead className="text-muted-foreground font-semibold py-4">
                             Tipo
                           </TableHead>
-                          <TableHead className="text-neutral-400 font-semibold py-4">
+                          <TableHead className="text-muted-foreground font-semibold py-4">
                             Acesso Site
                           </TableHead>
-                          <TableHead className="text-neutral-400 font-semibold py-4">
+                          <TableHead className="text-muted-foreground font-semibold py-4">
                             Expiração do Acesso
                           </TableHead>
-                          <TableHead className="text-neutral-400 font-semibold py-4">
+                          <TableHead className="text-muted-foreground font-semibold py-4">
                             Registrado Em
                           </TableHead>
-                          <TableHead className="text-neutral-400 font-semibold py-4 text-right">
+                          <TableHead className="text-muted-foreground font-semibold py-4 text-right">
                             Ações
                           </TableHead>
                         </TableRow>
@@ -781,26 +793,26 @@ function AdminPage() {
                           return (
                             <TableRow
                               key={u.id}
-                              className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                              className="border-b border-border hover:bg-muted/50 transition-colors"
                             >
-                              <TableCell className="font-medium text-neutral-200 py-4">
-                                <span className="text-sm">{u.email}</span>
+                              <TableCell className="font-medium text-foreground py-4">
+                                <span className="text-sm font-semibold">{u.email}</span>
                                 {u.id === user?.id && (
-                                  <Badge className="ml-2 bg-indigo-600 hover:bg-indigo-700 text-white scale-90 border-transparent">
+                                  <Badge className="ml-2 bg-primary hover:bg-primary/90 text-primary-foreground scale-90 border-transparent">
                                     Você
                                   </Badge>
                                 )}
                               </TableCell>
                               <TableCell className="py-4">
-                                <span className="flex items-center gap-1 text-xs text-neutral-300">
+                                <span className="flex items-center gap-1 text-xs text-foreground">
                                   {u.is_admin ? (
                                     <>
-                                      <Shield className="w-3.5 h-3.5 text-violet-400" />
+                                      <Shield className="w-3.5 h-3.5 text-primary animate-pulse" />
                                       Administrador
                                     </>
                                   ) : (
                                     <>
-                                      <Users className="w-3.5 h-3.5 text-neutral-400" />
+                                      <Users className="w-3.5 h-3.5 text-muted-foreground" />
                                       Membro Comum
                                     </>
                                   )}
@@ -813,23 +825,23 @@ function AdminPage() {
                                   {status.label}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-neutral-400 text-xs py-4">
+                              <TableCell className="text-muted-foreground text-xs py-4">
                                 {u.is_admin ? (
-                                  <span className="text-neutral-500 italic">
+                                  <span className="text-muted-foreground/60 italic text-xs">
                                     Sem limite (Permanente)
                                   </span>
                                 ) : status.expiresAt ? (
                                   <span className="flex items-center gap-1">
-                                    <Clock className="w-3.5 h-3.5 text-neutral-500" />
+                                    <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                                     {formatDate(status.expiresAt)}
                                   </span>
                                 ) : (
-                                  <span className="text-red-500 font-medium">
+                                  <span className="text-destructive font-medium text-xs">
                                     Bloqueado / Expirado
                                   </span>
                                 )}
                               </TableCell>
-                              <TableCell className="text-neutral-500 text-xs py-4">
+                              <TableCell className="text-muted-foreground text-xs py-4">
                                 {formatDate(u.created_at)}
                               </TableCell>
                               <TableCell className="py-4 text-right">
@@ -840,7 +852,7 @@ function AdminPage() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => setRenewUser(u)}
-                                      className="border-indigo-500/20 hover:border-indigo-500 text-indigo-400 hover:bg-indigo-500/10 gap-1 rounded-lg cursor-pointer"
+                                      className="border-primary/20 hover:border-primary text-primary hover:bg-primary/10 gap-1 rounded-lg cursor-pointer"
                                     >
                                       <RefreshCw className="w-3.5 h-3.5" />
                                       {status.isWebActive ? "Renovar" : "Ativar"}
@@ -860,7 +872,7 @@ function AdminPage() {
                                             targetRole: !u.is_admin,
                                           })
                                         }
-                                        className={`gap-1 rounded-lg text-xs cursor-pointer ${u.is_admin ? "text-neutral-400 hover:text-red-400 hover:bg-red-500/10" : "text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"}`}
+                                        className={`gap-1 rounded-lg text-xs cursor-pointer ${u.is_admin ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" : "text-primary hover:bg-primary/10 hover:text-primary"}`}
                                       >
                                         <Shield className="w-3.5 h-3.5" />
                                         {u.is_admin ? "Remover Admin" : "Tornar Admin"}
@@ -883,15 +895,15 @@ function AdminPage() {
 
       {/* Renewal Dialog Modal */}
       <Dialog open={!!renewUser} onOpenChange={() => setRenewUser(null)}>
-        <DialogContent className="bg-neutral-900 border-white/5 text-white rounded-2xl max-w-sm">
+        <DialogContent className="bg-card border-border text-foreground rounded-2xl max-w-sm transition-colors duration-200">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-white">
-              <UserCheck className="w-5 h-5 text-indigo-400" />
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <UserCheck className="w-5 h-5 text-primary" />
               Ativar / Renovar Acesso
             </DialogTitle>
-            <DialogDescription className="text-neutral-400">
+            <DialogDescription className="text-muted-foreground">
               Escolha a nova validade de acesso para o usuário comum:
-              <span className="block mt-1 text-indigo-400 font-semibold break-all">
+              <span className="block mt-1 text-primary font-semibold break-all">
                 {renewUser?.email}
               </span>
             </DialogDescription>
@@ -900,7 +912,7 @@ function AdminPage() {
           <div className="py-4">
             <Label
               htmlFor="renewDuration"
-              className="text-neutral-300 text-xs font-semibold uppercase tracking-wider block mb-2"
+              className="text-foreground text-xs font-semibold uppercase tracking-wider block mb-2"
             >
               Selecione o Tempo
             </Label>
@@ -908,22 +920,22 @@ function AdminPage() {
               value={renewDuration}
               onValueChange={(v) => setRenewDuration(v as TokenDuration)}
             >
-              <SelectTrigger className="bg-neutral-950 border-white/10 text-white rounded-xl focus:ring-indigo-500/50 py-5 h-auto">
+              <SelectTrigger className="bg-background border-border text-foreground rounded-xl focus:ring-primary/50 py-5 h-auto">
                 <SelectValue placeholder="Selecione o tempo de validade" />
               </SelectTrigger>
-              <SelectContent className="bg-neutral-900 border-white/5 text-white">
-                <SelectItem value="24h" className="focus:bg-indigo-600 focus:text-white">
+              <SelectContent className="bg-card border-border text-foreground">
+                <SelectItem value="24h" className="focus:bg-primary focus:text-primary-foreground">
                   24 Horas
                 </SelectItem>
-                <SelectItem value="7d" className="focus:bg-indigo-600 focus:text-white">
+                <SelectItem value="7d" className="focus:bg-primary focus:text-primary-foreground">
                   7 Dias
                 </SelectItem>
-                <SelectItem value="30d" className="focus:bg-indigo-600 focus:text-white">
+                <SelectItem value="30d" className="focus:bg-primary focus:text-primary-foreground">
                   30 Dias
                 </SelectItem>
               </SelectContent>
             </Select>
-            <span className="text-[10px] text-neutral-500 block mt-2 leading-tight">
+            <span className="text-[10px] text-muted-foreground block mt-2 leading-tight">
               Isso atualizará ou criará o token vinculado a este usuário diretamente, concedendo
               acesso imediato à plataforma.
             </span>
@@ -933,14 +945,14 @@ function AdminPage() {
             <Button
               variant="outline"
               onClick={() => setRenewUser(null)}
-              className="border-white/10 hover:bg-white/5 text-neutral-300 rounded-xl cursor-pointer"
+              className="border-border hover:bg-accent text-foreground rounded-xl cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleDirectActivation}
               disabled={renewing}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl cursor-pointer"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl cursor-pointer"
             >
               {renewing ? (
                 <>
@@ -957,20 +969,20 @@ function AdminPage() {
 
       {/* Admin Change Confirmation Alert Dialog */}
       <AlertDialog open={!!adminChangeTarget} onOpenChange={() => setAdminChangeTarget(null)}>
-        <AlertDialogContent className="bg-neutral-900 border-white/5 text-white rounded-2xl max-w-sm">
+        <AlertDialogContent className="bg-card border-border text-foreground rounded-2xl max-w-sm transition-colors duration-200">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-white">
-              <ShieldAlert className="w-5 h-5 text-amber-500 animate-pulse" />
+            <AlertDialogTitle className="flex items-center gap-2 text-foreground">
+              <ShieldAlert className="w-5 h-5 text-destructive animate-pulse" />
               Confirmar Alteração de Função
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-neutral-400">
+            <AlertDialogDescription className="text-muted-foreground">
               Você tem certeza que deseja alterar os privilégios de administrador do usuário:
-              <span className="block mt-1 text-amber-400 font-semibold break-all">
+              <span className="block mt-1 text-primary font-semibold break-all">
                 {adminChangeTarget?.profile.email}
               </span>
               <span className="block mt-2 font-medium">
                 Novo papel:{" "}
-                <span className="text-white font-bold">
+                <span className="text-foreground font-bold">
                   {adminChangeTarget?.targetRole ? "Administrador" : "Membro Comum"}
                 </span>
               </span>
@@ -979,14 +991,14 @@ function AdminPage() {
           <AlertDialogFooter className="gap-2">
             <AlertDialogCancel
               onClick={() => setAdminChangeTarget(null)}
-              className="border-white/10 hover:bg-white/5 text-neutral-300 rounded-xl cursor-pointer"
+              className="border-border hover:bg-accent text-foreground rounded-xl cursor-pointer"
             >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleToggleAdmin}
               disabled={changingAdmin}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl cursor-pointer"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl cursor-pointer"
             >
               {changingAdmin ? (
                 <>

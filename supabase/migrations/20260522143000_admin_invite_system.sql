@@ -9,25 +9,26 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Enable RLS for profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+-- Create is_admin helper function to break policy recursion
+CREATE OR REPLACE FUNCTION public.check_is_admin(user_uuid uuid)
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = user_uuid AND is_admin = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Policies for profiles
 CREATE POLICY "Users can view own profile" ON public.profiles
   FOR SELECT USING (auth.uid() = id);
 
 CREATE POLICY "Admins can view all profiles" ON public.profiles
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND is_admin = true
-    )
-  );
+  FOR SELECT USING (public.check_is_admin(auth.uid()));
 
 CREATE POLICY "Admins can update all profiles" ON public.profiles
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND is_admin = true
-    )
-  );
+  FOR UPDATE USING (public.check_is_admin(auth.uid()));
 
 -- Create invite_tokens table
 CREATE TABLE IF NOT EXISTS public.invite_tokens (
@@ -46,12 +47,7 @@ ALTER TABLE public.invite_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Policies for invite_tokens
 CREATE POLICY "Admins full access on invite_tokens" ON public.invite_tokens
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND is_admin = true
-    )
-  );
+  USING (public.check_is_admin(auth.uid()));
 
 -- Populate profiles for existing auth.users
 INSERT INTO public.profiles (id, email, is_admin)
