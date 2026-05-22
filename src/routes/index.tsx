@@ -36,6 +36,8 @@ import {
   Check,
   RefreshCw,
   ShieldAlert,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -55,9 +57,19 @@ type TextItem = {
   y: number;
 };
 
-type LibraryItem = { id: string; name: string; image_url: string };
+type LibraryItem = { id: string; name: string; image_url: string; signed_url?: string };
 type Foreground = { id: string; url: string; img: HTMLImageElement };
-type LogoState = { url: string; img: HTMLImageElement; x: number; y: number; size: number } | null;
+type LogoState = { url: string; signedUrl: string; img: HTMLImageElement; x: number; y: number; size: number } | null;
+
+type CanvasState = {
+  bgUrl: string | null;
+  bgUrlSigned: string | null;
+  bgImg: HTMLImageElement | null;
+  foregrounds: Foreground[];
+  logo: LogoState;
+  texts: TextItem[];
+  format: Format;
+};
 
 const FORMATS: Record<Format, { w: number; h: number; label: string }> = {
   feed: { w: 1080, h: 1350, label: "Feed (4:5)" },
@@ -168,6 +180,7 @@ function Index() {
   const [bgLib, setBgLib] = useState<LibraryItem[]>([]);
   const [bgImg, setBgImg] = useState<HTMLImageElement | null>(null);
   const [bgUrl, setBgUrl] = useState<string | null>(null);
+  const [bgUrlSigned, setBgUrlSigned] = useState<string | null>(null);
   const [uploadingBg, setUploadingBg] = useState(false);
 
   // Logo library
@@ -201,6 +214,151 @@ function Index() {
     name: string;
   } | null>(null);
 
+  // History Undo/Redo States
+  const [past, setPast] = useState<CanvasState[]>([]);
+  const [future, setFuture] = useState<CanvasState[]>([]);
+
+  // Helper for generating state signature
+  const getStateSignature = (state: Omit<CanvasState, "bgImg">) => {
+    const bg = state.bgUrl || "";
+    const fgs = state.foregrounds.map((f) => f.url).join(",");
+    const logoPart = state.logo
+      ? `${state.logo.url}:${state.logo.x.toFixed(3)}:${state.logo.y.toFixed(3)}:${state.logo.size.toFixed(3)}`
+      : "";
+    const txts = state.texts
+      .map((t) => `${t.id}:${t.text}:${t.color}:${t.size}:${t.x.toFixed(3)}:${t.y.toFixed(3)}`)
+      .sort()
+      .join("|");
+    const fmt = state.format;
+    return `${bg}#${fgs}#${logoPart}#${txts}#${fmt}`;
+  };
+
+  const getSignedUrlForStorageUrl = async (bucket: "backgrounds" | "logos", storageUrl: string): Promise<string> => {
+    try {
+      const url = new URL(storageUrl);
+      const pathParts = url.pathname.split(`/storage/v1/object/public/${bucket}/`);
+      const filePath = pathParts[1] || url.pathname.split(`/${bucket}/`)[1];
+      if (!filePath) return storageUrl;
+
+      const decodePath = decodeURIComponent(filePath);
+      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(decodePath, 7200); // 2 hours
+      if (error) {
+        console.error("Erro ao assinar URL:", error);
+        return storageUrl;
+      }
+      return data.signedUrl;
+    } catch (err) {
+      console.error("Erro ao gerar URL assinada:", err);
+      return storageUrl;
+    }
+  };
+
+  const saveToHistory = useCallback(() => {
+    const currentState: CanvasState = {
+      bgUrl,
+      bgUrlSigned,
+      bgImg,
+      foregrounds,
+      logo,
+      texts,
+      format,
+    };
+
+    const currentSig = getStateSignature(currentState);
+
+    setPast((prev) => {
+      if (prev.length > 0) {
+        const lastSig = getStateSignature(prev[prev.length - 1]);
+        if (lastSig === currentSig) {
+          return prev;
+        }
+      }
+      const newPast = [...prev, currentState];
+      if (newPast.length > 50) {
+        newPast.shift();
+      }
+      return newPast;
+    });
+    setFuture([]);
+  }, [bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format]);
+
+  const undo = useCallback(() => {
+    if (past.length === 0) return;
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, -1);
+
+    const currentState: CanvasState = {
+      bgUrl,
+      bgUrlSigned,
+      bgImg,
+      foregrounds,
+      logo,
+      texts,
+      format,
+    };
+
+    setPast(newPast);
+    setFuture((prev) => [currentState, ...prev]);
+
+    setBgUrl(previous.bgUrl);
+    setBgUrlSigned(previous.bgUrlSigned);
+    setBgImg(previous.bgImg);
+    setForegrounds(previous.foregrounds);
+    setLogo(previous.logo);
+    setTexts(previous.texts);
+    setFormat(previous.format);
+  }, [past, bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format]);
+
+  const redo = useCallback(() => {
+    if (future.length === 0) return;
+    const next = future[0];
+    const newFuture = future.slice(1);
+
+    const currentState: CanvasState = {
+      bgUrl,
+      bgUrlSigned,
+      bgImg,
+      foregrounds,
+      logo,
+      texts,
+      format,
+    };
+
+    setPast((prev) => [...prev, currentState]);
+    setFuture(newFuture);
+
+    setBgUrl(next.bgUrl);
+    setBgUrlSigned(next.bgUrlSigned);
+    setBgImg(next.bgImg);
+    setForegrounds(next.foregrounds);
+    setLogo(next.logo);
+    setTexts(next.texts);
+    setFormat(next.format);
+  }, [future, bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isEditingText = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+      if (isEditingText) return;
+
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        if (e.key.toLowerCase() === "z") {
+          e.preventDefault();
+          undo();
+        } else if (e.key.toLowerCase() === "y") {
+          e.preventDefault();
+          redo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo]);
+
   // Carregar bibliotecas
   const loadLibraries = useCallback(async () => {
     if (!user) return;
@@ -208,8 +366,36 @@ function Index() {
       supabase.from("backgrounds").select("*").order("created_at", { ascending: false }),
       supabase.from("logos").select("*").order("created_at", { ascending: false }),
     ]);
-    if (bg.data) setBgLib(bg.data as LibraryItem[]);
-    if (lg.data) setLogoLib(lg.data as LibraryItem[]);
+
+    let bgData = (bg.data || []) as LibraryItem[];
+    let lgData = (lg.data || []) as LibraryItem[];
+
+    try {
+      const signedBgs = await Promise.all(
+        bgData.map(async (item) => {
+          const signedUrl = await getSignedUrlForStorageUrl("backgrounds", item.image_url);
+          return { ...item, signed_url: signedUrl };
+        })
+      );
+      bgData = signedBgs;
+    } catch (e) {
+      console.error("Error signing background URLs:", e);
+    }
+
+    try {
+      const signedLgs = await Promise.all(
+        lgData.map(async (item) => {
+          const signedUrl = await getSignedUrlForStorageUrl("logos", item.image_url);
+          return { ...item, signed_url: signedUrl };
+        })
+      );
+      lgData = signedLgs;
+    } catch (e) {
+      console.error("Error signing logo URLs:", e);
+    }
+
+    setBgLib(bgData);
+    setLogoLib(lgData);
   }, [user]);
 
   useEffect(() => {
@@ -229,6 +415,7 @@ function Index() {
   // Background upload + save library
   const handleBgUpload = async (file: File) => {
     try {
+      saveToHistory();
       setUploadingBg(true);
       const url = await uploadToBucket("backgrounds", file);
       const name = file.name.replace(/\.[^.]+$/, "").slice(0, 60);
@@ -238,8 +425,12 @@ function Index() {
         .select()
         .single();
       if (error) throw error;
-      setBgLib((p) => [data as LibraryItem, ...p]);
-      await selectBackground(url);
+
+      const signedUrl = await getSignedUrlForStorageUrl("backgrounds", url);
+      const newItem = { ...(data as LibraryItem), signed_url: signedUrl };
+
+      setBgLib((p) => [newItem, ...p]);
+      await selectBackground(newItem);
       toast.success("Fundo adicionado à biblioteca");
     } catch (e) {
       toast.error((e as Error).message || "Erro ao enviar imagem");
@@ -248,11 +439,19 @@ function Index() {
     }
   };
 
-  const selectBackground = async (url: string) => {
+  const selectBackground = async (itemOrUrl: LibraryItem | string) => {
     try {
-      const img = await loadImage(url);
+      const url = typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.image_url;
+      let signedUrl = typeof itemOrUrl === "string" ? itemOrUrl : (itemOrUrl.signed_url || itemOrUrl.image_url);
+
+      if (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/backgrounds/")) {
+        signedUrl = await getSignedUrlForStorageUrl("backgrounds", url);
+      }
+
+      const img = await loadImage(signedUrl);
       setBgImg(img);
       setBgUrl(url);
+      setBgUrlSigned(signedUrl);
     } catch {
       toast.error("Não foi possível carregar a imagem");
     }
@@ -268,12 +467,12 @@ function Index() {
 
   const executeDelete = async () => {
     if (!confirmDelete) return;
+    saveToHistory();
     const { type, id } = confirmDelete;
     const table = type === "bg" ? "backgrounds" : "logos";
     const bucket = type === "bg" ? "backgrounds" : "logos";
 
     try {
-      // Get image_url to remove from storage
       const { data: row } = await supabase.from(table).select("image_url").eq("id", id).single();
       if (row?.image_url) {
         const url = new URL(row.image_url);
@@ -288,6 +487,7 @@ function Index() {
         setBgLib((p) => p.filter((x) => x.id !== id));
         if (bgUrl === row?.image_url) {
           setBgUrl(null);
+          setBgUrlSigned(null);
           setBgImg(null);
         }
       } else {
@@ -305,6 +505,7 @@ function Index() {
   // Logo upload + save
   const handleLogoUpload = async (file: File) => {
     try {
+      saveToHistory();
       setUploadingLogo(true);
       const url = await uploadToBucket("logos", file);
       const name = file.name.replace(/\.[^.]+$/, "").slice(0, 60);
@@ -314,8 +515,12 @@ function Index() {
         .select()
         .single();
       if (error) throw error;
-      setLogoLib((p) => [data as LibraryItem, ...p]);
-      await selectLogo(url);
+
+      const signedUrl = await getSignedUrlForStorageUrl("logos", url);
+      const newItem = { ...(data as LibraryItem), signed_url: signedUrl };
+
+      setLogoLib((p) => [newItem, ...p]);
+      await selectLogo(newItem);
       toast.success("Logo adicionada à biblioteca");
     } catch (e) {
       toast.error((e as Error).message || "Erro ao enviar logo");
@@ -324,10 +529,17 @@ function Index() {
     }
   };
 
-  const selectLogo = async (url: string) => {
+  const selectLogo = async (itemOrUrl: LibraryItem | string) => {
     try {
-      const img = await loadImage(url);
-      setLogo({ url, img, x: 0.5, y: 0.08, size: 0.25 });
+      const url = typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.image_url;
+      let signedUrl = typeof itemOrUrl === "string" ? itemOrUrl : (itemOrUrl.signed_url || itemOrUrl.image_url);
+
+      if (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/logos/")) {
+        signedUrl = await getSignedUrlForStorageUrl("logos", url);
+      }
+
+      const img = await loadImage(signedUrl);
+      setLogo({ url, signedUrl, img, x: 0.5, y: 0.08, size: 0.25 });
     } catch {
       toast.error("Não foi possível carregar a logo");
     }
@@ -358,8 +570,45 @@ function Index() {
       toast.error("Adicione fundos à biblioteca primeiro");
       return;
     }
-    const random = bgLib[Math.floor(Math.random() * bgLib.length)];
-    selectBackground(random.image_url);
+
+    const currentState: CanvasState = { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format };
+    const existingSigs = new Set([
+      ...past.map((s) => getStateSignature(s)),
+      getStateSignature(currentState),
+      ...future.map((s) => getStateSignature(s)),
+    ]);
+
+    let attempts = 0;
+    let found = false;
+    let chosenBg = null;
+
+    while (attempts < 100) {
+      const random = bgLib[Math.floor(Math.random() * bgLib.length)];
+      const candidate: CanvasState = {
+        bgUrl: random.image_url,
+        bgUrlSigned: random.signed_url || random.image_url,
+        bgImg: null,
+        foregrounds,
+        logo,
+        texts,
+        format,
+      };
+
+      if (!existingSigs.has(getStateSignature(candidate))) {
+        chosenBg = random;
+        found = true;
+        break;
+      }
+      attempts++;
+    }
+
+    if (!found) {
+      toast.warning("Limite de variações de fundo atingido!");
+      return;
+    }
+
+    saveToHistory();
+    selectBackground(chosenBg!);
     toast.success("Fundo randomizado");
   };
 
@@ -368,32 +617,98 @@ function Index() {
       toast.info("Adicione pelo menos 2 imagens para randomizar o padrão");
       return;
     }
-    setForegrounds((prev) => {
-      const shuffled = [...prev];
-      for (let i = shuffled.length - 1; i > 0; i--) {
+
+    const currentState: CanvasState = { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format };
+    const existingSigs = new Set([
+      ...past.map((s) => getStateSignature(s)),
+      getStateSignature(currentState),
+      ...future.map((s) => getStateSignature(s)),
+    ]);
+
+    let attempts = 0;
+    let found = false;
+    let shuffledForegrounds = [...foregrounds];
+
+    while (attempts < 100) {
+      const candidateFgs = [...foregrounds];
+      for (let i = candidateFgs.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        [candidateFgs[i], candidateFgs[j]] = [candidateFgs[j], candidateFgs[i]];
       }
-      return shuffled;
-    });
+
+      const candidate: CanvasState = {
+        bgUrl,
+        bgUrlSigned,
+        bgImg,
+        foregrounds: candidateFgs,
+        logo,
+        texts,
+        format,
+      };
+
+      if (!existingSigs.has(getStateSignature(candidate))) {
+        shuffledForegrounds = candidateFgs;
+        found = true;
+        break;
+      }
+      attempts++;
+    }
+
+    if (!found) {
+      toast.warning("Limite de variações de padrão atingido!");
+      return;
+    }
+
+    saveToHistory();
+    setForegrounds(shuffledForegrounds);
     toast.success("Padrão das imagens randomizado");
   };
 
   const randomizeAll = () => {
-    if (bgLib.length > 1) randomizeBackground();
-    if (foregrounds.length > 1) randomizeForegrounds();
-    // Randomize logo position if present
-    if (logo) {
-      setLogo({
-        ...logo,
-        x: 0.2 + Math.random() * 0.6,
-        y: 0.1 + Math.random() * 0.1,
-        size: 0.15 + Math.random() * 0.15,
-      });
-    }
-    // Randomize text positions
-    setTexts((prev) =>
-      prev.map((t) => ({
+    const currentState: CanvasState = { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format };
+    const existingSigs = new Set([
+      ...past.map((s) => getStateSignature(s)),
+      getStateSignature(currentState),
+      ...future.map((s) => getStateSignature(s)),
+    ]);
+
+    let attempts = 0;
+    let found = false;
+
+    let candidateBg = bgUrl;
+    let candidateBgSigned = bgUrlSigned;
+    let candidateFgs = [...foregrounds];
+    let candidateLogo = logo;
+    let candidateTexts = [...texts];
+
+    while (attempts < 100) {
+      let nextBg = bgUrl;
+      let nextBgSigned = bgUrlSigned;
+      if (bgLib.length > 0) {
+        const randomBg = bgLib[Math.floor(Math.random() * bgLib.length)];
+        nextBg = randomBg.image_url;
+        nextBgSigned = randomBg.signed_url || randomBg.image_url;
+      }
+
+      let nextFgs = [...foregrounds];
+      if (nextFgs.length > 1) {
+        for (let i = nextFgs.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [nextFgs[i], nextFgs[j]] = [nextFgs[j], nextFgs[i]];
+        }
+      }
+
+      let nextLogo = logo;
+      if (logo) {
+        nextLogo = {
+          ...logo,
+          x: 0.2 + Math.random() * 0.6,
+          y: 0.1 + Math.random() * 0.1,
+          size: 0.15 + Math.random() * 0.15,
+        };
+      }
+
+      let nextTexts = texts.map((t) => ({
         ...t,
         x: 0.2 + Math.random() * 0.6,
         y: 0.3 + Math.random() * 0.4,
@@ -401,8 +716,48 @@ function Index() {
         color: ["#ffffff", "#facc15", "#f87171", "#60a5fa", "#34d399", "#a78bfa", "#fb923c"][
           Math.floor(Math.random() * 7)
         ],
-      })),
-    );
+      }));
+
+      const candidate: CanvasState = {
+        bgUrl: nextBg,
+        bgUrlSigned: nextBgSigned,
+        bgImg: null,
+        foregrounds: nextFgs,
+        logo: nextLogo,
+        texts: nextTexts,
+        format,
+      };
+
+      if (!existingSigs.has(getStateSignature(candidate))) {
+        candidateBg = nextBg;
+        candidateBgSigned = nextBgSigned;
+        candidateFgs = nextFgs;
+        candidateLogo = nextLogo;
+        candidateTexts = nextTexts;
+        found = true;
+        break;
+      }
+      attempts++;
+    }
+
+    if (!found) {
+      toast.warning("Limite de variações atingido para os elementos atuais!");
+      return;
+    }
+
+    saveToHistory();
+
+    if (candidateBg !== bgUrl) {
+      const match = bgLib.find((b) => b.image_url === candidateBg);
+      if (match) {
+        selectBackground(match);
+      } else if (candidateBg) {
+        selectBackground(candidateBg);
+      }
+    }
+    setForegrounds(candidateFgs);
+    setLogo(candidateLogo);
+    setTexts(candidateTexts);
     toast.success("Tudo randomizado");
   };
 
@@ -418,6 +773,7 @@ function Index() {
 
   // Drag
   const onPointerDown = (e: React.PointerEvent, kind: "text" | "logo", id?: string) => {
+    saveToHistory();
     e.stopPropagation();
     const preview = previewRef.current!;
     const rect = preview.getBoundingClientRect();
@@ -701,7 +1057,7 @@ function Index() {
         <Card className="p-4 sm:p-5 space-y-5 h-fit order-2 lg:order-1 bg-card border-border shadow-md transition-colors duration-200">
           <div>
             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Formato</Label>
-            <Select value={format} onValueChange={(v) => setFormat(v as Format)}>
+            <Select value={format} onValueChange={(v) => { saveToHistory(); setFormat(v as Format); }}>
               <SelectTrigger className="mt-2 bg-background border-border text-foreground rounded-xl">
                 <SelectValue />
               </SelectTrigger>
@@ -741,10 +1097,10 @@ function Index() {
                 {bgLib.map((b) => (
                   <div key={b.id} className="relative group">
                     <button
-                      onClick={() => selectBackground(b.image_url)}
+                      onClick={() => { saveToHistory(); selectBackground(b); }}
                       className={`block w-full aspect-square rounded-lg overflow-hidden border-2 transition ${bgUrl === b.image_url ? "border-primary scale-[0.98] shadow-inner" : "border-transparent opacity-80 hover:opacity-100"}`}
                     >
-                      <img src={b.image_url} alt={b.name} className="w-full h-full object-cover" />
+                      <img src={b.signed_url || b.image_url} alt={b.name} className="w-full h-full object-cover" />
                     </button>
                     <button
                       onClick={() => promptDeleteBackground(b.id, b.name)}
@@ -786,11 +1142,11 @@ function Index() {
                 {logoLib.map((l) => (
                   <div key={l.id} className="relative group">
                     <button
-                      onClick={() => selectLogo(l.image_url)}
+                      onClick={() => { saveToHistory(); selectLogo(l); }}
                       className={`block w-full aspect-square rounded-lg overflow-hidden border-2 bg-muted transition ${logo?.url === l.image_url ? "border-primary scale-[0.98] shadow-inner" : "border-transparent opacity-80 hover:opacity-100"}`}
                     >
                       <img
-                        src={l.image_url}
+                        src={l.signed_url || l.image_url}
                         alt={l.name}
                         className="w-full h-full object-contain p-1"
                       />
@@ -810,7 +1166,7 @@ function Index() {
               <div className="mt-2 space-y-1 bg-muted/40 p-2.5 rounded-xl border border-border/50">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground font-medium">Tamanho da logo</span>
-                  <button onClick={() => setLogo(null)} className="text-destructive font-semibold hover:underline cursor-pointer">
+                  <button onClick={() => { saveToHistory(); setLogo(null); }} className="text-destructive font-semibold hover:underline cursor-pointer">
                     Remover
                   </button>
                 </div>
@@ -820,6 +1176,7 @@ function Index() {
                   max={0.6}
                   step={0.01}
                   value={logo.size}
+                  onPointerDown={() => saveToHistory()}
                   onChange={(e) => setLogo({ ...logo, size: +e.target.value })}
                   className="w-full accent-primary h-1.5 bg-background rounded-lg cursor-pointer"
                 />
@@ -838,7 +1195,12 @@ function Index() {
                   accept="image/*"
                   multiple
                   className="hidden"
-                  onChange={(e) => e.target.files && handleForegroundsUpload(e.target.files)}
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      saveToHistory();
+                      handleForegroundsUpload(e.target.files);
+                    }
+                  }}
                 />
               </label>
             </div>
@@ -854,7 +1216,10 @@ function Index() {
                       <img src={f.url} alt="" className="w-full h-full object-contain p-1" />
                     </div>
                     <button
-                      onClick={() => removeForeground(f.id)}
+                      onClick={() => {
+                        saveToHistory();
+                        removeForeground(f.id);
+                      }}
                       className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow hover:bg-destructive/90 cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -869,7 +1234,15 @@ function Index() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Textos</Label>
-              <Button size="sm" variant="outline" onClick={addText} className="border-border hover:bg-accent rounded-xl cursor-pointer">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  saveToHistory();
+                  addText();
+                }}
+                className="border-border hover:bg-accent rounded-xl cursor-pointer"
+              >
                 <Plus className="w-4 h-4 mr-1" /> Adicionar
               </Button>
             </div>
@@ -884,12 +1257,14 @@ function Index() {
                     className="w-full text-sm border border-border rounded-lg p-2 bg-background text-foreground focus-visible:ring-primary/50 focus-visible:outline-none"
                     rows={2}
                     value={t.text}
+                    onFocus={() => saveToHistory()}
                     onChange={(e) => updateText(t.id, { text: e.target.value })}
                   />
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
                       value={t.color}
+                      onPointerDown={() => saveToHistory()}
                       onChange={(e) => updateText(t.id, { color: e.target.value })}
                       className="w-9 h-9 rounded-lg cursor-pointer border border-border"
                     />
@@ -899,12 +1274,21 @@ function Index() {
                         min={16}
                         max={200}
                         value={t.size}
+                        onPointerDown={() => saveToHistory()}
                         onChange={(e) => updateText(t.id, { size: +e.target.value })}
                         className="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
                       />
                       <div className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t.size}px</div>
                     </div>
-                    <Button size="icon" variant="ghost" onClick={() => removeText(t.id)} className="text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        saveToHistory();
+                        removeText(t.id);
+                      }}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -935,18 +1319,48 @@ function Index() {
         </Card>
 
         {/* Canvas Preview Area */}
-        <div className="flex justify-center items-start order-1 lg:order-2">
+        <div className="flex flex-col items-center gap-3 order-1 lg:order-2 w-full max-w-sm lg:max-w-md">
+          {/* Undo/Redo Floating Bar */}
+          <div className="flex items-center gap-2 bg-card/90 border border-border rounded-full px-3 py-1.5 shadow-md backdrop-blur-sm">
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={past.length === 0}
+              onClick={undo}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full cursor-pointer"
+              title="Desfazer (Ctrl+Z)"
+            >
+              <Undo2 className="w-4 h-4" />
+            </Button>
+            <div className="w-px h-4 bg-border" />
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={future.length === 0}
+              onClick={redo}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full cursor-pointer"
+              title="Refazer (Ctrl+Y)"
+            >
+              <Redo2 className="w-4 h-4" />
+            </Button>
+            {past.length > 0 && (
+              <span className="text-[10px] text-muted-foreground font-semibold px-1">
+                {past.length} {past.length === 1 ? "alteração" : "alterações"}
+              </span>
+            )}
+          </div>
+
           <div
             ref={previewRef}
-            className={`relative ${aspectClass} w-full max-w-sm lg:max-w-md bg-muted border border-border rounded-2xl overflow-hidden shadow-xl select-none touch-none transition-colors duration-200`}
+            className={`relative ${aspectClass} w-full bg-muted border border-border rounded-2xl overflow-hidden shadow-xl select-none touch-none transition-colors duration-200`}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             onClick={() => setSelectedId(null)}
           >
-            {bgUrl ? (
+            {bgUrlSigned ? (
               <img
-                src={bgUrl}
+                src={bgUrlSigned}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               />
@@ -982,7 +1396,7 @@ function Index() {
             {/* Logo */}
             {logo && (
               <img
-                src={logo.url}
+                src={logo.signedUrl}
                 alt=""
                 onPointerDown={(e) => onPointerDown(e, "logo")}
                 style={{
