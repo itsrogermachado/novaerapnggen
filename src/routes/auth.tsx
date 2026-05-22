@@ -52,27 +52,27 @@ function AuthPage() {
     try {
       const { data, error } = await supabase.rpc("check_invite_token", { token_val: val.trim() });
       if (error) throw error;
-      
+
       const res = data?.[0];
       if (res && res.is_valid) {
         setTokenStatus({
           checked: true,
           valid: true,
           expiresAt: res.expires_at,
-          description: res.description ?? undefined
+          description: res.description ?? undefined,
         });
       } else {
         setTokenStatus({
           checked: true,
           valid: false,
-          error: "Token inválido, expirado ou já utilizado."
+          error: "Token inválido, expirado ou já utilizado.",
         });
       }
-    } catch (err: any) {
+    } catch {
       setTokenStatus({
         checked: true,
         valid: false,
-        error: "Erro ao validar o token."
+        error: "Erro ao validar o token.",
       });
     }
   };
@@ -83,8 +83,10 @@ function AuthPage() {
     try {
       if (mode === "signup") {
         const trimmedEmail = email.trim().toLowerCase();
-        const isAdminEmail = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(trimmedEmail);
-        
+        const isAdminEmail = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(
+          trimmedEmail,
+        );
+
         if (!isAdminEmail && !inviteToken) {
           toast.error("O token de convite é obrigatório.");
           setBusy(false);
@@ -94,22 +96,25 @@ function AuthPage() {
         const { error } = await supabase.auth.signUp({
           email: trimmedEmail,
           password,
-          options: { 
+          options: {
             emailRedirectTo: window.location.origin,
             data: {
-              invite_token: isAdminEmail ? undefined : inviteToken.trim()
-            }
+              invite_token: isAdminEmail ? undefined : inviteToken.trim(),
+            },
           },
         });
         if (error) throw error;
         toast.success("Conta criada com sucesso!");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
         if (error) throw error;
       }
       navigate({ to: "/" });
-    } catch (err: any) {
-      toast.error(err.message ?? "Erro de autenticação");
+    } catch (err) {
+      toast.error((err as Error).message ?? "Erro de autenticação");
     } finally {
       setBusy(false);
     }
@@ -125,25 +130,46 @@ function AuthPage() {
         <form onSubmit={submit} className="space-y-4">
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
           <div>
             <Label htmlFor="password">Senha</Label>
-            <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input
+              id="password"
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
           {mode === "signup" && (
             <div>
               <div className="flex justify-between items-center mb-1">
                 <Label htmlFor="token">Token de Convite</Label>
-                {["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(email.trim().toLowerCase()) && (
-                  <span className="text-xs text-emerald-500 font-medium animate-pulse">Opcional para Admin</span>
+                {["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(
+                  email.trim().toLowerCase(),
+                ) && (
+                  <span className="text-xs text-emerald-500 font-medium animate-pulse">
+                    Opcional para Admin
+                  </span>
                 )}
               </div>
               <Input
                 id="token"
                 type="text"
                 placeholder="Insira o seu token de convite"
-                required={!["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(email.trim().toLowerCase())}
+                required={
+                  !["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(
+                    email.trim().toLowerCase(),
+                  )
+                }
                 value={inviteToken}
                 onChange={(e) => {
                   setInviteToken(e.target.value);
@@ -155,7 +181,8 @@ function AuthPage() {
                 <div className="mt-1 text-xs">
                   {tokenStatus.valid ? (
                     <span className="text-emerald-500 font-medium">
-                      ✓ Token válido {tokenStatus.description ? `(Destinado a: ${tokenStatus.description})` : ""}
+                      ✓ Token válido{" "}
+                      {tokenStatus.description ? `(Destinado a: ${tokenStatus.description})` : ""}
                     </span>
                   ) : (
                     <span className="text-destructive font-medium">✗ {tokenStatus.error}</span>

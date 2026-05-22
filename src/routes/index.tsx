@@ -5,7 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +22,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Plus, Download, LogOut, Upload, ImageIcon, Loader2, Shuffle, Mail, Copy, Check, Lock, RefreshCw, ShieldAlert } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  Download,
+  LogOut,
+  Upload,
+  ImageIcon,
+  Loader2,
+  Shuffle,
+  Mail,
+  Copy,
+  Check,
+  Lock,
+  RefreshCw,
+  ShieldAlert,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -81,7 +102,9 @@ function Index() {
     if (!user) return;
     try {
       setCheckingAccess(true);
-      const { data: active, error: activeErr } = await supabase.rpc("is_user_active", { user_uuid: user.id });
+      const { data: active, error: activeErr } = await supabase.rpc("is_user_active", {
+        user_uuid: user.id,
+      });
       if (activeErr) throw activeErr;
 
       const { data: profile, error: profileErr } = await supabase
@@ -89,7 +112,7 @@ function Index() {
         .select("is_admin")
         .eq("id", user.id)
         .single();
-      
+
       if (profileErr) throw profileErr;
 
       setIsActive(!!active);
@@ -137,14 +160,27 @@ function Index() {
   const [foregrounds, setForegrounds] = useState<Foreground[]>([]);
 
   const [texts, setTexts] = useState<TextItem[]>([
-    { id: crypto.randomUUID(), text: "Seu resultado aqui", color: "#ffffff", size: 64, x: 0.5, y: 0.5 },
+    {
+      id: crypto.randomUUID(),
+      text: "Seu resultado aqui",
+      color: "#ffffff",
+      size: 64,
+      x: 0.5,
+      y: 0.5,
+    },
   ]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ kind: "text" | "logo"; id?: string; offX: number; offY: number } | null>(null);
+  const dragRef = useRef<{ kind: "text" | "logo"; id?: string; offX: number; offY: number } | null>(
+    null,
+  );
 
   // Confirm delete dialog
-  const [confirmDelete, setConfirmDelete] = useState<{ type: "bg" | "logo"; id: string; name: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    type: "bg" | "logo";
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Carregar bibliotecas
   const loadLibraries = useCallback(async () => {
@@ -186,8 +222,8 @@ function Index() {
       setBgLib((p) => [data as LibraryItem, ...p]);
       await selectBackground(url);
       toast.success("Fundo adicionado à biblioteca");
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao enviar imagem");
+    } catch (e) {
+      toast.error((e as Error).message || "Erro ao enviar imagem");
     } finally {
       setUploadingBg(false);
     }
@@ -240,8 +276,8 @@ function Index() {
         if (logo?.url === row?.image_url) setLogo(null);
       }
       toast.success(type === "bg" ? "Fundo removido" : "Logo removida");
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao remover");
+    } catch (e) {
+      toast.error((e as Error).message || "Erro ao remover");
     } finally {
       setConfirmDelete(null);
     }
@@ -262,8 +298,8 @@ function Index() {
       setLogoLib((p) => [data as LibraryItem, ...p]);
       await selectLogo(url);
       toast.success("Logo adicionada à biblioteca");
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao enviar logo");
+    } catch (e) {
+      toast.error((e as Error).message || "Erro ao enviar logo");
     } finally {
       setUploadingLogo(false);
     }
@@ -291,7 +327,9 @@ function Index() {
       try {
         const img = await loadImage(url);
         items.push({ id: crypto.randomUUID(), url, img });
-      } catch {}
+      } catch {
+        console.warn("Falha ao carregar imagem de primeiro plano:", url);
+      }
     }
     setForegrounds((p) => [...p, ...items]);
   };
@@ -350,7 +388,7 @@ function Index() {
         color: ["#ffffff", "#facc15", "#f87171", "#60a5fa", "#34d399", "#a78bfa", "#fb923c"][
           Math.floor(Math.random() * 7)
         ],
-      }))
+      })),
     );
     toast.success("Tudo randomizado");
   };
@@ -370,7 +408,8 @@ function Index() {
     e.stopPropagation();
     const preview = previewRef.current!;
     const rect = preview.getBoundingClientRect();
-    let cx = 0, cy = 0;
+    let cx = 0,
+      cy = 0;
     if (kind === "text" && id) {
       const item = texts.find((t) => t.id === id)!;
       cx = item.x * rect.width;
@@ -380,7 +419,12 @@ function Index() {
       cx = logo.x * rect.width;
       cy = logo.y * rect.height;
     }
-    dragRef.current = { kind, id, offX: e.clientX - rect.left - cx, offY: e.clientY - rect.top - cy };
+    dragRef.current = {
+      kind,
+      id,
+      offX: e.clientX - rect.left - cx,
+      offY: e.clientY - rect.top - cy,
+    };
     (e.target as Element).setPointerCapture(e.pointerId);
   };
 
@@ -417,7 +461,10 @@ function Index() {
     // background: object-fit cover
     const ir = bgImg.width / bgImg.height;
     const cr = w / h;
-    let sx = 0, sy = 0, sw = bgImg.width, sh = bgImg.height;
+    let sx = 0,
+      sy = 0,
+      sw = bgImg.width,
+      sh = bgImg.height;
     if (ir > cr) {
       sw = bgImg.height * cr;
       sx = (bgImg.width - sw) / 2;
@@ -447,7 +494,8 @@ function Index() {
         // fit contain
         const ir2 = fg.img.width / fg.img.height;
         const cr2 = cw / ch;
-        let dw = cw, dh = ch;
+        let dw = cw,
+          dh = ch;
         if (ir2 > cr2) {
           dh = cw / ir2;
         } else {
@@ -507,7 +555,9 @@ function Index() {
           <div className="absolute w-20 h-20 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
           <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
         </div>
-        <p className="mt-6 text-sm text-neutral-400 font-medium tracking-wide animate-pulse">Verificando credenciais de acesso...</p>
+        <p className="mt-6 text-sm text-neutral-400 font-medium tracking-wide animate-pulse">
+          Verificando credenciais de acesso...
+        </p>
       </div>
     );
   }
@@ -522,7 +572,7 @@ function Index() {
         <div className="w-full max-w-md bg-neutral-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl shadow-black/80 text-center relative overflow-hidden animate-fade-in">
           <div className="absolute -top-16 -right-16 w-36 h-36 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-          
+
           <div className="mx-auto w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mb-6 shadow-inner animate-pulse">
             <ShieldAlert className="w-8 h-8 text-red-500" />
           </div>
@@ -531,21 +581,21 @@ function Index() {
             Acesso Expirado ou Bloqueado
           </h2>
           <p className="text-sm text-neutral-400 mb-8 leading-relaxed">
-            Seu período de teste ou convite expirou. Para reativar seu acesso e continuar gerando imagens de alta conversão, entre em contato com nossos administradores:
+            Seu período de teste ou convite expirou. Para reativar seu acesso e continuar gerando
+            imagens de alta conversão, entre em contato com nossos administradores:
           </p>
 
           <div className="space-y-3 mb-8">
-            {[
-              "rogermachado019@gmail.com",
-              "casadosvloogs@gmail.com"
-            ].map((email) => (
-              <div 
+            {["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].map((email) => (
+              <div
                 key={email}
                 className="flex items-center justify-between p-3.5 bg-neutral-950/50 border border-white/5 rounded-xl hover:border-indigo-500/30 transition-all duration-300 group"
               >
                 <div className="flex items-center gap-3">
                   <Mail className="w-4 h-4 text-indigo-400" />
-                  <span className="text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">{email}</span>
+                  <span className="text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
+                    {email}
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -564,15 +614,15 @@ function Index() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <Button 
+            <Button
               onClick={checkAccess}
               className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-6 rounded-xl shadow-lg shadow-indigo-500/20 transition-all duration-300 group"
             >
               <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
               Verificar Novamente
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={logout}
               className="w-full border-white/10 hover:bg-white/5 text-neutral-400 hover:text-white py-6 rounded-xl transition-all duration-300"
             >
@@ -588,15 +638,17 @@ function Index() {
   const aspectClass = format === "feed" ? "aspect-[4/5]" : "aspect-[9/16]";
 
   // Preview foreground layout (mesma lógica do canvas, em %)
-  const fgGrid = foregrounds.length > 0
-    ? (() => {
-        const aspectW = format === "feed" ? 4 : 9;
-        const aspectH = format === "feed" ? 5 : 16;
-        const areaW = 0.9, areaH = 0.7;
-        const { cols, rows } = computeGrid(foregrounds.length, areaW * aspectW, areaH * aspectH);
-        return { cols, rows, areaW, areaH };
-      })()
-    : null;
+  const fgGrid =
+    foregrounds.length > 0
+      ? (() => {
+          const aspectW = format === "feed" ? 4 : 9;
+          const aspectH = format === "feed" ? 5 : 16;
+          const areaW = 0.9,
+            areaH = 0.7;
+          const { cols, rows } = computeGrid(foregrounds.length, areaW * aspectW, areaH * aspectH);
+          return { cols, rows, areaW, areaH };
+        })()
+      : null;
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -604,7 +656,9 @@ function Index() {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
           <h1 className="text-base sm:text-lg font-bold truncate">Gerador de Resultados</h1>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <span className="text-xs sm:text-sm text-muted-foreground hidden md:inline truncate max-w-[180px]">{user.email}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground hidden md:inline truncate max-w-[180px]">
+              {user.email}
+            </span>
             {isAdmin && (
               <Button
                 variant="outline"
@@ -634,7 +688,11 @@ function Index() {
             onClick={() => setSelectedId(null)}
           >
             {bgUrl ? (
-              <img src={bgUrl} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+              <img
+                src={bgUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-neutral-500 text-sm p-4 text-center">
                 Escolha um fundo da biblioteca ou faça upload
@@ -731,7 +789,11 @@ function Index() {
             <div className="flex items-center justify-between mb-2">
               <Label>Biblioteca de Fundos</Label>
               <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1 border rounded hover:bg-muted">
-                {uploadingBg ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                {uploadingBg ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Upload className="w-3 h-3" />
+                )}
                 Adicionar
                 <input
                   type="file"
@@ -743,7 +805,9 @@ function Index() {
               </label>
             </div>
             {bgLib.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhum fundo salvo. Adicione um para começar.</p>
+              <p className="text-xs text-muted-foreground">
+                Nenhum fundo salvo. Adicione um para começar.
+              </p>
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 {bgLib.map((b) => (
@@ -771,7 +835,11 @@ function Index() {
             <div className="flex items-center justify-between mb-2">
               <Label>Biblioteca de Logos</Label>
               <label className="inline-flex items-center gap-1 text-xs cursor-pointer px-2 py-1 border rounded hover:bg-muted">
-                {uploadingLogo ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                {uploadingLogo ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Upload className="w-3 h-3" />
+                )}
                 Adicionar
                 <input
                   type="file"
@@ -792,7 +860,11 @@ function Index() {
                       onClick={() => selectLogo(l.image_url)}
                       className={`block w-full aspect-square rounded overflow-hidden border-2 bg-muted ${logo?.url === l.image_url ? "border-primary" : "border-transparent"}`}
                     >
-                      <img src={l.image_url} alt={l.name} className="w-full h-full object-contain" />
+                      <img
+                        src={l.image_url}
+                        alt={l.name}
+                        className="w-full h-full object-contain"
+                      />
                     </button>
                     <button
                       onClick={() => promptDeleteLogo(l.id, l.name)}
@@ -808,7 +880,9 @@ function Index() {
               <div className="mt-2 space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Tamanho da logo</span>
-                  <button onClick={() => setLogo(null)} className="text-destructive">Remover</button>
+                  <button onClick={() => setLogo(null)} className="text-destructive">
+                    Remover
+                  </button>
                 </div>
                 <input
                   type="range"
@@ -839,7 +913,9 @@ function Index() {
               </label>
             </div>
             {foregrounds.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Faça upload de uma ou mais imagens. Elas são organizadas automaticamente.</p>
+              <p className="text-xs text-muted-foreground">
+                Faça upload de uma ou mais imagens. Elas são organizadas automaticamente.
+              </p>
             ) : (
               <div className="grid grid-cols-4 gap-2">
                 {foregrounds.map((f) => (
@@ -934,12 +1010,16 @@ function Index() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover "{confirmDelete?.name}" da biblioteca? Esta ação não pode ser desfeita.
+              Tem certeza que deseja remover "{confirmDelete?.name}" da biblioteca? Esta ação não
+              pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setConfirmDelete(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={executeDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={executeDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
