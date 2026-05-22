@@ -165,7 +165,7 @@ function getForegroundCoordinates(
   num: number,
   styleType: number,
   fgMinY: number,
-  fgMaxY: number
+  fgMaxY: number,
 ): { x: number; y: number; size: number }[] {
   const coords: { x: number; y: number; size: number }[] = [];
   const fgCenterY = (fgMinY + fgMaxY) / 2;
@@ -178,24 +178,24 @@ function getForegroundCoordinates(
     coords.push({
       x: 0.5,
       y: fgCenterY,
-      size: Math.min(0.42, fgHeightRange / aspectRatio),
+      size: Math.min(0.45, fgHeightRange / aspectRatio),
     });
   } else if (num === 2) {
     const style = styleType % 3;
     if (style === 0) {
       // Columns (side-by-side)
-      const size = Math.min(0.38, fgHeightRange / aspectRatio);
-      coords.push({ x: 0.26, y: fgCenterY, size });
-      coords.push({ x: 0.74, y: fgCenterY, size });
+      const size = Math.min(0.35, fgHeightRange / aspectRatio);
+      coords.push({ x: 0.28, y: fgCenterY, size });
+      coords.push({ x: 0.72, y: fgCenterY, size });
     } else if (style === 1) {
       // Diagonal staggered (no overlap)
-      const size = Math.min(0.35, (fgHeightRange * 0.8) / aspectRatio);
+      const size = Math.min(0.33, (fgHeightRange * 0.8) / aspectRatio);
       const dy = fgHeightRange * 0.16;
-      coords.push({ x: 0.3, y: fgCenterY - dy, size });
-      coords.push({ x: 0.7, y: fgCenterY + dy, size });
+      coords.push({ x: 0.28, y: fgCenterY - dy, size });
+      coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else {
       // Stacked vertically (single column, no overlap)
-      const size = Math.min(0.38, (fgHeightRange * 0.45) / aspectRatio);
+      const size = Math.min(0.35, (fgHeightRange * 0.45) / aspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
@@ -204,30 +204,30 @@ function getForegroundCoordinates(
     const style = styleType % 4;
     if (style === 0) {
       // 3 Columns (side-by-side)
-      const size = Math.min(0.26, fgHeightRange / aspectRatio);
-      coords.push({ x: 0.18, y: fgCenterY, size });
+      const size = Math.min(0.24, fgHeightRange / aspectRatio);
+      coords.push({ x: 0.2, y: fgCenterY, size });
       coords.push({ x: 0.5, y: fgCenterY, size });
-      coords.push({ x: 0.82, y: fgCenterY, size });
+      coords.push({ x: 0.8, y: fgCenterY, size });
     } else if (style === 1) {
       // Pyramid (1 top, 2 bottom)
-      const size = Math.min(0.28, (fgHeightRange * 0.7) / aspectRatio);
+      const size = Math.min(0.26, (fgHeightRange * 0.7) / aspectRatio);
       const dy = fgHeightRange * 0.2;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.26, y: fgCenterY + dy, size });
-      coords.push({ x: 0.74, y: fgCenterY + dy, size });
+      coords.push({ x: 0.28, y: fgCenterY + dy, size });
+      coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else if (style === 2) {
       // Staircase diagonal
-      const size = Math.min(0.25, (fgHeightRange * 0.6) / aspectRatio);
+      const size = Math.min(0.24, (fgHeightRange * 0.6) / aspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.22, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY, size });
       coords.push({ x: 0.78, y: fgCenterY + dy, size });
     } else {
       // Reverse Pyramid (2 top, 1 bottom)
-      const size = Math.min(0.28, (fgHeightRange * 0.7) / aspectRatio);
+      const size = Math.min(0.26, (fgHeightRange * 0.7) / aspectRatio);
       const dy = fgHeightRange * 0.2;
-      coords.push({ x: 0.26, y: fgCenterY - dy, size });
-      coords.push({ x: 0.74, y: fgCenterY - dy, size });
+      coords.push({ x: 0.28, y: fgCenterY - dy, size });
+      coords.push({ x: 0.72, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
     }
   } else if (num === 4) {
@@ -236,33 +236,33 @@ function getForegroundCoordinates(
       // 2x2 Grid (perfectly spaced, minimal overlap)
       const size = Math.min(0.28, (fgHeightRange * 0.65) / aspectRatio);
       const dy = fgHeightRange * 0.22;
-      coords.push({ x: 0.26, y: fgCenterY - dy, size });
-      coords.push({ x: 0.74, y: fgCenterY - dy, size });
-      coords.push({ x: 0.26, y: fgCenterY + dy, size });
-      coords.push({ x: 0.74, y: fgCenterY + dy, size });
+      coords.push({ x: 0.28, y: fgCenterY - dy, size });
+      coords.push({ x: 0.72, y: fgCenterY - dy, size });
+      coords.push({ x: 0.28, y: fgCenterY + dy, size });
+      coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else if (style === 1) {
       // Diamond
       const size = Math.min(0.26, (fgHeightRange * 0.65) / aspectRatio);
       const dy = fgHeightRange * 0.24;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.24, y: fgCenterY, size });
-      coords.push({ x: 0.76, y: fgCenterY, size });
+      coords.push({ x: 0.26, y: fgCenterY, size });
+      coords.push({ x: 0.74, y: fgCenterY, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
     } else if (style === 2) {
       // 1 Top, 3 Bottom
-      const size = Math.min(0.24, (fgHeightRange * 0.6) / aspectRatio);
+      const size = Math.min(0.22, (fgHeightRange * 0.6) / aspectRatio);
       const dy = fgHeightRange * 0.22;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.18, y: fgCenterY + dy, size });
+      coords.push({ x: 0.2, y: fgCenterY + dy, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
-      coords.push({ x: 0.82, y: fgCenterY + dy, size });
+      coords.push({ x: 0.8, y: fgCenterY + dy, size });
     } else {
       // 3 Top, 1 Bottom
-      const size = Math.min(0.24, (fgHeightRange * 0.6) / aspectRatio);
+      const size = Math.min(0.22, (fgHeightRange * 0.6) / aspectRatio);
       const dy = fgHeightRange * 0.22;
-      coords.push({ x: 0.18, y: fgCenterY - dy, size });
+      coords.push({ x: 0.2, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.82, y: fgCenterY - dy, size });
+      coords.push({ x: 0.8, y: fgCenterY - dy, size });
       coords.push({ x: 0.5, y: fgCenterY + dy, size });
     }
   } else {
@@ -270,11 +270,11 @@ function getForegroundCoordinates(
     const cols = Math.ceil(Math.sqrt(num));
     const rows = Math.ceil(num / cols);
 
-    const sizeX = 0.8 / cols;
+    const sizeX = 0.75 / cols;
     const sizeY = fgHeightRange / (rows * aspectRatio);
-    const size = Math.max(0.12, Math.min(sizeX, sizeY, 0.24));
+    const size = Math.max(0.12, Math.min(sizeX, sizeY, 0.22));
 
-    const spacingX = cols > 1 ? (0.8 - size) / (cols - 1) : 0;
+    const spacingX = cols > 1 ? (0.75 - size) / (cols - 1) : 0;
     const spacingY = rows > 1 ? (fgHeightRange - size * aspectRatio) / (rows - 1) : 0;
 
     const startY = fgCenterY - ((rows - 1) * spacingY) / 2;
@@ -294,20 +294,42 @@ function getForegroundCoordinates(
     }
   }
 
-  return coords;
+  // Double-check sizes and keep within 0.05-0.95 margins of the canvas width and height
+  return coords.map((c) => {
+    let size = c.size;
+    let x = c.x;
+    let y = c.y;
+
+    const halfW = size / 2;
+    if (x - halfW < 0.05) {
+      x = 0.05 + halfW;
+    }
+    if (x + halfW > 0.95) {
+      x = 0.95 - halfW;
+    }
+
+    const halfH = (size * aspectRatio) / 2;
+    if (y - halfH < 0.05) {
+      y = 0.05 + halfH;
+    }
+    if (y + halfH > 0.95) {
+      y = 0.95 - halfH;
+    }
+
+    const maxW = Math.min(x - 0.05, 0.95 - x) * 2;
+    const maxH = (Math.min(y - 0.05, 0.95 - y) * 2) / aspectRatio;
+    size = Math.min(size, maxW, maxH);
+
+    return { x, y, size };
+  });
 }
 
-function generateForegroundLayouts(
-  num: number,
-  styleType: number,
-  fgMinY: number,
-  fgMaxY: number
-) {
+function generateForegroundLayouts(num: number, styleType: number, fgMinY: number, fgMaxY: number) {
   const coords = getForegroundCoordinates(num, styleType, fgMinY, fgMaxY);
   return coords.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x + (Math.random() - 0.5) * 0.015)),
-    y: Math.max(0.05, Math.min(0.95, c.y + (Math.random() - 0.5) * 0.015)),
-    size: Math.max(0.05, Math.min(0.9, c.size + (Math.random() - 0.5) * 0.01)),
+    x: Math.max(0.05, Math.min(0.95, c.x)),
+    y: Math.max(0.05, Math.min(0.95, c.y)),
+    size: Math.max(0.05, Math.min(0.9, c.size)),
   }));
 }
 
@@ -316,7 +338,7 @@ function generateCohesiveLayout(
   numForegrounds: number,
   numTexts: number,
   logoExists: boolean,
-  presetIndex: number
+  presetIndex: number,
 ): ElementLayouts {
   const isStory = format === "story";
   const layout: ElementLayouts = {
@@ -330,7 +352,7 @@ function generateCohesiveLayout(
   if (logoExists) {
     if (preset === 0) {
       layout.logo = {
-        x: Math.random() > 0.5 ? 0.5 : 0.15,
+        x: 0.5,
         y: isStory ? 0.08 : 0.07,
         size: 0.22,
       };
@@ -342,7 +364,7 @@ function generateCohesiveLayout(
       };
     } else {
       layout.logo = {
-        x: Math.random() > 0.5 ? 0.85 : 0.5,
+        x: 0.5,
         y: isStory ? 0.08 : 0.07,
         size: 0.22,
       };
@@ -352,24 +374,24 @@ function generateCohesiveLayout(
   if (numTexts > 0) {
     if (preset === 0) {
       const logoTopCenter = layout.logo && Math.abs(layout.logo.x - 0.5) < 0.05;
-      const startY = logoTopCenter ? (isStory ? 0.22 : 0.20) : (isStory ? 0.16 : 0.14);
+      const startY = logoTopCenter ? (isStory ? 0.22 : 0.2) : isStory ? 0.16 : 0.14;
       const spacing = isStory ? 0.07 : 0.06;
 
       for (let i = 0; i < numTexts; i++) {
         layout.texts.push({
           x: 0.5,
           y: startY + i * spacing,
-          size: i === 0 ? (isStory ? 56 : 48) : (isStory ? 38 : 32),
+          size: i === 0 ? (isStory ? 56 : 48) : isStory ? 38 : 32,
         });
       }
     } else if (preset === 1) {
-      const startY = isStory ? 0.82 : 0.80;
+      const startY = isStory ? 0.82 : 0.8;
       const spacing = isStory ? 0.07 : 0.06;
       for (let i = 0; i < numTexts; i++) {
         layout.texts.push({
           x: 0.5,
           y: startY + i * spacing,
-          size: i === 0 ? (isStory ? 56 : 48) : (isStory ? 38 : 32),
+          size: i === 0 ? (isStory ? 56 : 48) : isStory ? 38 : 32,
         });
       }
     } else {
@@ -421,31 +443,28 @@ function generateCohesiveLayout(
   }
 
   if (fgMinY > fgMaxY - 0.15) {
-    fgMinY = isStory ? 0.22 : 0.20;
+    fgMinY = isStory ? 0.22 : 0.2;
     fgMaxY = isStory ? 0.82 : 0.78;
   }
 
-  const fgCenterY = (fgMinY + fgMaxY) / 2;
-  const fgHeightRange = fgMaxY - fgMinY;
-
-  layout.foregrounds = getForegroundCoordinates(numForegrounds, presetIndex, fgMinY, fgMaxY);
+  layout.foregrounds = getForegroundCoordinates(numForegrounds, 0, fgMinY, fgMaxY);
 
   layout.foregrounds = layout.foregrounds.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x + (Math.random() - 0.5) * 0.015)),
-    y: Math.max(0.05, Math.min(0.95, c.y + (Math.random() - 0.5) * 0.015)),
-    size: Math.max(0.05, Math.min(0.9, c.size + (Math.random() - 0.5) * 0.01)),
+    x: Math.max(0.05, Math.min(0.95, c.x)),
+    y: Math.max(0.05, Math.min(0.95, c.y)),
+    size: Math.max(0.05, Math.min(0.9, c.size)),
   }));
 
   if (layout.logo) {
-    layout.logo.x = Math.max(0.05, Math.min(0.95, layout.logo.x + (Math.random() - 0.5) * 0.015));
-    layout.logo.y = Math.max(0.03, Math.min(0.97, layout.logo.y + (Math.random() - 0.5) * 0.015));
-    layout.logo.size = Math.max(0.05, Math.min(0.9, layout.logo.size + (Math.random() - 0.5) * 0.01));
+    layout.logo.x = Math.max(0.05, Math.min(0.95, layout.logo.x));
+    layout.logo.y = Math.max(0.03, Math.min(0.97, layout.logo.y));
+    layout.logo.size = Math.max(0.05, Math.min(0.9, layout.logo.size));
   }
 
   layout.texts = layout.texts.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x + (Math.random() - 0.5) * 0.015)),
-    y: Math.max(0.05, Math.min(0.95, c.y + (Math.random() - 0.5) * 0.015)),
-    size: Math.max(16, Math.min(200, c.size + Math.floor((Math.random() - 0.5) * 4))),
+    x: Math.max(0.05, Math.min(0.95, c.x)),
+    y: Math.max(0.05, Math.min(0.95, c.y)),
+    size: Math.max(16, Math.min(200, c.size)),
   }));
 
   return layout;
@@ -585,6 +604,40 @@ function Index() {
     setPreviewWidth(el.getBoundingClientRect().width || 400);
     return () => observer.disconnect();
   }, [isActive, format]);
+
+  // Auto-arrange foregrounds when their count or format changes
+  useEffect(() => {
+    if (foregrounds.length === 0) return;
+
+    const isStory = format === "story";
+    const { fgMinY, fgMaxY } = getForegroundSpace(texts, logo, isStory);
+    const coords = getForegroundCoordinates(foregrounds.length, 0, fgMinY, fgMaxY);
+
+    setForegrounds((p) => {
+      const hasChanged = p.some((fg, idx) => {
+        const c = coords[idx];
+        if (!c) return false;
+        return (
+          Math.abs(fg.x - c.x) > 0.001 ||
+          Math.abs(fg.y - c.y) > 0.001 ||
+          Math.abs(fg.size - c.size) > 0.001
+        );
+      });
+
+      if (!hasChanged) return p;
+
+      return p.map((fg, idx) => {
+        const c = coords[idx];
+        if (!c) return fg;
+        return {
+          ...fg,
+          x: c.x,
+          y: c.y,
+          size: c.size,
+        };
+      });
+    });
+  }, [foregrounds.length, format]);
 
   // Helper for generating state signature
   const getStateSignature = (state: Omit<CanvasState, "bgImg">) => {
@@ -1040,10 +1093,18 @@ function Index() {
 
     while (attempts < 100) {
       const { fgMinY, fgMaxY } = getForegroundSpace(texts, logo, isStory);
-      const styleType = Math.floor(Math.random() * 4) + attempts;
-      const layouts = generateForegroundLayouts(foregrounds.length, styleType, fgMinY, fgMaxY);
+      
+      // Shuffle copies of the foregrounds to randomize positions
+      const tempFgs = [...foregrounds];
+      for (let i = tempFgs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tempFgs[i], tempFgs[j]] = [tempFgs[j], tempFgs[i]];
+      }
 
-      const candidateFgs = foregrounds.map((fg, idx) => ({
+      // Generate the clean layout coordinates (always style 0)
+      const layouts = generateForegroundLayouts(foregrounds.length, 0, fgMinY, fgMaxY);
+
+      const candidateFgs = tempFgs.map((fg, idx) => ({
         ...fg,
         x: layouts[idx]?.x ?? fg.x,
         y: layouts[idx]?.y ?? fg.y,
@@ -1121,7 +1182,14 @@ function Index() {
         presetIndex
       );
 
-      const nextFgs = foregrounds.map((fg, idx) => ({
+      // Shuffle copies of the foregrounds to randomize positions
+      const tempFgs = [...foregrounds];
+      for (let i = tempFgs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tempFgs[i], tempFgs[j]] = [tempFgs[j], tempFgs[i]];
+      }
+
+      const nextFgs = tempFgs.map((fg, idx) => ({
         ...fg,
         x: layout.foregrounds[idx]?.x ?? fg.x,
         y: layout.foregrounds[idx]?.y ?? fg.y,
