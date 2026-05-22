@@ -2133,10 +2133,8 @@ function Index() {
 
             {/* Draggable Highlights */}
             {foregrounds.map((fg) => (
-              <img
+              <div
                 key={fg.id}
-                src={fg.url}
-                alt=""
                 onPointerDown={(e) => onPointerDown(e, "foreground", fg.id)}
                 style={{
                   position: "absolute",
@@ -2147,15 +2145,19 @@ function Index() {
                   cursor: "grab",
                   touchAction: "none",
                 }}
-                className={`animate-fade-in-scale select-none ${selectedId === fg.id ? "outline-2 outline-dashed outline-white ring-2 ring-primary/80" : ""}`}
-              />
+                className="select-none"
+              >
+                <img
+                  src={fg.url}
+                  alt=""
+                  className={`w-full h-auto animate-fade-in-scale select-none pointer-events-none ${selectedId === fg.id ? "outline-2 outline-dashed outline-white ring-2 ring-primary/80" : ""}`}
+                />
+              </div>
             ))}
 
             {/* Draggable Logo */}
             {logo && (
-              <img
-                src={logo.signedUrl}
-                alt=""
+              <div
                 onPointerDown={(e) => onPointerDown(e, "logo")}
                 style={{
                   position: "absolute",
@@ -2166,8 +2168,14 @@ function Index() {
                   cursor: "grab",
                   touchAction: "none",
                 }}
-                className={`animate-fade-in-scale select-none ${selectedId === "logo" ? "outline-2 outline-dashed outline-white ring-2 ring-primary/80" : ""}`}
-              />
+                className="select-none"
+              >
+                <img
+                  src={logo.signedUrl}
+                  alt=""
+                  className={`w-full h-auto animate-fade-in-scale select-none pointer-events-none ${selectedId === "logo" ? "outline-2 outline-dashed outline-white ring-2 ring-primary/80" : ""}`}
+                />
+              </div>
             )}
 
             {/* Draggable Texts with observer scaled font size */}
