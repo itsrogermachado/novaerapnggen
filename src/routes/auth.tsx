@@ -33,7 +33,7 @@ function AuthPage() {
   const HARDCODED_ADMINS = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"];
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/" });
+    if (!loading && user) navigate({ to: "/app" });
   }, [user, loading, navigate]);
 
   useEffect(() => {
@@ -114,7 +114,7 @@ function AuthPage() {
         });
         if (error) throw error;
       }
-      navigate({ to: "/" });
+      navigate({ to: "/app" });
     } catch (err) {
       toast.error((err as Error).message ?? "Erro de autenticação");
     } finally {

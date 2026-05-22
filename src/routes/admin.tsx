@@ -176,7 +176,7 @@ function AdminPage() {
             } else {
               setIsAdmin(false);
               toast.error("Acesso negado. Apenas administradores.");
-              navigate({ to: "/" });
+              navigate({ to: "/app" });
             }
           } catch {
             if (user.email && HARDCODED_ADMINS.includes(user.email)) {
@@ -184,7 +184,7 @@ function AdminPage() {
               loadData();
             } else {
               setIsAdmin(false);
-              navigate({ to: "/" });
+              navigate({ to: "/app" });
             }
           }
         };
@@ -454,7 +454,7 @@ function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate({ to: "/" })}
+              onClick={() => navigate({ to: "/app" })}
               className="p-2 hover:bg-accent hover:text-accent-foreground rounded-xl text-muted-foreground transition-all duration-200"
               title="Voltar ao Gerador"
             >
@@ -477,7 +477,7 @@ function AdminPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate({ to: "/" })}
+              onClick={() => navigate({ to: "/app" })}
               className="border-border hover:bg-accent text-foreground transition-all duration-200"
             >
               Acessar Gerador
