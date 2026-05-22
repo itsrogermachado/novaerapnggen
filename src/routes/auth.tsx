@@ -18,26 +18,93 @@ function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteToken, setInviteToken] = useState("");
   const [busy, setBusy] = useState(false);
+  const [tokenStatus, setTokenStatus] = useState<{
+    checked: boolean;
+    valid: boolean;
+    expiresAt?: string;
+    description?: string;
+    error?: string;
+  }>({ checked: false, valid: false });
 
   useEffect(() => {
     if (!loading && user) navigate({ to: "/" });
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tokenParam = params.get("token");
+      if (tokenParam) {
+        setInviteToken(tokenParam);
+        setMode("signup");
+        checkToken(tokenParam);
+      }
+    }
+  }, []);
+
+  const checkToken = async (val: string) => {
+    if (!val) {
+      setTokenStatus({ checked: false, valid: false });
+      return;
+    }
+    try {
+      const { data, error } = await supabase.rpc("check_invite_token", { token_val: val.trim() });
+      if (error) throw error;
+      
+      const res = data?.[0];
+      if (res && res.is_valid) {
+        setTokenStatus({
+          checked: true,
+          valid: true,
+          expiresAt: res.expires_at,
+          description: res.description ?? undefined
+        });
+      } else {
+        setTokenStatus({
+          checked: true,
+          valid: false,
+          error: "Token inválido, expirado ou já utilizado."
+        });
+      }
+    } catch (err: any) {
+      setTokenStatus({
+        checked: true,
+        valid: false,
+        error: "Erro ao validar o token."
+      });
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     try {
       if (mode === "signup") {
+        const trimmedEmail = email.trim().toLowerCase();
+        const isAdminEmail = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(trimmedEmail);
+        
+        if (!isAdminEmail && !inviteToken) {
+          toast.error("O token de convite é obrigatório.");
+          setBusy(false);
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
-          email,
+          email: trimmedEmail,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { 
+            emailRedirectTo: window.location.origin,
+            data: {
+              invite_token: isAdminEmail ? undefined : inviteToken.trim()
+            }
+          },
         });
         if (error) throw error;
-        toast.success("Conta criada! Você já está conectado.");
+        toast.success("Conta criada com sucesso!");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
         if (error) throw error;
       }
       navigate({ to: "/" });
@@ -64,6 +131,39 @@ function AuthPage() {
             <Label htmlFor="password">Senha</Label>
             <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
+          {mode === "signup" && (
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <Label htmlFor="token">Token de Convite</Label>
+                {["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(email.trim().toLowerCase()) && (
+                  <span className="text-xs text-emerald-500 font-medium animate-pulse">Opcional para Admin</span>
+                )}
+              </div>
+              <Input
+                id="token"
+                type="text"
+                placeholder="Insira o seu token de convite"
+                required={!["rogermachado019@gmail.com", "casadosvloogs@gmail.com"].includes(email.trim().toLowerCase())}
+                value={inviteToken}
+                onChange={(e) => {
+                  setInviteToken(e.target.value);
+                  checkToken(e.target.value);
+                }}
+                onBlur={() => checkToken(inviteToken)}
+              />
+              {inviteToken && tokenStatus.checked && (
+                <div className="mt-1 text-xs">
+                  {tokenStatus.valid ? (
+                    <span className="text-emerald-500 font-medium">
+                      ✓ Token válido {tokenStatus.description ? `(Destinado a: ${tokenStatus.description})` : ""}
+                    </span>
+                  ) : (
+                    <span className="text-destructive font-medium">✗ {tokenStatus.error}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={busy}>
             {busy ? "Aguarde..." : mode === "login" ? "Entrar" : "Cadastrar"}
           </Button>

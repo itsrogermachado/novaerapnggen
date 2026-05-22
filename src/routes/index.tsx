@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Plus, Download, LogOut, Upload, ImageIcon, Loader2, Shuffle } from "lucide-react";
+import { Trash2, Plus, Download, LogOut, Upload, ImageIcon, Loader2, Shuffle, Mail, Copy, Check, Lock, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -72,9 +72,53 @@ function Index() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
+  const [isActive, setIsActive] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [checkingAccess, setCheckingAccess] = useState<boolean>(true);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+
+  const checkAccess = useCallback(async () => {
+    if (!user) return;
+    try {
+      setCheckingAccess(true);
+      const { data: active, error: activeErr } = await supabase.rpc("is_user_active", { user_uuid: user.id });
+      if (activeErr) throw activeErr;
+
+      const { data: profile, error: profileErr } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single();
+      
+      if (profileErr) throw profileErr;
+
+      setIsActive(!!active);
+      setIsAdmin(!!profile?.is_admin);
+    } catch (err) {
+      console.error("Erro ao verificar acesso:", err);
+      setIsActive(false);
+      setIsAdmin(false);
+    } finally {
+      setCheckingAccess(false);
+    }
+  }, [user]);
+
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
-  }, [user, loading, navigate]);
+    if (!loading) {
+      if (!user) {
+        navigate({ to: "/auth" });
+      } else {
+        checkAccess();
+      }
+    }
+  }, [user, loading, navigate, checkAccess]);
+
+  const copyToClipboard = (email: string) => {
+    navigator.clipboard.writeText(email);
+    setCopiedEmail(email);
+    toast.success("E-mail copiado!");
+    setTimeout(() => setCopiedEmail(null), 2000);
+  };
 
   const [format, setFormat] = useState<Format>("feed");
 
@@ -456,8 +500,89 @@ function Index() {
     navigate({ to: "/auth" });
   };
 
-  if (loading || !user) {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  if (loading || checkingAccess) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-radial from-neutral-900 via-neutral-950 to-black text-white p-4">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-20 h-20 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+        </div>
+        <p className="mt-6 text-sm text-neutral-400 font-medium tracking-wide animate-pulse">Verificando credenciais de acesso...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  if (isActive === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-radial from-neutral-900 via-neutral-950 to-black text-white p-4 font-sans">
+        <div className="w-full max-w-md bg-neutral-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl shadow-black/80 text-center relative overflow-hidden animate-fade-in">
+          <div className="absolute -top-16 -right-16 w-36 h-36 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="mx-auto w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mb-6 shadow-inner animate-pulse">
+            <ShieldAlert className="w-8 h-8 text-red-500" />
+          </div>
+
+          <h2 className="text-2xl font-bold tracking-tight mb-2 bg-gradient-to-r from-red-400 to-indigo-400 bg-clip-text text-transparent">
+            Acesso Expirado ou Bloqueado
+          </h2>
+          <p className="text-sm text-neutral-400 mb-8 leading-relaxed">
+            Seu período de teste ou convite expirou. Para reativar seu acesso e continuar gerando imagens de alta conversão, entre em contato com nossos administradores:
+          </p>
+
+          <div className="space-y-3 mb-8">
+            {[
+              "rogermachado019@gmail.com",
+              "casadosvloogs@gmail.com"
+            ].map((email) => (
+              <div 
+                key={email}
+                className="flex items-center justify-between p-3.5 bg-neutral-950/50 border border-white/5 rounded-xl hover:border-indigo-500/30 transition-all duration-300 group"
+              >
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-indigo-400" />
+                  <span className="text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">{email}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(email)}
+                  className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition"
+                  title="Copiar e-mail"
+                >
+                  {copiedEmail === email ? (
+                    <Check className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button 
+              onClick={checkAccess}
+              className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-6 rounded-xl shadow-lg shadow-indigo-500/20 transition-all duration-300 group"
+            >
+              <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+              Verificar Novamente
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={logout}
+              className="w-full border-white/10 hover:bg-white/5 text-neutral-400 hover:text-white py-6 rounded-xl transition-all duration-300"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair da Conta
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const aspectClass = format === "feed" ? "aspect-[4/5]" : "aspect-[9/16]";
@@ -480,6 +605,16 @@ function Index() {
           <h1 className="text-base sm:text-lg font-bold truncate">Gerador de Resultados</h1>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <span className="text-xs sm:text-sm text-muted-foreground hidden md:inline truncate max-w-[180px]">{user.email}</span>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate({ to: "/admin" })}
+                className="border-indigo-500/30 hover:border-indigo-500 hover:bg-indigo-50/10 text-indigo-400 font-medium"
+              >
+                Painel Admin
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={logout}>
               <LogOut className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Sair</span>
             </Button>
