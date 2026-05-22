@@ -451,7 +451,7 @@ function generateCohesiveLayout(
     fgMaxY = isStory ? 0.82 : 0.78;
   }
 
-  layout.foregrounds = getForegroundCoordinates(numForegrounds, 0, fgMinY, fgMaxY);
+  layout.foregrounds = getForegroundCoordinates(numForegrounds, presetIndex, fgMinY, fgMaxY);
 
   layout.foregrounds = layout.foregrounds.map((c) => ({
     x: Math.max(0.05, Math.min(0.95, c.x)),
@@ -1105,8 +1105,9 @@ function Index() {
         [tempFgs[i], tempFgs[j]] = [tempFgs[j], tempFgs[i]];
       }
 
-      // Generate the clean layout coordinates (always style 0)
-      const layouts = generateForegroundLayouts(foregrounds.length, 0, fgMinY, fgMaxY);
+      // Generate layout coordinates with randomized style
+      const randomStyle = Math.floor(Math.random() * 4);
+      const layouts = generateForegroundLayouts(foregrounds.length, randomStyle, fgMinY, fgMaxY);
 
       const candidateFgs = tempFgs.map((fg, idx) => ({
         ...fg,

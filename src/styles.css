@@ -263,3 +263,9 @@ textarea {
   background-size: 200% 100%;
   animation: shimmer 1.4s ease infinite;
 }
+
+/* Guarantee absolute centering of preview elements on their coordinate center */
+.preview-centered-element {
+  transform: translate(-50%, -50%) !important;
+}
+
