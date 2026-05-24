@@ -23,7 +23,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import logoImg from "../../nova_era_logo.png";
-import showcaseImg from "../../nova_era_showcase.png";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -324,35 +323,6 @@ function LandingPage() {
           </div>
         </div>
 
-        {/* Mockup Floating Container */}
-        <div className="relative mt-16 md:mt-24 z-10 max-w-5xl mx-auto px-4 animate-fade-in-scale">
-          {/* Glowing Backdrops */}
-          <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[85%] h-[60%] bg-gradient-to-tr from-primary/20 to-primary/5 rounded-3xl blur-[80px] pointer-events-none" />
-
-          {/* Realistic Browser Frame */}
-          <div className="relative bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-2xl overflow-hidden p-2 group hover:border-primary/30 transition-colors duration-500">
-            {/* Top Bar */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 mb-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-destructive/60" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                <div className="w-3 h-3 rounded-full bg-green-500/60" />
-              </div>
-              <div className="text-[11px] text-muted-foreground font-medium bg-background/50 border border-border/30 px-6 py-0.5 rounded-md">
-                app.novaerapng.com/editor
-              </div>
-              <div className="w-14" />
-            </div>
-            {/* Image Showcase */}
-            <div className="overflow-hidden rounded-lg bg-background/40">
-              <img
-                src={showcaseImg}
-                alt="Nova Era Editor Preview"
-                className="w-full h-auto object-cover transform transition-transform duration-[20s] ease-in-out hover:scale-105"
-              />
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Features Grid */}
