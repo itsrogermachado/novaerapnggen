@@ -632,6 +632,32 @@ function Index() {
     setTimeout(() => setCopiedEmail(null), 2000);
   };
 
+  if (!loading && user && isActive === false && !checkingAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden transition-colors duration-200 font-sans">
+        {/* Dynamic Glows */}
+        <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[8000ms]" />
+        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[150px] pointer-events-none animate-pulse duration-[10000ms]" />
+        <div className="absolute top-4 right-4 z-20">
+          <ThemeToggle />
+        </div>
+        <Card className="w-full max-w-md p-8 bg-card border-border/80 shadow-2xl relative z-10 transition-colors duration-200 rounded-2xl text-center">
+          <h2 className="text-xl font-bold text-foreground mb-4">Acesso Pendente</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Sua conta está aguardando aprovação de um administrador ou seu tempo de acesso expirou.
+            Por favor, aguarde ou entre em contato com o suporte.
+          </p>
+          <Button 
+            onClick={() => supabase.auth.signOut()} 
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-xl shadow-lg cursor-pointer"
+          >
+            Sair e Voltar ao Login
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   const [format, setFormat] = useState<Format>("feed");
 
   // Background library
@@ -2338,9 +2364,9 @@ function Index() {
             <Undo2 className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-semibold tracking-wide">Linha do Tempo</h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 gap-3 custom-scrollbar content-start">
             {past.length === 0 && future.length === 0 && (
-              <div className="text-center text-xs text-muted-foreground py-6">
+              <div className="text-center text-xs text-muted-foreground py-6 col-span-2">
                 Faça alterações no canvas para vê-las aqui.
               </div>
             )}

@@ -20,66 +20,11 @@ function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [inviteToken, setInviteToken] = useState("");
   const [busy, setBusy] = useState(false);
-  const [tokenStatus, setTokenStatus] = useState<{
-    checked: boolean;
-    valid: boolean;
-    expiresAt?: string;
-    description?: string;
-    error?: string;
-  }>({ checked: false, valid: false });
-
-  const HARDCODED_ADMINS = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"];
 
   useEffect(() => {
     if (!loading && user) navigate({ to: "/app" });
   }, [user, loading, navigate]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tokenParam = params.get("token");
-      if (tokenParam) {
-        setInviteToken(tokenParam);
-        setMode("signup");
-        checkToken(tokenParam);
-      }
-    }
-  }, []);
-
-  const checkToken = async (val: string) => {
-    if (!val) {
-      setTokenStatus({ checked: false, valid: false });
-      return;
-    }
-    try {
-      const { data, error } = await supabase.rpc("check_invite_token", { token_val: val.trim() });
-      if (error) throw error;
-
-      const res = data?.[0];
-      if (res && res.is_valid) {
-        setTokenStatus({
-          checked: true,
-          valid: true,
-          expiresAt: res.expires_at,
-          description: res.description ?? undefined,
-        });
-      } else {
-        setTokenStatus({
-          checked: true,
-          valid: false,
-          error: "Token inválido, expirado ou já utilizado.",
-        });
-      }
-    } catch {
-      setTokenStatus({
-        checked: true,
-        valid: false,
-        error: "Erro ao validar o token.",
-      });
-    }
-  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,26 +32,15 @@ function AuthPage() {
     try {
       const trimmedEmail = email.trim().toLowerCase();
       if (mode === "signup") {
-        const isAdminEmail = HARDCODED_ADMINS.includes(trimmedEmail);
-
-        if (!isAdminEmail && !inviteToken) {
-          toast.error("O token de convite é obrigatório.");
-          setBusy(false);
-          return;
-        }
-
         const { error } = await supabase.auth.signUp({
           email: trimmedEmail,
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: {
-              invite_token: isAdminEmail ? undefined : inviteToken.trim(),
-            },
           },
         });
         if (error) throw error;
-        toast.success("Conta criada com sucesso! Verifique seu acesso.");
+        toast.success("Sua conta foi criada! Acesse e aguarde a aprovação do administrador.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: trimmedEmail,
@@ -121,8 +55,6 @@ function AuthPage() {
       setBusy(false);
     }
   };
-
-  const isCurrentEmailAdmin = HARDCODED_ADMINS.includes(email.trim().toLowerCase());
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden transition-colors duration-200 selection:bg-primary/20 selection:text-foreground font-sans">
@@ -196,52 +128,6 @@ function AuthPage() {
             </div>
           </div>
 
-          {mode === "signup" && (
-            <div className="space-y-1 animate-fade-in">
-              <div className="flex justify-between items-center mb-1">
-                <Label
-                  htmlFor="token"
-                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                >
-                  Token de Convite
-                </Label>
-                {isCurrentEmailAdmin && (
-                  <span className="text-[10px] text-primary font-medium animate-pulse">
-                    Opcional para Admin
-                  </span>
-                )}
-              </div>
-              <div className="relative">
-                <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="token"
-                  type="text"
-                  placeholder="NE-XXXXXXXXXXXX"
-                  required={!isCurrentEmailAdmin}
-                  value={inviteToken}
-                  onChange={(e) => {
-                    setInviteToken(e.target.value);
-                    checkToken(e.target.value);
-                  }}
-                  onBlur={() => checkToken(inviteToken)}
-                  className="bg-background border-border text-foreground pl-10 py-5 rounded-xl focus-visible:ring-primary/50 font-mono"
-                />
-              </div>
-              {inviteToken && tokenStatus.checked && (
-                <div className="mt-1 text-xs">
-                  {tokenStatus.valid ? (
-                    <span className="text-primary font-medium">
-                      ✓ Convite válido{" "}
-                      {tokenStatus.description ? `(${tokenStatus.description})` : ""}
-                    </span>
-                  ) : (
-                    <span className="text-destructive font-medium">✗ {tokenStatus.error}</span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
           <Button
             type="submit"
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 cursor-pointer"
@@ -261,15 +147,12 @@ function AuthPage() {
         </form>
 
         <button
-          onClick={() => {
-            setMode(mode === "login" ? "signup" : "login");
-            setTokenStatus({ checked: false, valid: false });
-            setInviteToken("");
-          }}
+          type="button"
+          onClick={() => setMode(mode === "login" ? "signup" : "login")}
           className="mt-5 text-sm text-primary hover:text-primary/80 transition-colors hover:underline w-full text-center cursor-pointer font-medium"
         >
           {mode === "login"
-            ? "Não tem conta? Cadastre-se com um convite"
+            ? "Não tem conta? Cadastre-se"
             : "Já tem uma conta? Entrar"}
         </button>
       </Card>
