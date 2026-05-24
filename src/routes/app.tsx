@@ -474,6 +474,94 @@ function generateCohesiveLayout(
   return layout;
 }
 
+const MiniCanvas = ({
+  state,
+  aspectClass,
+  isActive,
+  onClick,
+}: {
+  state: CanvasState;
+  aspectClass: string;
+  isActive?: boolean;
+  onClick: () => void;
+}) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative w-full ${aspectClass} bg-muted/45 border-2 rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.02] ${
+        isActive
+          ? "border-primary ring-2 ring-primary/30 shadow-md"
+          : "border-border/60 hover:border-border"
+      }`}
+    >
+      {state.bgUrlSigned && (
+        <img
+          src={state.bgUrlSigned}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        />
+      )}
+      {state.foregrounds.map((fg) => (
+        <div
+          key={fg.id}
+          style={{
+            position: "absolute",
+            left: `${fg.x * 100}%`,
+            top: `${fg.y * 100}%`,
+            width: `${fg.size * 100}%`,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <img src={fg.url} alt="" className="w-full h-auto pointer-events-none" />
+        </div>
+      ))}
+      {state.logo && (
+        <div
+          style={{
+            position: "absolute",
+            left: `${state.logo.x * 100}%`,
+            top: `${state.logo.y * 100}%`,
+            width: `${state.logo.size * 100}%`,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <img
+            src={state.logo.signedUrl}
+            alt=""
+            className="w-full h-auto pointer-events-none"
+          />
+        </div>
+      )}
+      {state.texts.map((t) => {
+        const selectedFont = FONTS.find((f) => f.id === (t.font || "inter")) || FONTS[0];
+        const scaleFactor = 0.15;
+        const scaledSize = t.size * scaleFactor;
+        return (
+          <div
+            key={t.id}
+            style={{
+              position: "absolute",
+              left: `${t.x * 100}%`,
+              top: `${t.y * 100}%`,
+              transform: "translate(-50%, -50%)",
+              color: t.color,
+              fontSize: `${scaledSize}px`,
+              fontFamily: selectedFont.family,
+              fontWeight: 700,
+              textAlign: "center",
+              whiteSpace: "pre-wrap",
+              textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+              lineHeight: 1.15,
+            }}
+          >
+            {t.text}
+          </div>
+        );
+      })}
+    </button>
+  );
+};
+
 function Index() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -560,6 +648,7 @@ function Index() {
 
   // Foregrounds (draggable, scalable)
   const [foregrounds, setForegrounds] = useState<Foreground[]>([]);
+  const [highlightLibrary, setHighlightLibrary] = useState<{ id: string; url: string; img: HTMLImageElement }[]>([]);
 
   const [texts, setTexts] = useState<TextItem[]>([
     {
@@ -768,6 +857,39 @@ function Index() {
     setTexts(next.texts);
     setFormat(next.format);
   }, [future, bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format]);
+
+  const goToHistoryState = useCallback((targetState: CanvasState, index: number, type: "past" | "future") => {
+    const currentState: CanvasState = {
+      bgUrl,
+      bgUrlSigned,
+      bgImg,
+      foregrounds,
+      logo,
+      texts,
+      format,
+    };
+
+    if (type === "past") {
+      const newPast = past.slice(0, index);
+      const newFuture = [...past.slice(index + 1), currentState, ...future];
+      setPast(newPast);
+      setFuture(newFuture);
+    } else {
+      const newPast = [...past, currentState, ...future.slice(0, index)];
+      const newFuture = future.slice(index + 1);
+      setPast(newPast);
+      setFuture(newFuture);
+    }
+
+    setBgUrl(targetState.bgUrl);
+    setBgUrlSigned(targetState.bgUrlSigned);
+    setBgImg(targetState.bgImg);
+    setForegrounds(targetState.foregrounds);
+    setLogo(targetState.logo);
+    setTexts(targetState.texts);
+    setFormat(targetState.format);
+    setSelectedId(null);
+  }, [past, future, bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -982,26 +1104,43 @@ function Index() {
 
   // Upload custom layers (foregrounds)
   const handleForegroundsUpload = async (files: FileList) => {
-    const items: Foreground[] = [];
+    const items: { id: string; url: string; img: HTMLImageElement }[] = [];
     for (const file of Array.from(files)) {
       const url = URL.createObjectURL(file);
       try {
         const img = await loadImage(url);
         const newId = crypto.randomUUID();
-        items.push({
-          id: newId,
-          url,
-          img,
-          x: 0.5,
-          y: 0.5,
-          size: 0.3,
-        });
-        setSelectedId(newId);
+        items.push({ id: newId, url, img });
       } catch {
         console.warn("Falha ao carregar imagem de destaque:", url);
       }
     }
-    setForegrounds((p) => [...p, ...items]);
+    setHighlightLibrary((p) => [...p, ...items]);
+  };
+
+  const toggleForeground = (item: { id: string; url: string; img: HTMLImageElement }) => {
+    saveToHistory();
+    const exists = foregrounds.find(f => f.id === item.id);
+    if (exists) {
+      removeForeground(item.id);
+    } else {
+      setForegrounds(p => [...p, {
+        id: item.id,
+        url: item.url,
+        img: item.img,
+        x: 0.5,
+        y: 0.5,
+        size: 0.3
+      }]);
+      setSelectedId(item.id);
+    }
+  };
+
+  const deleteFromHighlightLibrary = (id: string) => {
+    const isActive = foregrounds.some(f => f.id === id);
+    if (isActive) saveToHistory();
+    setHighlightLibrary(p => p.filter(i => i.id !== id));
+    removeForeground(id);
   };
 
   const updateForeground = (id: string, patch: Partial<Foreground>) => {
@@ -1913,14 +2052,14 @@ function Index() {
                   className="hidden"
                   onChange={(e) => {
                     if (e.target.files) {
-                      saveToHistory();
                       handleForegroundsUpload(e.target.files);
+                      e.target.value = ''; // Reset input to allow re-uploading same file
                     }
                   }}
                 />
               </label>
             </div>
-            {foregrounds.length === 0 ? (
+            {highlightLibrary.length === 0 ? (
               <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
                 <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
                 <div>
@@ -1932,25 +2071,30 @@ function Index() {
               </div>
             ) : (
               <div className="grid grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-0.5">
-                {foregrounds.map((f) => (
-                  <div key={f.id} className="relative group">
-                    <button
-                      onClick={() => setSelectedId(f.id)}
-                      className={`block w-full aspect-square rounded-xl overflow-hidden bg-muted/50 border transition-all ${selectedId === f.id ? "border-primary scale-[0.98]" : "border-border/80 hover:scale-[1.03]"}`}
-                    >
-                      <img src={f.url} alt="" className="w-full h-full object-contain p-1" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        saveToHistory();
-                        removeForeground(f.id);
-                      }}
-                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+                {highlightLibrary.map((f) => {
+                  const isActive = foregrounds.some((active) => active.id === f.id);
+                  return (
+                    <div key={f.id} className="relative group">
+                      <button
+                        onClick={() => toggleForeground(f)}
+                        className={`block w-full aspect-square rounded-xl overflow-hidden bg-muted/50 border transition-all relative ${isActive ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
+                      >
+                        <img src={f.url} alt="" className={`w-full h-full object-contain p-1 ${isActive ? "opacity-100" : "opacity-85"}`} />
+                        {isActive && (
+                          <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
+                            <Check className="w-3 h-3" />
+                          </div>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => deleteFromHighlightLibrary(f.id)}
+                        className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -2075,40 +2219,12 @@ function Index() {
           </Button>
         </Card>
 
-        {/* Canvas Preview Area */}
-        <div className="flex flex-col items-center gap-4 order-1 lg:order-2 w-full max-w-sm lg:max-w-md mx-auto">
-          {/* Undo/Redo Floating Bar */}
-          <div className="flex items-center gap-2.5 bg-card/90 border border-border/80 rounded-full px-4 py-2 shadow-lg backdrop-blur-md animate-fade-in-scale">
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled={past.length === 0}
-              onClick={undo}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full hover:bg-accent transition cursor-pointer"
-              title="Desfazer (Ctrl+Z)"
-            >
-              <Undo2 className="w-4 h-4" />
-            </Button>
-            <div className="w-px h-4 bg-border/80" />
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled={future.length === 0}
-              onClick={redo}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40 rounded-full hover:bg-accent transition cursor-pointer"
-              title="Refazer (Ctrl+Y)"
-            >
-              <Redo2 className="w-4 h-4" />
-            </Button>
-            {past.length > 0 && (
-              <span className="text-[10px] text-muted-foreground font-bold border-l border-border/80 pl-2.5 font-sans">
-                {past.length} {past.length === 1 ? "alteração" : "alterações"}
-              </span>
-            )}
-          </div>
-
-          <div
-            ref={previewRef}
+        {/* Canvas & Visual History Wrapper */}
+        <div className="grid lg:grid-cols-[1fr_200px] xl:grid-cols-[1fr_240px] gap-6 order-1 lg:order-2 w-full h-full">
+          {/* Canvas Preview Area */}
+          <div className="flex flex-col items-center gap-4 w-full max-w-sm lg:max-w-md mx-auto relative">
+            <div
+              ref={previewRef}
             className={`relative ${aspectClass} w-full bg-muted/45 border border-border/90 rounded-2xl overflow-hidden shadow-2xl transition-all duration-500 select-none touch-none`}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
@@ -2215,7 +2331,54 @@ function Index() {
             })}
           </div>
         </div>
-      </main>
+
+        {/* Visual History Panel */}
+        <Card className="p-4 flex flex-col h-[500px] lg:h-full lg:max-h-[85vh] bg-card/60 backdrop-blur-xl border-border/60 shadow-2xl overflow-hidden order-3 lg:order-none relative">
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50">
+            <Undo2 className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold tracking-wide">Linha do Tempo</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+            {past.length === 0 && future.length === 0 && (
+              <div className="text-center text-xs text-muted-foreground py-6">
+                Faça alterações no canvas para vê-las aqui.
+              </div>
+            )}
+            
+            {past.map((state, idx) => (
+              <MiniCanvas 
+                key={`past-${idx}`} 
+                state={state} 
+                aspectClass={aspectClass} 
+                onClick={() => goToHistoryState(state, idx, "past")}
+              />
+            ))}
+            
+            {/* Current State Indicator */}
+            {(past.length > 0 || future.length > 0) && (
+              <div className="relative">
+                 <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
+                 <MiniCanvas 
+                   state={{ bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format }} 
+                   aspectClass={aspectClass} 
+                   isActive={true} 
+                   onClick={() => {}}
+                 />
+              </div>
+            )}
+
+            {future.map((state, idx) => (
+              <MiniCanvas 
+                key={`future-${idx}`} 
+                state={state} 
+                aspectClass={aspectClass} 
+                onClick={() => goToHistoryState(state, idx, "future")}
+              />
+            ))}
+          </div>
+        </Card>
+      </div>
+    </main>
 
       <AlertDialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
         <AlertDialogContent className="bg-card border border-border text-foreground rounded-2xl max-w-sm">
