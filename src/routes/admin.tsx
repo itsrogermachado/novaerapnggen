@@ -58,7 +58,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type TokenDuration = "24h" | "7d" | "30d";
+type TokenDuration = "1m" | "24h" | "7d" | "30d";
 
 interface Profile {
   id: string;
@@ -160,7 +160,9 @@ function AdminPage() {
 
   const getExpiresAtDate = (duration: TokenDuration): Date => {
     const d = new Date();
-    if (duration === "24h") {
+    if (duration === "1m") {
+      d.setMinutes(d.getMinutes() + 1);
+    } else if (duration === "24h") {
       d.setHours(d.getHours() + 24);
     } else if (duration === "7d") {
       d.setDate(d.getDate() + 7);
@@ -532,6 +534,7 @@ function AdminPage() {
                   <SelectValue placeholder="Selecione o tempo..." />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
+                  <SelectItem value="1m">1 Minuto (Teste)</SelectItem>
                   <SelectItem value="24h">24 Horas</SelectItem>
                   <SelectItem value="7d">7 Dias</SelectItem>
                   <SelectItem value="30d">30 Dias</SelectItem>

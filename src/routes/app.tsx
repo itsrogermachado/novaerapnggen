@@ -42,6 +42,7 @@ import {
   Layers,
   Type,
   Sparkles,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -571,6 +572,9 @@ function Index() {
   const [checkingAccess, setCheckingAccess] = useState<boolean>(true);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
+  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+
   const HARDCODED_ADMINS = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"];
 
   const checkAccess = useCallback(async () => {
@@ -583,11 +587,11 @@ function Index() {
         user_uuid: user.id,
       });
 
-      const { data: profile, error: profileErr } = await supabase
+      const { data: profile, error: profileErr } = (await supabase
         .from("profiles")
-        .select("is_admin")
+        .select("is_admin, expires_at")
         .eq("id", user.id)
-        .single();
+        .single()) as any;
 
       if (isHardcodedAdmin) {
         setIsActive(true);
@@ -598,8 +602,13 @@ function Index() {
       } else {
         if (activeErr) throw activeErr;
         if (profileErr) throw profileErr;
+        
+        const p = profile as any;
         setIsActive(!!active);
-        setIsAdmin(!!profile?.is_admin);
+        setIsAdmin(!!p?.is_admin);
+        if (p?.expires_at) {
+          setExpiresAt(new Date(p.expires_at));
+        }
       }
     } catch (err) {
       console.error("Erro ao verificar acesso:", err);
@@ -614,6 +623,35 @@ function Index() {
       setCheckingAccess(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (isAdmin || !expiresAt) return;
+
+    const updateTimeLeft = () => {
+      const now = new Date();
+      const diff = expiresAt.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        setTimeLeft("Expirado");
+        setIsActive(false);
+        return;
+      }
+      
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / 1000 / 60) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+      
+      if (d > 0) setTimeLeft(`${d}d ${h}h`);
+      else if (h > 0) setTimeLeft(`${h}h ${m}m`);
+      else if (m > 0) setTimeLeft(`${m}m ${s}s`);
+      else setTimeLeft(`${s}s`);
+    };
+
+    updateTimeLeft();
+    const interval = setInterval(updateTimeLeft, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt, isAdmin]);
 
   useEffect(() => {
     if (!loading) {
@@ -1698,6 +1736,12 @@ function Index() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {!isAdmin && timeLeft && (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-primary/10 text-primary border-primary/20 text-xs font-bold shadow-sm transition-colors cursor-default">
+                <Clock className="w-3.5 h-3.5" />
+                {timeLeft}
+              </div>
+            )}
             <div className="flex items-center gap-2 bg-muted/50 border border-border/40 rounded-full pl-2 pr-3 py-1 text-xs sm:text-sm font-medium text-muted-foreground hidden md:flex hover:text-foreground hover:bg-muted/80 transition-all cursor-default">
               <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-primary to-primary/70 text-primary-foreground flex items-center justify-center font-bold text-[10px] uppercase shadow-sm">
                 {(user.email || "U").slice(0, 1)}
