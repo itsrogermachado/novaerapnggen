@@ -2384,9 +2384,27 @@ function Index() {
 
         {/* Visual History Panel */}
         <Card className="p-4 flex flex-col h-[500px] lg:h-full lg:max-h-[85vh] bg-card/60 backdrop-blur-xl border-border/60 shadow-2xl overflow-hidden order-3 lg:order-none relative">
-          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50">
-            <Undo2 className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-semibold tracking-wide">Linha do Tempo</h3>
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <Undo2 className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold tracking-wide">Linha do Tempo</h3>
+            </div>
+            {(past.length > 0 || future.length > 0) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setPast([]);
+                  setFuture([]);
+                  toast.success("Histórico limpo!");
+                }}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                title="Limpar histórico"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                Limpar
+              </Button>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 gap-3 custom-scrollbar content-start">
             {past.length === 0 && future.length === 0 && (
