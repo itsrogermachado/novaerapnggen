@@ -1035,6 +1035,14 @@ function Index() {
   const selectBackground = async (itemOrUrl: LibraryItem | string) => {
     try {
       const url = typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.image_url;
+      
+      if (bgUrl === url) {
+        setBgUrl(null);
+        setBgUrlSigned(null);
+        setBgImg(null);
+        return;
+      }
+
       let signedUrl =
         typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.signed_url || itemOrUrl.image_url;
 
@@ -1125,6 +1133,13 @@ function Index() {
   const selectLogo = async (itemOrUrl: LibraryItem | string) => {
     try {
       const url = typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.image_url;
+
+      if (logo?.url === url) {
+        setLogo(null);
+        if (selectedId === "logo") setSelectedId(null);
+        return;
+      }
+
       let signedUrl =
         typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.signed_url || itemOrUrl.image_url;
 
