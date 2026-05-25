@@ -269,3 +269,14 @@ textarea {
   transform: translate(-50%, -50%) !important;
 }
 
+/* Ocultar a marca d'água do Lovable */
+#lovable-badge, 
+.lovable-badge,
+[id^="lovable-badge"],
+lovable-badge,
+#lovable-badge-container {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
