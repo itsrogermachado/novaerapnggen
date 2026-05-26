@@ -92,8 +92,6 @@ function AdminPage() {
   } | null>(null);
   const [changingAdmin, setChangingAdmin] = useState(false);
 
-  // Hardcoded admins who cannot be demoted
-  const HARDCODED_ADMINS = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"];
 
   const loadData = useCallback(async () => {
     try {
@@ -105,7 +103,7 @@ function AdminPage() {
         .order("created_at", { ascending: false });
       if (profilesErr) throw profilesErr;
 
-      setUsers((profilesData as any) || []);
+      setUsers((profilesData as unknown as Profile[]) || []);
     } catch (err) {
       console.error("Erro ao carregar dados do painel:", err);
       toast.error("Erro ao carregar dados administrativos.");
@@ -121,14 +119,6 @@ function AdminPage() {
       } else {
         const verifyAdmin = async () => {
           try {
-            const isHardcodedAdmin = HARDCODED_ADMINS.includes(user.email || "");
-
-            if (isHardcodedAdmin) {
-              setIsAdmin(true);
-              loadData();
-              return;
-            }
-
             const { data } = await supabase
               .from("profiles")
               .select("is_admin")
@@ -143,14 +133,10 @@ function AdminPage() {
               toast.error("Acesso negado. Apenas administradores.");
               navigate({ to: "/app" });
             }
-          } catch {
-            if (user.email && HARDCODED_ADMINS.includes(user.email)) {
-              setIsAdmin(true);
-              loadData();
-            } else {
-              setIsAdmin(false);
-              navigate({ to: "/app" });
-            }
+          } catch (err) {
+            console.error("Erro ao verificar status de admin:", err);
+            setIsAdmin(false);
+            navigate({ to: "/app" });
           }
         };
         verifyAdmin();
@@ -221,11 +207,7 @@ function AdminPage() {
       setAdminChangeTarget(null);
       return;
     }
-    if (profile.email && HARDCODED_ADMINS.includes(profile.email)) {
-      toast.error("Este e-mail é um administrador permanente fixado e não pode ser removido.");
-      setAdminChangeTarget(null);
-      return;
-    }
+
 
     try {
       setChangingAdmin(true);

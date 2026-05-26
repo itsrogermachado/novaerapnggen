@@ -51,61 +51,11 @@ export const Route = createFileRoute("/app")({
   component: Index,
 });
 
-type Format = "feed" | "story";
-
-type TextItem = {
-  id: string;
-  text: string;
-  color: string;
-  size: number;
-  x: number;
-  y: number;
-  font?: string;
-};
-
-type LibraryItem = { id: string; name: string; image_url: string; signed_url?: string };
-type Foreground = {
-  id: string;
-  url: string;
-  img: HTMLImageElement;
-  x: number;
-  y: number;
-  size: number;
-};
-type LogoState = {
-  url: string;
-  signedUrl: string;
-  img: HTMLImageElement;
-  x: number;
-  y: number;
-  size: number;
-} | null;
-
-type CanvasState = {
-  bgUrl: string | null;
-  bgUrlSigned: string | null;
-  bgImg: HTMLImageElement | null;
-  foregrounds: Foreground[];
-  logo: LogoState;
-  texts: TextItem[];
-  format: Format;
-};
-
-const FORMATS: Record<Format, { w: number; h: number; label: string }> = {
-  feed: { w: 1080, h: 1350, label: "Feed (4:5)" },
-  story: { w: 1080, h: 1920, label: "Stories (9:16)" },
-};
-
-const FONTS = [
-  { id: "inter", name: "Inter", family: "'Inter', sans-serif" },
-  { id: "montserrat", name: "Montserrat", family: "'Montserrat', sans-serif" },
-  { id: "poppins", name: "Poppins", family: "'Poppins', sans-serif" },
-  { id: "playfair", name: "Playfair Display", family: "'Playfair Display', serif" },
-  { id: "bebas", name: "Bebas Neue", family: "'Bebas Neue', sans-serif" },
-  { id: "lora", name: "Lora", family: "'Lora', serif" },
-  { id: "cinzel", name: "Cinzel", family: "'Cinzel', serif" },
-];
-
+import { Format, TextItem, LibraryItem, Foreground, LogoState, CanvasState, ElementLayouts } from "@/types/canvas";
+import { FORMATS, FONTS, getForegroundSpace, getForegroundCoordinates, generateForegroundLayouts, generateCohesiveLayout, getStateSignature } from "@/lib/layout-utils";
+import { MiniCanvas } from "@/components/canvas/MiniCanvas";
+import { useCanvasHistory } from "@/hooks/useCanvasHistory";
+import type { Database } from "@/integrations/supabase/types";
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -115,453 +65,6 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     img.src = url;
   });
 }
-
-interface ElementLayouts {
-  foregrounds: { x: number; y: number; size: number }[];
-  logo: { x: number; y: number; size: number } | null;
-  texts: { x: number; y: number; size: number }[];
-}
-
-function getForegroundSpace(
-  currentTexts: TextItem[],
-  currentLogo: LogoState,
-  isStory: boolean
-) {
-  let fgMinY = isStory ? 0.18 : 0.16;
-  let fgMaxY = isStory ? 0.88 : 0.85;
-
-  const activeTexts = currentTexts.filter((t) => t.text.trim() !== "");
-  const hasTopText = activeTexts.some((t) => t.y < 0.35);
-  const hasBottomText = activeTexts.some((t) => t.y > 0.65);
-  const hasLogo = !!currentLogo;
-
-  if (hasTopText && hasBottomText) {
-    const topTexts = activeTexts.filter((t) => t.y < 0.35);
-    const bottomTexts = activeTexts.filter((t) => t.y > 0.65);
-    const maxTopY = Math.max(...topTexts.map((t) => t.y), hasLogo ? currentLogo.y : 0);
-    const minBottomY = Math.min(...bottomTexts.map((t) => t.y));
-    fgMinY = maxTopY + 0.12;
-    fgMaxY = minBottomY - 0.12;
-  } else if (hasTopText) {
-    const maxTopY = Math.max(...activeTexts.map((t) => t.y), hasLogo ? currentLogo.y : 0);
-    fgMinY = maxTopY + 0.12;
-  } else if (hasBottomText) {
-    const minBottomY = Math.min(...activeTexts.map((t) => t.y));
-    fgMaxY = minBottomY - 0.12;
-    if (hasLogo) {
-      fgMinY = currentLogo.y + 0.12;
-    }
-  } else if (hasLogo) {
-    fgMinY = currentLogo.y + 0.12;
-  }
-
-  if (fgMinY > fgMaxY - 0.15) {
-    fgMinY = isStory ? 0.22 : 0.20;
-    fgMaxY = isStory ? 0.82 : 0.78;
-  }
-
-  return { fgMinY, fgMaxY };
-}
-
-function getForegroundCoordinates(
-  num: number,
-  styleType: number,
-  fgMinY: number,
-  fgMaxY: number,
-): { x: number; y: number; size: number }[] {
-  const coords: { x: number; y: number; size: number }[] = [];
-  const fgCenterY = (fgMinY + fgMaxY) / 2;
-  const fgHeightRange = fgMaxY - fgMinY;
-
-  // Betting tickets/coupons are generally vertical with ~1.4 ratio
-  const aspectRatio = 1.4;
-  const layoutAspectRatio = 1.05;
-
-  if (num === 1) {
-    coords.push({
-      x: 0.5,
-      y: fgCenterY,
-      size: Math.min(0.48, fgHeightRange / layoutAspectRatio),
-    });
-  } else if (num === 2) {
-    const style = styleType % 3;
-    if (style === 0) {
-      // Columns (side-by-side)
-      const size = Math.min(0.42, fgHeightRange / layoutAspectRatio);
-      coords.push({ x: 0.28, y: fgCenterY, size });
-      coords.push({ x: 0.72, y: fgCenterY, size });
-    } else if (style === 1) {
-      // Diagonal staggered (no overlap)
-      const size = Math.min(0.38, (fgHeightRange * 0.85) / layoutAspectRatio);
-      const dy = fgHeightRange * 0.16;
-      coords.push({ x: 0.28, y: fgCenterY - dy, size });
-      coords.push({ x: 0.72, y: fgCenterY + dy, size });
-    } else {
-      // Stacked vertically (single column, no overlap)
-      const size = Math.min(0.42, (fgHeightRange * 0.5) / layoutAspectRatio);
-      const dy = fgHeightRange * 0.22;
-      coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.5, y: fgCenterY + dy, size });
-    }
-  } else if (num === 3) {
-    const style = styleType % 4;
-    if (style === 0) {
-      // 3 Columns (side-by-side)
-      const size = Math.min(0.28, fgHeightRange / layoutAspectRatio);
-      coords.push({ x: 0.2, y: fgCenterY, size });
-      coords.push({ x: 0.5, y: fgCenterY, size });
-      coords.push({ x: 0.8, y: fgCenterY, size });
-    } else if (style === 1) {
-      // Pyramid (1 top, 2 bottom)
-      const size = Math.min(0.32, (fgHeightRange * 0.75) / layoutAspectRatio);
-      const dy = fgHeightRange * 0.2;
-      coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.28, y: fgCenterY + dy, size });
-      coords.push({ x: 0.72, y: fgCenterY + dy, size });
-    } else if (style === 2) {
-      // Staircase diagonal
-      const size = Math.min(0.28, (fgHeightRange * 0.65) / layoutAspectRatio);
-      const dy = fgHeightRange * 0.22;
-      coords.push({ x: 0.22, y: fgCenterY - dy, size });
-      coords.push({ x: 0.5, y: fgCenterY, size });
-      coords.push({ x: 0.78, y: fgCenterY + dy, size });
-    } else {
-      // Reverse Pyramid (2 top, 1 bottom)
-      const size = Math.min(0.32, (fgHeightRange * 0.75) / layoutAspectRatio);
-      const dy = fgHeightRange * 0.2;
-      coords.push({ x: 0.28, y: fgCenterY - dy, size });
-      coords.push({ x: 0.72, y: fgCenterY - dy, size });
-      coords.push({ x: 0.5, y: fgCenterY + dy, size });
-    }
-  } else if (num === 4) {
-    const style = styleType % 4;
-    if (style === 0) {
-      // 2x2 Grid (perfectly spaced, minimal overlap)
-      const size = Math.min(0.34, (fgHeightRange * 0.7) / layoutAspectRatio);
-      const dy = fgHeightRange * 0.22;
-      coords.push({ x: 0.28, y: fgCenterY - dy, size });
-      coords.push({ x: 0.72, y: fgCenterY - dy, size });
-      coords.push({ x: 0.28, y: fgCenterY + dy, size });
-      coords.push({ x: 0.72, y: fgCenterY + dy, size });
-    } else if (style === 1) {
-      // Diamond
-      const size = Math.min(0.30, (fgHeightRange * 0.7) / layoutAspectRatio);
-      const dy = fgHeightRange * 0.24;
-      coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.26, y: fgCenterY, size });
-      coords.push({ x: 0.74, y: fgCenterY, size });
-      coords.push({ x: 0.5, y: fgCenterY + dy, size });
-    } else if (style === 2) {
-      // 1 Top, 3 Bottom
-      const size = Math.min(0.26, (fgHeightRange * 0.65) / layoutAspectRatio);
-      const dy = fgHeightRange * 0.22;
-      coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.2, y: fgCenterY + dy, size });
-      coords.push({ x: 0.5, y: fgCenterY + dy, size });
-      coords.push({ x: 0.8, y: fgCenterY + dy, size });
-    } else {
-      // 3 Top, 1 Bottom
-      const size = Math.min(0.26, (fgHeightRange * 0.65) / layoutAspectRatio);
-      const dy = fgHeightRange * 0.22;
-      coords.push({ x: 0.2, y: fgCenterY - dy, size });
-      coords.push({ x: 0.5, y: fgCenterY - dy, size });
-      coords.push({ x: 0.8, y: fgCenterY - dy, size });
-      coords.push({ x: 0.5, y: fgCenterY + dy, size });
-    }
-  } else {
-    // Smart Centered Grid for 5 or more elements
-    const cols = Math.ceil(Math.sqrt(num));
-    const rows = Math.ceil(num / cols);
-
-    const layoutGridWidth = 0.88;
-
-    const sizeX = layoutGridWidth / cols;
-    const sizeY = fgHeightRange / (rows * layoutAspectRatio);
-    const size = Math.max(0.12, Math.min(sizeX, sizeY, 0.28));
-
-    const spacingX = cols > 1 ? (layoutGridWidth - size) / (cols - 1) : 0;
-    const spacingY = rows > 1 ? (fgHeightRange - size * aspectRatio) / (rows - 1) : 0;
-
-    const startY = fgCenterY - ((rows - 1) * spacingY) / 2;
-
-    for (let r = 0; r < rows; r++) {
-      const startIndex = r * cols;
-      const cardsInRow = Math.min(cols, num - startIndex);
-      const rowStartX = 0.5 - ((cardsInRow - 1) * spacingX) / 2;
-
-      for (let c = 0; c < cardsInRow; c++) {
-        coords.push({
-          x: rowStartX + c * spacingX,
-          y: startY + r * spacingY,
-          size,
-        });
-      }
-    }
-  }
-
-  // Double-check sizes and keep within 0.05-0.95 margins of the canvas width and height
-  return coords.map((c) => {
-    let size = c.size;
-    let x = c.x;
-    let y = c.y;
-
-    const halfW = size / 2;
-    if (x - halfW < 0.05) {
-      x = 0.05 + halfW;
-    }
-    if (x + halfW > 0.95) {
-      x = 0.95 - halfW;
-    }
-
-    const halfH = (size * aspectRatio) / 2;
-    if (y - halfH < 0.05) {
-      y = 0.05 + halfH;
-    }
-    if (y + halfH > 0.95) {
-      y = 0.95 - halfH;
-    }
-
-    const maxW = Math.min(x - 0.05, 0.95 - x) * 2;
-    const maxH = (Math.min(y - 0.05, 0.95 - y) * 2) / aspectRatio;
-    size = Math.min(size, maxW, maxH);
-
-    return { x, y, size };
-  });
-}
-
-function generateForegroundLayouts(num: number, styleType: number, fgMinY: number, fgMaxY: number) {
-  const coords = getForegroundCoordinates(num, styleType, fgMinY, fgMaxY);
-  return coords.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x)),
-    y: Math.max(0.05, Math.min(0.95, c.y)),
-    size: Math.max(0.05, Math.min(0.9, c.size)),
-  }));
-}
-
-function generateCohesiveLayout(
-  format: Format,
-  numForegrounds: number,
-  numTexts: number,
-  logoExists: boolean,
-  presetIndex: number,
-): ElementLayouts {
-  const isStory = format === "story";
-  const layout: ElementLayouts = {
-    foregrounds: [],
-    logo: null,
-    texts: [],
-  };
-
-  const preset = presetIndex % 3;
-
-  if (logoExists) {
-    if (preset === 0) {
-      layout.logo = {
-        x: 0.5,
-        y: isStory ? 0.08 : 0.07,
-        size: 0.22,
-      };
-    } else if (preset === 1) {
-      layout.logo = {
-        x: 0.5,
-        y: isStory ? 0.1 : 0.09,
-        size: 0.25,
-      };
-    } else {
-      layout.logo = {
-        x: 0.5,
-        y: isStory ? 0.08 : 0.07,
-        size: 0.22,
-      };
-    }
-  }
-
-  if (numTexts > 0) {
-    if (preset === 0) {
-      const logoTopCenter = layout.logo && Math.abs(layout.logo.x - 0.5) < 0.05;
-      const startY = logoTopCenter ? (isStory ? 0.22 : 0.2) : isStory ? 0.16 : 0.14;
-      const spacing = isStory ? 0.07 : 0.06;
-
-      for (let i = 0; i < numTexts; i++) {
-        layout.texts.push({
-          x: 0.5,
-          y: startY + i * spacing,
-          size: i === 0 ? (isStory ? 56 : 48) : isStory ? 38 : 32,
-        });
-      }
-    } else if (preset === 1) {
-      const startY = isStory ? 0.82 : 0.8;
-      const spacing = isStory ? 0.07 : 0.06;
-      for (let i = 0; i < numTexts; i++) {
-        layout.texts.push({
-          x: 0.5,
-          y: startY + i * spacing,
-          size: i === 0 ? (isStory ? 56 : 48) : isStory ? 38 : 32,
-        });
-      }
-    } else {
-      for (let i = 0; i < numTexts; i++) {
-        if (i === 0) {
-          layout.texts.push({
-            x: 0.5,
-            y: isStory ? 0.18 : 0.16,
-            size: isStory ? 54 : 46,
-          });
-        } else if (i === 1) {
-          layout.texts.push({
-            x: 0.5,
-            y: isStory ? 0.84 : 0.82,
-            size: isStory ? 48 : 40,
-          });
-        } else {
-          layout.texts.push({
-            x: 0.5,
-            y: 0.88 + (i - 2) * 0.05,
-            size: 32,
-          });
-        }
-      }
-    }
-  }
-
-  let fgMinY = isStory ? 0.18 : 0.16;
-  let fgMaxY = isStory ? 0.88 : 0.85;
-
-  if (layout.logo) {
-    fgMinY = Math.max(fgMinY, layout.logo.y + 0.12);
-  }
-
-  if (numTexts > 0) {
-    if (preset === 0) {
-      const lastTextY = layout.texts[layout.texts.length - 1].y;
-      fgMinY = Math.max(fgMinY, lastTextY + 0.12);
-    } else if (preset === 1) {
-      const firstTextY = layout.texts[0].y;
-      fgMaxY = Math.min(fgMaxY, firstTextY - 0.12);
-    } else {
-      const topTextY = layout.texts[0].y;
-      fgMinY = Math.max(fgMinY, topTextY + 0.12);
-      if (layout.texts[1]) {
-        fgMaxY = Math.min(fgMaxY, layout.texts[1].y - 0.12);
-      }
-    }
-  }
-
-  if (fgMinY > fgMaxY - 0.15) {
-    fgMinY = isStory ? 0.22 : 0.2;
-    fgMaxY = isStory ? 0.82 : 0.78;
-  }
-
-  layout.foregrounds = getForegroundCoordinates(numForegrounds, 0, fgMinY, fgMaxY);
-
-  layout.foregrounds = layout.foregrounds.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x)),
-    y: Math.max(0.05, Math.min(0.95, c.y)),
-    size: Math.max(0.05, Math.min(0.9, c.size)),
-  }));
-
-  if (layout.logo) {
-    layout.logo.x = Math.max(0.05, Math.min(0.95, layout.logo.x));
-    layout.logo.y = Math.max(0.03, Math.min(0.97, layout.logo.y));
-    layout.logo.size = Math.max(0.05, Math.min(0.9, layout.logo.size));
-  }
-
-  layout.texts = layout.texts.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x)),
-    y: Math.max(0.05, Math.min(0.95, c.y)),
-    size: Math.max(16, Math.min(200, c.size)),
-  }));
-
-  return layout;
-}
-
-const MiniCanvas = ({
-  state,
-  aspectClass,
-  isActive,
-  onClick,
-}: {
-  state: CanvasState;
-  aspectClass: string;
-  isActive?: boolean;
-  onClick: () => void;
-}) => {
-  return (
-    <button
-      onClick={onClick}
-      className={`relative w-full ${aspectClass} bg-muted/45 border-2 rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.02] ${
-        isActive
-          ? "border-primary ring-2 ring-primary/30 shadow-md"
-          : "border-border/60 hover:border-border"
-      }`}
-    >
-      {state.bgUrlSigned && (
-        <img
-          src={state.bgUrlSigned}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        />
-      )}
-      {state.foregrounds.map((fg) => (
-        <div
-          key={fg.id}
-          style={{
-            position: "absolute",
-            left: `${fg.x * 100}%`,
-            top: `${fg.y * 100}%`,
-            width: `${fg.size * 100}%`,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          <img src={fg.url} alt="" className="w-full h-auto pointer-events-none" />
-        </div>
-      ))}
-      {state.logo && (
-        <div
-          style={{
-            position: "absolute",
-            left: `${state.logo.x * 100}%`,
-            top: `${state.logo.y * 100}%`,
-            width: `${state.logo.size * 100}%`,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          <img
-            src={state.logo.signedUrl}
-            alt=""
-            className="w-full h-auto pointer-events-none"
-          />
-        </div>
-      )}
-      {state.texts.map((t) => {
-        const selectedFont = FONTS.find((f) => f.id === (t.font || "inter")) || FONTS[0];
-        const scaleFactor = 0.15;
-        const scaledSize = t.size * scaleFactor;
-        return (
-          <div
-            key={t.id}
-            style={{
-              position: "absolute",
-              left: `${t.x * 100}%`,
-              top: `${t.y * 100}%`,
-              transform: "translate(-50%, -50%)",
-              color: t.color,
-              fontSize: `${scaledSize}px`,
-              fontFamily: selectedFont.family,
-              fontWeight: 700,
-              textAlign: "center",
-              whiteSpace: "pre-wrap",
-              textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-              lineHeight: 1.15,
-            }}
-          >
-            {t.text}
-          </div>
-        );
-      })}
-    </button>
-  );
-};
 
 function Index() {
   const navigate = useNavigate();
@@ -575,50 +78,34 @@ function Index() {
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
 
-  const HARDCODED_ADMINS = ["rogermachado019@gmail.com", "casadosvloogs@gmail.com"];
-
   const checkAccess = useCallback(async () => {
     if (!user) return;
     try {
       setCheckingAccess(true);
-      const isHardcodedAdmin = HARDCODED_ADMINS.includes(user.email || "");
 
       const { data: active, error: activeErr } = await supabase.rpc("is_user_active", {
         user_uuid: user.id,
       });
 
-      const { data: profile, error: profileErr } = (await supabase
+      const { data: profileData, error: profileErr } = await supabase
         .from("profiles")
         .select("is_admin, expires_at")
         .eq("id", user.id)
-        .single()) as any;
+        .single();
 
-      if (isHardcodedAdmin) {
-        setIsActive(true);
-        setIsAdmin(true);
-        if (profile && !profile.is_admin) {
-          await supabase.from("profiles").update({ is_admin: true }).eq("id", user.id);
-        }
-      } else {
-        if (activeErr) throw activeErr;
-        if (profileErr) throw profileErr;
-        
-        const p = profile as any;
-        setIsActive(!!active);
-        setIsAdmin(!!p?.is_admin);
-        if (p?.expires_at) {
-          setExpiresAt(new Date(p.expires_at));
-        }
+      if (activeErr) throw activeErr;
+      if (profileErr) throw profileErr;
+      
+      const profile = profileData as any;
+      setIsActive(!!active);
+      setIsAdmin(!!profile?.is_admin);
+      if (profile?.expires_at) {
+        setExpiresAt(new Date(profile.expires_at));
       }
     } catch (err) {
       console.error("Erro ao verificar acesso:", err);
-      if (user.email && HARDCODED_ADMINS.includes(user.email)) {
-        setIsActive(true);
-        setIsAdmin(true);
-      } else {
-        setIsActive(false);
-        setIsAdmin(false);
-      }
+      setIsActive(false);
+      setIsAdmin(false);
     } finally {
       setCheckingAccess(false);
     }
@@ -719,8 +206,10 @@ function Index() {
   } | null>(null);
 
   // History Undo/Redo States
-  const [past, setPast] = useState<CanvasState[]>([]);
-  const [future, setFuture] = useState<CanvasState[]>([]);
+  const { past, future, setPast, setFuture, saveToHistory, undo, redo, goToHistoryState } = useCanvasHistory({
+    currentState: { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format },
+    setters: { setBgUrl, setBgUrlSigned, setBgImg, setForegrounds, setLogo, setTexts, setFormat, setSelectedId }
+  });
 
   // ResizeObserver for dynamic text scaling
   useEffect(() => {
@@ -771,24 +260,6 @@ function Index() {
   }, [foregrounds.length, format, texts.length, !!logo]);
 
   // Helper for generating state signature
-  const getStateSignature = (state: Omit<CanvasState, "bgImg">) => {
-    const bg = state.bgUrl || "";
-    const fgs = state.foregrounds
-      .map((f) => `${f.url}:${f.x.toFixed(3)}:${f.y.toFixed(3)}:${f.size.toFixed(3)}`)
-      .join(",");
-    const logoPart = state.logo
-      ? `${state.logo.url}:${state.logo.x.toFixed(3)}:${state.logo.y.toFixed(3)}:${state.logo.size.toFixed(3)}`
-      : "";
-    const txts = state.texts
-      .map(
-        (t) =>
-          `${t.id}:${t.text}:${t.color}:${t.size}:${t.x.toFixed(3)}:${t.y.toFixed(3)}:${t.font || "inter"}`,
-      )
-      .sort()
-      .join("|");
-    const fmt = state.format;
-    return `${bg}#${fgs}#${logoPart}#${txts}#${fmt}`;
-  };
 
   const getSignedUrlForStorageUrl = async (
     bucket: "backgrounds" | "logos",
@@ -813,145 +284,10 @@ function Index() {
     }
   };
 
-  const saveToHistory = useCallback(() => {
-    const currentState: CanvasState = {
-      bgUrl,
-      bgUrlSigned,
-      bgImg,
-      foregrounds,
-      logo,
-      texts,
-      format,
-    };
 
-    const currentSig = getStateSignature(currentState);
 
-    setPast((prev) => {
-      if (prev.length > 0) {
-        const lastSig = getStateSignature(prev[prev.length - 1]);
-        if (lastSig === currentSig) {
-          return prev;
-        }
-      }
-      const newPast = [...prev, currentState];
-      if (newPast.length > 50) {
-        newPast.shift();
-      }
-      return newPast;
-    });
-    setFuture([]);
-  }, [bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format]);
 
-  const undo = useCallback(() => {
-    if (past.length === 0) return;
-    const previous = past[past.length - 1];
-    const newPast = past.slice(0, -1);
 
-    const currentState: CanvasState = {
-      bgUrl,
-      bgUrlSigned,
-      bgImg,
-      foregrounds,
-      logo,
-      texts,
-      format,
-    };
-
-    setPast(newPast);
-    setFuture((prev) => [currentState, ...prev]);
-
-    setBgUrl(previous.bgUrl);
-    setBgUrlSigned(previous.bgUrlSigned);
-    setBgImg(previous.bgImg);
-    setForegrounds(previous.foregrounds);
-    setLogo(previous.logo);
-    setTexts(previous.texts);
-    setFormat(previous.format);
-  }, [past, bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format]);
-
-  const redo = useCallback(() => {
-    if (future.length === 0) return;
-    const next = future[0];
-    const newFuture = future.slice(1);
-
-    const currentState: CanvasState = {
-      bgUrl,
-      bgUrlSigned,
-      bgImg,
-      foregrounds,
-      logo,
-      texts,
-      format,
-    };
-
-    setPast((prev) => [...prev, currentState]);
-    setFuture(newFuture);
-
-    setBgUrl(next.bgUrl);
-    setBgUrlSigned(next.bgUrlSigned);
-    setBgImg(next.bgImg);
-    setForegrounds(next.foregrounds);
-    setLogo(next.logo);
-    setTexts(next.texts);
-    setFormat(next.format);
-  }, [future, bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format]);
-
-  const goToHistoryState = useCallback((targetState: CanvasState, index: number, type: "past" | "future") => {
-    const currentState: CanvasState = {
-      bgUrl,
-      bgUrlSigned,
-      bgImg,
-      foregrounds,
-      logo,
-      texts,
-      format,
-    };
-
-    if (type === "past") {
-      const newPast = past.slice(0, index);
-      const newFuture = [...past.slice(index + 1), currentState, ...future];
-      setPast(newPast);
-      setFuture(newFuture);
-    } else {
-      const newPast = [...past, currentState, ...future.slice(0, index)];
-      const newFuture = future.slice(index + 1);
-      setPast(newPast);
-      setFuture(newFuture);
-    }
-
-    setBgUrl(targetState.bgUrl);
-    setBgUrlSigned(targetState.bgUrlSigned);
-    setBgImg(targetState.bgImg);
-    setForegrounds(targetState.foregrounds);
-    setLogo(targetState.logo);
-    setTexts(targetState.texts);
-    setFormat(targetState.format);
-    setSelectedId(null);
-  }, [past, future, bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const activeEl = document.activeElement;
-      const isEditingText =
-        activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
-      if (isEditingText) return;
-
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-        if (e.key.toLowerCase() === "z") {
-          e.preventDefault();
-          undo();
-        } else if (e.key.toLowerCase() === "y") {
-          e.preventDefault();
-          redo();
-        }
-      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        redo();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo]);
 
   // Carregar bibliotecas
   const loadLibraries = useCallback(async () => {
