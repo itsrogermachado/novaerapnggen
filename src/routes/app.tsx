@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -55,6 +56,8 @@ import { Format, LibraryItem, Foreground, LogoState, CanvasState, ElementLayouts
 import { FORMATS, FONTS, getForegroundSpace, getForegroundCoordinates, generateForegroundLayouts, generateCohesiveLayout, getStateSignature } from "@/lib/layout-utils";
 import { MiniCanvas } from "@/components/canvas/MiniCanvas";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
+import { Header } from "@/components/Header";
+import { RandomizerPanel } from "@/components/RandomizerPanel";
 import type { Database } from "@/integrations/supabase/types";
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -64,6 +67,20 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     img.onerror = reject;
     img.src = url;
   });
+}
+
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/<\/?[?#&]?[^>]+(>|$)/g, "") // remove HTML tags
+    .replace(/[<>'"`;\\/]/g, "")          // remove XSS/path-traversal chars
+    .trim()
+    .slice(0, 60);
+}
+
+function safeLogError(message: string, error?: any) {
+  if (import.meta.env.DEV) {
+    console.error(message, error);
+  }
 }
 
 function Index() {
@@ -103,7 +120,7 @@ function Index() {
         setExpiresAt(new Date(profile.expires_at));
       }
     } catch (err) {
-      console.error("Erro ao verificar acesso:", err);
+      safeLogError("Erro ao verificar acesso:", err);
       setIsActive(false);
       setIsAdmin(false);
     } finally {
@@ -196,7 +213,7 @@ function Index() {
   } | null>(null);
 
   // History Undo/Redo States
-  const { past, future, setPast, setFuture, saveToHistory, undo, redo, goToHistoryState } = useCanvasHistory({
+  const { past, future, setPast, setFuture, saveToHistory, undo, redo, goToHistoryState, historyEnabled, setHistoryEnabled } = useCanvasHistory({
     currentState: { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, format },
     setters: { setBgUrl, setBgUrlSigned, setBgImg, setForegrounds, setLogo, setFormat, setSelectedId }
   });
@@ -264,12 +281,12 @@ function Index() {
       const decodePath = decodeURIComponent(filePath);
       const { data, error } = await supabase.storage.from(bucket).createSignedUrl(decodePath, 7200);
       if (error) {
-        console.error("Erro ao assinar URL:", error);
+        safeLogError("Erro ao assinar URL:", error);
         return storageUrl;
       }
       return data.signedUrl;
     } catch (err) {
-      console.error("Erro ao gerar URL assinada:", err);
+      safeLogError("Erro ao gerar URL assinada:", err);
       return storageUrl;
     }
   };
@@ -294,24 +311,24 @@ function Index() {
       const signedBgs = await Promise.all(
         bgData.map(async (item) => {
           const signedUrl = await getSignedUrlForStorageUrl("backgrounds", item.image_url);
-          return { ...item, signed_url: signedUrl };
+          return { ...item, signed_url: signedUrl, signed_at: Date.now() };
         }),
       );
       bgData = signedBgs;
     } catch (e) {
-      console.error("Error signing background URLs:", e);
+      safeLogError("Error signing background URLs:", e);
     }
 
     try {
       const signedLgs = await Promise.all(
         lgData.map(async (item) => {
           const signedUrl = await getSignedUrlForStorageUrl("logos", item.image_url);
-          return { ...item, signed_url: signedUrl };
+          return { ...item, signed_url: signedUrl, signed_at: Date.now() };
         }),
       );
       lgData = signedLgs;
     } catch (e) {
-      console.error("Error signing logo URLs:", e);
+      safeLogError("Error signing logo URLs:", e);
     }
 
     setBgLib(bgData);
@@ -337,7 +354,8 @@ function Index() {
       saveToHistory();
       setUploadingBg(true);
       const url = await uploadToBucket("backgrounds", file);
-      const name = file.name.replace(/\.[^.]+$/, "").slice(0, 60);
+      const rawName = file.name.replace(/\.[^.]+$/, "");
+      const name = sanitizeFilename(rawName);
       const { data, error } = await supabase
         .from("backgrounds")
         .insert({ user_id: user!.id, name, image_url: url })
@@ -346,7 +364,7 @@ function Index() {
       if (error) throw error;
 
       const signedUrl = await getSignedUrlForStorageUrl("backgrounds", url);
-      const newItem = { ...(data as LibraryItem), signed_url: signedUrl };
+      const newItem = { ...(data as LibraryItem), signed_url: signedUrl, signed_at: Date.now() };
 
       setBgLib((p) => [newItem, ...p]);
       await selectBackground(newItem);
@@ -372,8 +390,15 @@ function Index() {
       let signedUrl =
         typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.signed_url || itemOrUrl.image_url;
 
-      if (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/backgrounds/")) {
+      const isExpired = typeof itemOrUrl !== "string" && 
+        (!itemOrUrl.signed_at || Date.now() - itemOrUrl.signed_at > 7000 * 1000);
+
+      if (isExpired || (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/backgrounds/"))) {
         signedUrl = await getSignedUrlForStorageUrl("backgrounds", url);
+        if (typeof itemOrUrl !== "string") {
+          itemOrUrl.signed_url = signedUrl;
+          itemOrUrl.signed_at = Date.now();
+        }
       }
 
       const img = await loadImage(signedUrl);
@@ -435,7 +460,8 @@ function Index() {
       saveToHistory();
       setUploadingLogo(true);
       const url = await uploadToBucket("logos", file);
-      const name = file.name.replace(/\.[^.]+$/, "").slice(0, 60);
+      const rawName = file.name.replace(/\.[^.]+$/, "");
+      const name = sanitizeFilename(rawName);
       const { data, error } = await supabase
         .from("logos")
         .insert({ user_id: user!.id, name, image_url: url })
@@ -444,7 +470,7 @@ function Index() {
       if (error) throw error;
 
       const signedUrl = await getSignedUrlForStorageUrl("logos", url);
-      const newItem = { ...(data as LibraryItem), signed_url: signedUrl };
+      const newItem = { ...(data as LibraryItem), signed_url: signedUrl, signed_at: Date.now() };
 
       setLogoLib((p) => [newItem, ...p]);
       await selectLogo(newItem);
@@ -469,8 +495,15 @@ function Index() {
       let signedUrl =
         typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.signed_url || itemOrUrl.image_url;
 
-      if (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/logos/")) {
+      const isExpired = typeof itemOrUrl !== "string" && 
+        (!itemOrUrl.signed_at || Date.now() - itemOrUrl.signed_at > 7000 * 1000);
+
+      if (isExpired || (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/logos/"))) {
         signedUrl = await getSignedUrlForStorageUrl("logos", url);
+        if (typeof itemOrUrl !== "string") {
+          itemOrUrl.signed_url = signedUrl;
+          itemOrUrl.signed_at = Date.now();
+        }
       }
 
       const img = await loadImage(signedUrl);
@@ -992,58 +1025,13 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-200 font-sans">
-      <header className="border-b border-border/80 bg-card/75 backdrop-blur-md sticky top-0 z-50 transition-all duration-200">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
-              <Sparkles className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground/95 to-primary bg-clip-text text-transparent">
-                Nova Era
-              </h1>
-              <p className="text-[10px] text-muted-foreground font-medium hidden sm:block">
-                Gerador de Resultados
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {!isAdmin && timeLeft && (
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-primary/10 text-primary border-primary/20 text-xs font-bold shadow-sm transition-colors cursor-default">
-                <Clock className="w-3.5 h-3.5" />
-                {timeLeft}
-              </div>
-            )}
-            <div className="flex items-center gap-2 bg-muted/50 border border-border/40 rounded-full pl-2 pr-3 py-1 text-xs sm:text-sm font-medium text-muted-foreground hidden md:flex hover:text-foreground hover:bg-muted/80 transition-all cursor-default">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-primary to-primary/70 text-primary-foreground flex items-center justify-center font-bold text-[10px] uppercase shadow-sm">
-                {(user.email || "U").slice(0, 1)}
-              </div>
-              <span className="truncate max-w-[140px]">{user.email}</span>
-            </div>
-            <ThemeToggle />
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate({ to: "/admin" })}
-                className="border-primary/20 hover:border-primary hover:bg-primary/10 text-primary font-semibold transition-all duration-200 cursor-pointer rounded-xl flex items-center gap-1.5"
-              >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Painel Admin</span>
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={logout}
-              className="border-border hover:bg-accent cursor-pointer rounded-xl flex items-center gap-1"
-            >
-              <LogOut className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Sair</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header
+        isAdmin={isAdmin}
+        timeLeft={timeLeft}
+        userEmail={user?.email ?? null}
+        onNavigateToAdmin={() => navigate({ to: "/admin" })}
+        onLogout={logout}
+      />
 
       <main className="max-w-7xl mx-auto p-4 grid lg:grid-cols-[380px_1fr] gap-6">
         {/* Controls Panel */}
@@ -1368,43 +1356,11 @@ function Index() {
 
           <hr className="border-border/60" />
 
-          <hr className="border-border/60" />
-
-          {/* Randomizers */}
-          <div className="space-y-3 bg-muted/30 p-4 rounded-2xl border border-border/50">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Randomização
-              </Label>
-            </div>
-            <div className="grid grid-cols-3 gap-2 mt-1">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={randomizeBackground}
-                className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all text-xs"
-              >
-                <Shuffle className="w-3.5 h-3.5 mr-1" /> Fundo
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={randomizeForegrounds}
-                className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all text-xs"
-              >
-                <Shuffle className="w-3.5 h-3.5 mr-1" /> Posição
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={randomizeAll}
-                className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all text-xs"
-              >
-                <Shuffle className="w-3.5 h-3.5 mr-1" /> Tudo
-              </Button>
-            </div>
-          </div>
+          <RandomizerPanel
+            onRandomizeBackground={randomizeBackground}
+            onRandomizeForegrounds={randomizeForegrounds}
+            onRandomizeAll={randomizeAll}
+          />
 
           {/* Export upscale scale option */}
           <div className="space-y-2">
@@ -1524,22 +1480,39 @@ function Index() {
               <Undo2 className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-semibold tracking-wide">Linha do Tempo</h3>
             </div>
-            {(past.length > 0 || future.length > 0) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setPast([]);
-                  setFuture([]);
-                  toast.success("Histórico limpo!");
-                }}
-                className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-                title="Limpar histórico"
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-1" />
-                Limpar
-              </Button>
-            )}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Gravar</span>
+                <Switch
+                  checked={historyEnabled}
+                  onCheckedChange={(val) => {
+                    setHistoryEnabled(val);
+                    if (val) {
+                      toast.success("Gravação de histórico ativada");
+                    } else {
+                      toast.info("Gravação de histórico pausada");
+                    }
+                  }}
+                  className="scale-75 origin-right"
+                />
+              </div>
+              {(past.length > 0 || future.length > 0) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setPast([]);
+                    setFuture([]);
+                    toast.success("Histórico limpo!");
+                  }}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                  title="Limpar histórico"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  Limpar
+                </Button>
+              )}
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 gap-3 custom-scrollbar content-start">
             {past.length === 0 && future.length === 0 && (

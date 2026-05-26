@@ -69,6 +69,12 @@ interface Profile {
   created_at: string;
 }
 
+function safeLogError(message: string, error?: any) {
+  if (import.meta.env.DEV) {
+    console.error(message, error);
+  }
+}
+
 function AdminPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -105,7 +111,7 @@ function AdminPage() {
 
       setUsers((profilesData as unknown as Profile[]) || []);
     } catch (err) {
-      console.error("Erro ao carregar dados do painel:", err);
+      safeLogError("Erro ao carregar dados do painel:", err);
       toast.error("Erro ao carregar dados administrativos.");
     } finally {
       setLoadingData(false);
@@ -134,7 +140,7 @@ function AdminPage() {
               navigate({ to: "/app" });
             }
           } catch (err) {
-            console.error("Erro ao verificar status de admin:", err);
+            safeLogError("Erro ao verificar status de admin:", err);
             setIsAdmin(false);
             navigate({ to: "/app" });
           }

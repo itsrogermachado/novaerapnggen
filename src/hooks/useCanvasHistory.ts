@@ -19,10 +19,10 @@ export function useCanvasHistory({
 }) {
   const [past, setPast] = useState<CanvasState[]>([]);
   const [future, setFuture] = useState<CanvasState[]>([]);
-
-
+  const [historyEnabled, setHistoryEnabled] = useState(true);
 
   const saveToHistory = useCallback(() => {
+    if (!historyEnabled) return;
     const currentSig = getStateSignature(currentState);
 
     setPast((prev) => {
@@ -39,7 +39,7 @@ export function useCanvasHistory({
       return newPast;
     });
     setFuture([]);
-  }, [currentState]);
+  }, [currentState, historyEnabled]);
 
   const undo = useCallback(() => {
     if (past.length === 0) return;
@@ -119,5 +119,5 @@ export function useCanvasHistory({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
 
-  return { past, future, setPast, setFuture, saveToHistory, undo, redo, goToHistoryState };
+  return { past, future, setPast, setFuture, saveToHistory, undo, redo, goToHistoryState, historyEnabled, setHistoryEnabled };
 }

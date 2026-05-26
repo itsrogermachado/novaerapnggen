@@ -1,7 +1,7 @@
+import React from "react";
 import { CanvasState } from "@/types/canvas";
-import { FONTS } from "@/lib/layout-utils";
 
-export const MiniCanvas = ({
+export const MiniCanvas = React.memo(({
   state,
   aspectClass,
   isActive,
@@ -62,4 +62,10 @@ export const MiniCanvas = ({
 
     </button>
   );
-};
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.aspectClass === nextProps.aspectClass &&
+    prevProps.state === nextProps.state
+  );
+});

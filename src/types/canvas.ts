@@ -7,6 +7,7 @@ export type LibraryItem = {
   name: string;
   image_url: string;
   signed_url?: string;
+  signed_at?: number;
 };
 
 export type Foreground = {
