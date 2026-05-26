@@ -1,4 +1,4 @@
-import { Format, TextItem, LogoState, ElementLayouts, CanvasState } from "@/types/canvas";
+import { Format, LogoState, ElementLayouts, CanvasState } from "@/types/canvas";
 
 export const FORMATS: Record<Format, { w: number; h: number; label: string }> = {
   feed: { w: 1080, h: 1350, label: "Feed (4:5)" },
@@ -16,35 +16,15 @@ export const FONTS = [
 ];
 
 export function getForegroundSpace(
-  currentTexts: TextItem[],
   currentLogo: LogoState,
   isStory: boolean
 ) {
   let fgMinY = isStory ? 0.18 : 0.16;
   let fgMaxY = isStory ? 0.88 : 0.85;
 
-  const activeTexts = currentTexts.filter((t) => t.text.trim() !== "");
-  const hasTopText = activeTexts.some((t) => t.y < 0.35);
-  const hasBottomText = activeTexts.some((t) => t.y > 0.65);
   const hasLogo = !!currentLogo;
 
-  if (hasTopText && hasBottomText) {
-    const topTexts = activeTexts.filter((t) => t.y < 0.35);
-    const bottomTexts = activeTexts.filter((t) => t.y > 0.65);
-    const maxTopY = Math.max(...topTexts.map((t) => t.y), hasLogo ? currentLogo.y : 0);
-    const minBottomY = Math.min(...bottomTexts.map((t) => t.y));
-    fgMinY = maxTopY + 0.12;
-    fgMaxY = minBottomY - 0.12;
-  } else if (hasTopText) {
-    const maxTopY = Math.max(...activeTexts.map((t) => t.y), hasLogo ? currentLogo.y : 0);
-    fgMinY = maxTopY + 0.12;
-  } else if (hasBottomText) {
-    const minBottomY = Math.min(...activeTexts.map((t) => t.y));
-    fgMaxY = minBottomY - 0.12;
-    if (hasLogo) {
-      fgMinY = currentLogo.y + 0.12;
-    }
-  } else if (hasLogo) {
+  if (hasLogo) {
     fgMinY = currentLogo.y + 0.12;
   }
 
@@ -220,7 +200,6 @@ export function generateForegroundLayouts(num: number, styleType: number, fgMinY
 export function generateCohesiveLayout(
   format: Format,
   numForegrounds: number,
-  numTexts: number,
   logoExists: boolean,
   presetIndex: number,
 ): ElementLayouts {
@@ -228,7 +207,6 @@ export function generateCohesiveLayout(
   const layout: ElementLayouts = {
     foregrounds: [],
     logo: null,
-    texts: [],
   };
 
   const preset = presetIndex % 3;
@@ -243,63 +221,11 @@ export function generateCohesiveLayout(
     }
   }
 
-  if (numTexts > 0) {
-    if (preset === 0) {
-      const logoTopCenter = layout.logo && Math.abs(layout.logo.x - 0.5) < 0.05;
-      const startY = logoTopCenter ? (isStory ? 0.22 : 0.2) : isStory ? 0.16 : 0.14;
-      const spacing = isStory ? 0.07 : 0.06;
-
-      for (let i = 0; i < numTexts; i++) {
-        layout.texts.push({
-          x: 0.5,
-          y: startY + i * spacing,
-          size: i === 0 ? (isStory ? 56 : 48) : isStory ? 38 : 32,
-        });
-      }
-    } else if (preset === 1) {
-      const startY = isStory ? 0.82 : 0.8;
-      const spacing = isStory ? 0.07 : 0.06;
-      for (let i = 0; i < numTexts; i++) {
-        layout.texts.push({
-          x: 0.5,
-          y: startY + i * spacing,
-          size: i === 0 ? (isStory ? 56 : 48) : isStory ? 38 : 32,
-        });
-      }
-    } else {
-      for (let i = 0; i < numTexts; i++) {
-        if (i === 0) {
-          layout.texts.push({ x: 0.5, y: isStory ? 0.18 : 0.16, size: isStory ? 54 : 46 });
-        } else if (i === 1) {
-          layout.texts.push({ x: 0.5, y: isStory ? 0.84 : 0.82, size: isStory ? 48 : 40 });
-        } else {
-          layout.texts.push({ x: 0.5, y: 0.88 + (i - 2) * 0.05, size: 32 });
-        }
-      }
-    }
-  }
-
   let fgMinY = isStory ? 0.18 : 0.16;
   let fgMaxY = isStory ? 0.88 : 0.85;
 
   if (layout.logo) {
     fgMinY = Math.max(fgMinY, layout.logo.y + 0.12);
-  }
-
-  if (numTexts > 0) {
-    if (preset === 0) {
-      const lastTextY = layout.texts[layout.texts.length - 1].y;
-      fgMinY = Math.max(fgMinY, lastTextY + 0.12);
-    } else if (preset === 1) {
-      const firstTextY = layout.texts[0].y;
-      fgMaxY = Math.min(fgMaxY, firstTextY - 0.12);
-    } else {
-      const topTextY = layout.texts[0].y;
-      fgMinY = Math.max(fgMinY, topTextY + 0.12);
-      if (layout.texts[1]) {
-        fgMaxY = Math.min(fgMaxY, layout.texts[1].y - 0.12);
-      }
-    }
   }
 
   if (fgMinY > fgMaxY - 0.15) {
@@ -321,12 +247,6 @@ export function generateCohesiveLayout(
     layout.logo.size = Math.max(0.05, Math.min(0.9, layout.logo.size));
   }
 
-  layout.texts = layout.texts.map((c) => ({
-    x: Math.max(0.05, Math.min(0.95, c.x)),
-    y: Math.max(0.05, Math.min(0.95, c.y)),
-    size: Math.max(16, Math.min(200, c.size)),
-  }));
-
   return layout;
 }
 
@@ -338,14 +258,6 @@ export function getStateSignature(state: Omit<CanvasState, "bgImg">) {
   const logoPart = state.logo
     ? `${state.logo.url}:${state.logo.x.toFixed(3)}:${state.logo.y.toFixed(3)}:${state.logo.size.toFixed(3)}`
     : "";
-  const txts = state.texts
-    .map(
-      (t) =>
-        `${t.id}:${t.text}:${t.color}:${t.size}:${t.x.toFixed(3)}:${t.y.toFixed(3)}:${t.font || "inter"}`,
-    )
-    .sort()
-    .join("|");
   const fmt = state.format;
-  return `${bg}#${fgs}#${logoPart}#${txts}#${fmt}`;
+  return `${bg}#${fgs}#${logoPart}#${fmt}`;
 }
-

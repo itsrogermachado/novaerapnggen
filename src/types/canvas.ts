@@ -1,14 +1,6 @@
 export type Format = "feed" | "story";
 
-export type TextItem = {
-  id: string;
-  text: string;
-  color: string;
-  size: number;
-  x: number;
-  y: number;
-  font?: string;
-};
+
 
 export type LibraryItem = {
   id: string;
@@ -41,12 +33,12 @@ export type CanvasState = {
   bgImg: HTMLImageElement | null;
   foregrounds: Foreground[];
   logo: LogoState;
-  texts: TextItem[];
+
   format: Format;
 };
 
 export interface ElementLayouts {
   foregrounds: { x: number; y: number; size: number }[];
   logo: { x: number; y: number; size: number } | null;
-  texts: { x: number; y: number; size: number }[];
+
 }

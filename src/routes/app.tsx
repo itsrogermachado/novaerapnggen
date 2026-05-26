@@ -51,7 +51,7 @@ export const Route = createFileRoute("/app")({
   component: Index,
 });
 
-import { Format, TextItem, LibraryItem, Foreground, LogoState, CanvasState, ElementLayouts } from "@/types/canvas";
+import { Format, LibraryItem, Foreground, LogoState, CanvasState, ElementLayouts } from "@/types/canvas";
 import { FORMATS, FONTS, getForegroundSpace, getForegroundCoordinates, generateForegroundLayouts, generateCohesiveLayout, getStateSignature } from "@/lib/layout-utils";
 import { MiniCanvas } from "@/components/canvas/MiniCanvas";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
@@ -175,17 +175,7 @@ function Index() {
   const [foregrounds, setForegrounds] = useState<Foreground[]>([]);
   const [highlightLibrary, setHighlightLibrary] = useState<{ id: string; url: string; img: HTMLImageElement }[]>([]);
 
-  const [texts, setTexts] = useState<TextItem[]>([
-    {
-      id: crypto.randomUUID(),
-      text: "Seu resultado aqui",
-      color: "#ffffff",
-      size: 64,
-      x: 0.5,
-      y: 0.5,
-      font: "inter",
-    },
-  ]);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [exportScale, setExportScale] = useState<number>(1);
   const [previewWidth, setPreviewWidth] = useState<number>(400);
@@ -207,8 +197,8 @@ function Index() {
 
   // History Undo/Redo States
   const { past, future, setPast, setFuture, saveToHistory, undo, redo, goToHistoryState } = useCanvasHistory({
-    currentState: { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format },
-    setters: { setBgUrl, setBgUrlSigned, setBgImg, setForegrounds, setLogo, setTexts, setFormat, setSelectedId }
+    currentState: { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, format },
+    setters: { setBgUrl, setBgUrlSigned, setBgImg, setForegrounds, setLogo, setFormat, setSelectedId }
   });
 
   // ResizeObserver for dynamic text scaling
@@ -230,7 +220,7 @@ function Index() {
     if (foregrounds.length === 0) return;
 
     const isStory = format === "story";
-    const { fgMinY, fgMaxY } = getForegroundSpace(texts, logo, isStory);
+    const { fgMinY, fgMaxY } = getForegroundSpace(logo, isStory);
     const coords = getForegroundCoordinates(foregrounds.length, 0, fgMinY, fgMaxY);
 
     setForegrounds((p) => {
@@ -257,7 +247,7 @@ function Index() {
         };
       });
     });
-  }, [foregrounds.length, format, texts.length, !!logo]);
+  }, [foregrounds.length, format, !!logo]);
 
   // Helper for generating state signature
 
@@ -553,9 +543,7 @@ function Index() {
       bgUrlSigned,
       bgImg,
       foregrounds,
-      logo,
-      texts,
-      format,
+      logo, format,
     };
     const existingSigs = new Set([
       ...past.map((s) => getStateSignature(s)),
@@ -574,9 +562,7 @@ function Index() {
         bgUrlSigned: random.signed_url || random.image_url,
         bgImg: null,
         foregrounds,
-        logo,
-        texts,
-        format,
+        logo, format,
       };
 
       if (!existingSigs.has(getStateSignature(candidate))) {
@@ -608,9 +594,7 @@ function Index() {
       bgUrlSigned,
       bgImg,
       foregrounds,
-      logo,
-      texts,
-      format,
+      logo, format,
     };
     const existingSigs = new Set([
       ...past.map((s) => getStateSignature(s)),
@@ -624,7 +608,7 @@ function Index() {
     const isStory = format === "story";
 
     while (attempts < 100) {
-      const { fgMinY, fgMaxY } = getForegroundSpace(texts, logo, isStory);
+      const { fgMinY, fgMaxY } = getForegroundSpace(logo, isStory);
       
       // Shuffle copies of the foregrounds to randomize positions
       const tempFgs = [...foregrounds];
@@ -648,9 +632,7 @@ function Index() {
         bgUrlSigned,
         bgImg: null,
         foregrounds: candidateFgs,
-        logo,
-        texts,
-        format,
+        logo, format,
       };
 
       if (!existingSigs.has(getStateSignature(candidate))) {
@@ -677,9 +659,7 @@ function Index() {
       bgUrlSigned,
       bgImg,
       foregrounds,
-      logo,
-      texts,
-      format,
+      logo, format,
     };
     const existingSigs = new Set([
       ...past.map((s) => getStateSignature(s)),
@@ -694,7 +674,7 @@ function Index() {
     let candidateBgSigned = bgUrlSigned;
     let candidateFgs = [...foregrounds];
     let candidateLogo = logo;
-    let candidateTexts = [...texts];
+
 
     while (attempts < 100) {
       let nextBg = bgUrl;
@@ -709,7 +689,6 @@ function Index() {
       const layout = generateCohesiveLayout(
         format,
         foregrounds.length,
-        texts.length,
         !!logo,
         presetIndex
       );
@@ -738,22 +717,7 @@ function Index() {
         };
       }
 
-      const randomFont = FONTS[Math.floor(Math.random() * FONTS.length)].id;
-      const highlightColors = ["#ffffff", "#facc15", "#f87171", "#60a5fa", "#34d399", "#a78bfa", "#fb923c"];
-      const mainColor = highlightColors[Math.floor(Math.random() * highlightColors.length)];
-      const subColor = mainColor === "#ffffff" ? highlightColors[Math.floor(1 + Math.random() * (highlightColors.length - 1))] : "#ffffff";
 
-      const nextTexts = texts.map((t, idx) => {
-        const layoutText = layout.texts[idx];
-        return {
-          ...t,
-          x: layoutText?.x ?? t.x,
-          y: layoutText?.y ?? t.y,
-          size: layoutText?.size ?? t.size,
-          font: randomFont,
-          color: idx === 0 ? mainColor : subColor,
-        };
-      });
 
       const candidate: CanvasState = {
         bgUrl: nextBg,
@@ -761,7 +725,6 @@ function Index() {
         bgImg: null,
         foregrounds: nextFgs,
         logo: nextLogo,
-        texts: nextTexts,
         format,
       };
 
@@ -770,7 +733,7 @@ function Index() {
         candidateBgSigned = nextBgSigned;
         candidateFgs = nextFgs;
         candidateLogo = nextLogo;
-        candidateTexts = nextTexts;
+
         found = true;
         break;
       }
@@ -794,32 +757,16 @@ function Index() {
     }
     setForegrounds(candidateFgs);
     setLogo(candidateLogo);
-    setTexts(candidateTexts);
+
     toast.success("Tudo randomizado");
   };
 
-  // Texts
-  const addText = () => {
-    const newId = crypto.randomUUID();
-    setTexts((t) => [
-      ...t,
-      { id: newId, text: "Novo texto", color: "#ffffff", size: 48, x: 0.5, y: 0.6, font: "inter" },
-    ]);
-    setSelectedId(newId);
-  };
 
-  const updateText = (id: string, patch: Partial<TextItem>) =>
-    setTexts((t) => t.map((it) => (it.id === id ? { ...it, ...patch } : it)));
-
-  const removeText = (id: string) => {
-    setTexts((t) => t.filter((it) => it.id !== id));
-    if (selectedId === id) setSelectedId(null);
-  };
 
   // Drag Pointer Gestures
   const onPointerDown = (
     e: React.PointerEvent,
-    kind: "text" | "logo" | "foreground",
+    kind: "logo" | "foreground",
     id?: string,
   ) => {
     saveToHistory();
@@ -829,12 +776,7 @@ function Index() {
     let cx = 0,
       cy = 0;
 
-    if (kind === "text" && id) {
-      const item = texts.find((t) => t.id === id)!;
-      cx = item.x * rect.width;
-      cy = item.y * rect.height;
-      setSelectedId(id);
-    } else if (kind === "logo" && logo) {
+    if (kind === "logo" && logo) {
       cx = logo.x * rect.width;
       cy = logo.y * rect.height;
       setSelectedId("logo");
@@ -864,7 +806,7 @@ function Index() {
     const cy = Math.max(0, Math.min(1, y));
 
     if (dragRef.current.kind === "text" && dragRef.current.id) {
-      updateText(dragRef.current.id, { x: cx, y: cy });
+      
     } else if (dragRef.current.kind === "logo" && logo) {
       setLogo({ ...logo, x: cx, y: cy });
     } else if (dragRef.current.kind === "foreground" && dragRef.current.id) {
@@ -924,27 +866,7 @@ function Index() {
       );
     }
 
-    // texts with font selection
-    texts.forEach((t) => {
-      const selectedFont = FONTS.find((f) => f.id === (t.font || "inter")) || FONTS[0];
-      ctx.fillStyle = t.color;
-      ctx.font = `700 ${t.size * exportScale}px ${selectedFont.family}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.shadowColor = "rgba(0,0,0,0.4)";
-      ctx.shadowBlur = 8 * exportScale;
 
-      const lines = t.text.split("\n");
-      const lineH = t.size * exportScale * 1.15;
-      const totalH = lineH * lines.length;
-      lines.forEach((line, i) => {
-        ctx.fillText(
-          line,
-          t.x * canvas.width,
-          t.y * canvas.height - totalH / 2 + lineH / 2 + i * lineH,
-        );
-      });
-    });
 
     canvas.toBlob((blob) => {
       if (!blob) return;
@@ -1145,8 +1067,6 @@ function Index() {
                       setLogo(null);
                     } else if (foregrounds.some((f) => f.id === selectedId)) {
                       removeForeground(selectedId);
-                    } else {
-                      removeText(selectedId);
                     }
                     setSelectedId(null);
                   }}
@@ -1201,71 +1121,7 @@ function Index() {
                 </div>
               )}
 
-              {texts.find((t) => t.id === selectedId) && (
-                <div className="space-y-3">
-                  {(() => {
-                    const txtItem = texts.find((t) => t.id === selectedId)!;
-                    return (
-                      <>
-                        <textarea
-                          className="w-full text-xs font-medium border border-border/80 rounded-xl p-2.5 bg-background text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-transparent focus-visible:outline-none transition-all"
-                          rows={2}
-                          value={txtItem.text}
-                          onFocus={() => saveToHistory()}
-                          onChange={(e) => updateText(selectedId, { text: e.target.value })}
-                        />
-                        <div className="flex items-center gap-2.5">
-                          <input
-                            type="color"
-                            value={txtItem.color}
-                            onPointerDown={() => saveToHistory()}
-                            onChange={(e) => updateText(selectedId, { color: e.target.value })}
-                            className="w-8 h-8 rounded-lg cursor-pointer border border-border/80 p-0.5 bg-background"
-                          />
-                          <div className="flex-1">
-                            <Select
-                              value={txtItem.font || "inter"}
-                              onValueChange={(val) => {
-                                saveToHistory();
-                                updateText(selectedId, { font: val });
-                              }}
-                            >
-                              <SelectTrigger className="bg-background border-border text-xs rounded-xl h-8">
-                                <SelectValue placeholder="Fonte" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-card border-border text-foreground">
-                                {FONTS.map((f) => (
-                                  <SelectItem
-                                    key={f.id}
-                                    value={f.id}
-                                    style={{ fontFamily: f.family }}
-                                  >
-                                    {f.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <input
-                            type="range"
-                            min={16}
-                            max={200}
-                            value={txtItem.size}
-                            onPointerDown={() => saveToHistory()}
-                            onChange={(e) => updateText(selectedId, { size: +e.target.value })}
-                            className="w-full accent-primary h-1.5 bg-background rounded-lg cursor-pointer"
-                          />
-                          <div className="text-[10px] text-muted-foreground font-bold">
-                            Tamanho: {txtItem.size}px
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
+
             </div>
           )}
 
@@ -1344,13 +1200,18 @@ function Index() {
                         saveToHistory();
                         selectBackground(b);
                       }}
-                      className={`block w-full aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 ${bgUrl === b.image_url ? "border-primary scale-[0.98] shadow-md shadow-primary/20" : "border-transparent opacity-85 hover:opacity-100 hover:scale-[1.03] shadow-sm"}`}
+                      className={`block w-full aspect-square rounded-xl overflow-hidden border transition-all duration-300 relative ${bgUrl === b.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
                     >
                       <img
                         src={b.signed_url || b.image_url}
                         alt={b.name}
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full object-cover ${bgUrl === b.image_url ? "opacity-100" : "opacity-85"}`}
                       />
+                      {bgUrl === b.image_url && (
+                        <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
+                          <Check className="w-3 h-3" />
+                        </div>
+                      )}
                     </button>
                     <button
                       onClick={() => promptDeleteBackground(b.id, b.name)}
@@ -1411,13 +1272,18 @@ function Index() {
                         saveToHistory();
                         selectLogo(l);
                       }}
-                      className={`block w-full aspect-square rounded-xl overflow-hidden border-2 bg-muted/40 transition-all duration-300 ${logo?.url === l.image_url ? "border-primary scale-[0.98] shadow-md shadow-primary/20" : "border-transparent opacity-85 hover:opacity-100 hover:scale-[1.03] shadow-sm"}`}
+                      className={`block w-full aspect-square rounded-xl overflow-hidden border transition-all duration-300 bg-muted/40 relative ${logo?.url === l.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
                     >
                       <img
                         src={l.signed_url || l.image_url}
                         alt={l.name}
-                        className="w-full h-full object-contain p-1.5"
+                        className={`w-full h-full object-contain p-1.5 ${logo?.url === l.image_url ? "opacity-100" : "opacity-85"}`}
                       />
+                      {logo?.url === l.image_url && (
+                        <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
+                          <Check className="w-3 h-3" />
+                        </div>
+                      )}
                     </button>
                     <button
                       onClick={() => promptDeleteLogo(l.id, l.name)}
@@ -1501,54 +1367,6 @@ function Index() {
           </div>
 
           <hr className="border-border/60" />
-
-          {/* Texts */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Type className="w-4 h-4 text-primary" />
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Textos
-                </Label>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  saveToHistory();
-                  addText();
-                }}
-                className="border-border hover:border-primary/30 hover:bg-accent rounded-xl font-semibold shadow-sm cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar
-              </Button>
-            </div>
-            {texts.length === 0 ? (
-              <div className="border border-dashed border-border/80 rounded-2xl p-4 text-center bg-muted/10">
-                <p className="text-[11px] text-muted-foreground">
-                  Nenhum texto no canvas. Adicione um acima.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
-                {texts.map((t) => (
-                  <div
-                    key={t.id}
-                    className={`border rounded-xl p-2.5 flex items-center justify-between gap-2.5 transition-all bg-background/40 hover:bg-background/60 shadow-sm cursor-pointer ${selectedId === t.id ? "ring-2 ring-primary border-transparent" : "border-border/85"}`}
-                    onClick={() => setSelectedId(t.id)}
-                  >
-                    <span className="text-xs font-semibold truncate flex-1 pr-2">
-                      {t.text || "(Texto vazio)"}
-                    </span>
-                    <span
-                      className="w-4 h-4 rounded-full border border-border"
-                      style={{ backgroundColor: t.color }}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
           <hr className="border-border/60" />
 
@@ -1695,41 +1513,7 @@ function Index() {
               </div>
             )}
 
-            {/* Draggable Texts with observer scaled font size */}
-            {texts.map((t) => {
-              const selectedFont = FONTS.find((f) => f.id === (t.font || "inter")) || FONTS[0];
-              const scaledSize = (t.size * previewWidth) / 1080;
-              return (
-                <div
-                  key={t.id}
-                  onPointerDown={(e) => onPointerDown(e, "text", t.id)}
-                  style={{
-                    position: "absolute",
-                    left: `${t.x * 100}%`,
-                    top: `${t.y * 100}%`,
-                    transform: "translate(-50%, -50%)",
-                    color: t.color,
-                    fontSize: `${scaledSize}px`,
-                    fontFamily: selectedFont.family,
-                    fontWeight: 700,
-                    textAlign: "center",
-                    whiteSpace: "pre-wrap",
-                    textShadow: "0 2px 8px rgba(0,0,0,0.45)",
-                    cursor: "grab",
-                    lineHeight: 1.15,
-                    userSelect: "none",
-                    touchAction: "none",
-                  }}
-                  className={
-                    selectedId === t.id
-                      ? "outline-2 outline-dashed outline-white ring-2 ring-primary/80 animate-pulse duration-[1500ms]"
-                      : ""
-                  }
-                >
-                  {t.text}
-                </div>
-              );
-            })}
+
           </div>
         </div>
 
@@ -1778,7 +1562,7 @@ function Index() {
               <div className="relative">
                  <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
                  <MiniCanvas 
-                   state={{ bgUrl, bgUrlSigned, bgImg, foregrounds, logo, texts, format }} 
+                   state={{ bgUrl, bgUrlSigned, bgImg, foregrounds, logo, format }} 
                    aspectClass={aspectClass} 
                    isActive={true} 
                    onClick={() => {}}

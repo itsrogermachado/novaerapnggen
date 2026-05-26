@@ -59,32 +59,7 @@ export const MiniCanvas = ({
           />
         </div>
       )}
-      {state.texts.map((t) => {
-        const selectedFont = FONTS.find((f) => f.id === (t.font || "inter")) || FONTS[0];
-        const scaleFactor = 0.15;
-        const scaledSize = t.size * scaleFactor;
-        return (
-          <div
-            key={t.id}
-            style={{
-              position: "absolute",
-              left: `${t.x * 100}%`,
-              top: `${t.y * 100}%`,
-              transform: "translate(-50%, -50%)",
-              color: t.color,
-              fontSize: `${scaledSize}px`,
-              fontFamily: selectedFont.family,
-              fontWeight: 700,
-              textAlign: "center",
-              whiteSpace: "pre-wrap",
-              textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-              lineHeight: 1.15,
-            }}
-          >
-            {t.text}
-          </div>
-        );
-      })}
+
     </button>
   );
 };

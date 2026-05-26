@@ -13,7 +13,6 @@ export function useCanvasHistory({
     setBgImg: (v: HTMLImageElement | null) => void;
     setForegrounds: (v: CanvasState["foregrounds"] | ((prev: CanvasState["foregrounds"]) => CanvasState["foregrounds"])) => void;
     setLogo: (v: CanvasState["logo"]) => void;
-    setTexts: (v: CanvasState["texts"]) => void;
     setFormat: (v: CanvasState["format"]) => void;
     setSelectedId: (v: string | null) => void;
   }
@@ -55,7 +54,6 @@ export function useCanvasHistory({
     setters.setBgImg(previous.bgImg);
     setters.setForegrounds(previous.foregrounds);
     setters.setLogo(previous.logo);
-    setters.setTexts(previous.texts);
     setters.setFormat(previous.format);
   }, [past, currentState, setters]);
 
@@ -72,7 +70,6 @@ export function useCanvasHistory({
     setters.setBgImg(next.bgImg);
     setters.setForegrounds(next.foregrounds);
     setters.setLogo(next.logo);
-    setters.setTexts(next.texts);
     setters.setFormat(next.format);
   }, [future, currentState, setters]);
 
@@ -94,7 +91,6 @@ export function useCanvasHistory({
     setters.setBgImg(targetState.bgImg);
     setters.setForegrounds(targetState.foregrounds);
     setters.setLogo(targetState.logo);
-    setters.setTexts(targetState.texts);
     setters.setFormat(targetState.format);
     setters.setSelectedId(null);
   }, [past, future, currentState, setters]);
