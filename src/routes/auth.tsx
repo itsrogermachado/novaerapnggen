@@ -57,38 +57,48 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden transition-colors duration-200 selection:bg-primary/20 selection:text-foreground font-sans">
-      {/* Dynamic Glows */}
-      <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[8000ms]" />
-      <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[150px] pointer-events-none animate-pulse duration-[10000ms]" />
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden transition-colors duration-200 selection:bg-primary/20 selection:text-foreground">
+      {/* Grain Texture */}
+      <div className="grain-texture fixed inset-0 pointer-events-none z-[1]" />
 
-      {/* Floating Theme Switcher */}
+      {/* Geometric accent */}
+      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary via-accent to-primary z-50" />
+
+      {/* Decorative geometry */}
+      <div className="absolute top-1/4 right-[10%] w-64 h-64 border border-border/15 rounded-sm rotate-12 pointer-events-none" />
+      <div className="absolute bottom-1/4 left-[10%] w-40 h-40 border border-primary/10 rounded-sm -rotate-6 pointer-events-none" />
+
+      {/* Theme Toggle */}
       <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
 
-      <Card className="w-full max-w-md p-8 bg-card border-border/80 shadow-2xl relative z-10 transition-colors duration-200 rounded-2xl animate-fade-in">
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-sm shadow-primary/20">
+      <Card className="w-full max-w-md p-8 bg-card border-border/80 shadow-2xl relative z-10 transition-colors duration-200 rounded-sm animate-fade-in">
+        {/* Accent line */}
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-accent" />
+
+        {/* Logo */}
+        <div className="animate-slide-up flex items-center gap-2.5 mb-2">
+          <div className="w-8 h-8 rounded-sm bg-primary flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-extrabold tracking-tight text-lg bg-gradient-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent">
+          <span className="font-black tracking-tight text-lg">
             Nova Era
           </span>
         </div>
 
-        <h1 className="text-2xl font-extrabold tracking-tight mb-1 text-foreground">
+        <h1 className="animate-slide-up stagger-2 text-2xl font-black tracking-tight mb-1 text-foreground">
           Gerador de Resultados
         </h1>
-        <p className="text-sm text-muted-foreground mb-6">
+        <p className="animate-slide-up stagger-3 text-sm text-muted-foreground mb-6">
           {mode === "login" ? "Entre para acessar a ferramenta" : "Crie sua conta de membro"}
         </p>
 
         <form onSubmit={submit} className="space-y-4">
-          <div className="space-y-1">
+          <div className="animate-slide-up stagger-3 space-y-1.5">
             <Label
               htmlFor="email"
-              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
             >
               E-mail
             </Label>
@@ -100,16 +110,16 @@ function AuthPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-background border-border text-foreground pl-10 py-5 rounded-xl focus-visible:ring-primary/50"
+                className="bg-background border-border text-foreground pl-10 py-5 rounded-sm focus-visible:ring-primary/50 focus-visible:border-primary"
                 placeholder="nome@exemplo.com"
               />
             </div>
           </div>
 
-          <div className="space-y-1">
+          <div className="animate-slide-up stagger-4 space-y-1.5">
             <Label
               htmlFor="password"
-              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
             >
               Senha
             </Label>
@@ -122,7 +132,7 @@ function AuthPage() {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-background border-border text-foreground pl-10 py-5 rounded-xl focus-visible:ring-primary/50"
+                className="bg-background border-border text-foreground pl-10 py-5 rounded-sm focus-visible:ring-primary/50 focus-visible:border-primary"
                 placeholder="Mínimo 6 caracteres"
               />
             </div>
@@ -130,7 +140,7 @@ function AuthPage() {
 
           <Button
             type="submit"
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 cursor-pointer"
+            className="animate-slide-up stagger-5 w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 rounded-sm shadow-lg shadow-primary/20 transition-all duration-200 cursor-pointer hover:translate-y-[-1px] hover:shadow-xl"
             disabled={busy}
           >
             {busy ? (
@@ -149,7 +159,7 @@ function AuthPage() {
         <button
           type="button"
           onClick={() => setMode(mode === "login" ? "signup" : "login")}
-          className="mt-5 text-sm text-primary hover:text-primary/80 transition-colors hover:underline w-full text-center cursor-pointer font-medium"
+          className="animate-slide-up stagger-6 mt-5 text-sm text-primary hover:text-primary/80 transition-colors hover:underline w-full text-center cursor-pointer font-semibold"
         >
           {mode === "login"
             ? "Não tem conta? Cadastre-se"

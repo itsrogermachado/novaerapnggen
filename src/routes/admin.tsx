@@ -299,22 +299,22 @@ function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans transition-colors duration-200">
-      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px] pointer-events-none" />
+    <div className="min-h-screen bg-background text-foreground font-sans transition-colors duration-200 relative">
+      <div className="grain-texture fixed inset-0 pointer-events-none z-[1]" />
+      <div className="fixed top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary via-accent to-primary z-50" />
 
-      <header className="border-b border-border bg-card/85 backdrop-blur-xl sticky top-0 z-20 transition-colors duration-200">
+      <header className="border-b border-border/60 bg-card/90 backdrop-blur-sm sticky top-[2px] z-20 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate({ to: "/app" })}
-              className="p-2 hover:bg-accent hover:text-accent-foreground rounded-xl text-muted-foreground transition-all duration-200"
+              className="p-2 hover:bg-muted hover:text-foreground rounded-sm text-muted-foreground transition-all duration-200"
               title="Voltar ao Gerador"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              <h1 className="text-lg font-black tracking-tight text-foreground">
                 Painel Administrativo
               </h1>
               <p className="text-xs text-muted-foreground hidden sm:block">
@@ -323,7 +323,7 @@ function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground font-medium hidden md:inline-block px-3 py-1.5 bg-muted border border-border rounded-lg">
+            <span className="text-xs text-muted-foreground font-medium hidden md:inline-block px-3 py-1.5 bg-muted border border-border rounded-sm font-mono">
               Logado como: <span className="text-primary font-semibold">{user?.email}</span>
             </span>
             <ThemeToggle />
@@ -363,7 +363,7 @@ function AdminPage() {
                 placeholder="Pesquisar usuário por e-mail..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                className="bg-background border-border text-foreground rounded-xl pl-10 focus-visible:ring-primary/50"
+                className="bg-background border-border text-foreground rounded-sm pl-10 focus-visible:ring-primary/50 focus-visible:border-primary"
               />
             </div>
           </CardHeader>
@@ -378,7 +378,7 @@ function AdminPage() {
                 Nenhum usuário encontrado.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-border bg-background/50">
+              <div className="overflow-x-auto rounded-sm border border-border bg-background/50">
                 <Table>
                   <TableHeader className="bg-background border-b border-border">
                     <TableRow>
@@ -428,7 +428,7 @@ function AdminPage() {
                           </TableCell>
                           <TableCell className="py-4">
                             <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${status.badgeClass}`}
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-bold border ${status.badgeClass}`}
                             >
                               {status.label}
                             </span>
@@ -499,7 +499,7 @@ function AdminPage() {
 
       {/* Approve User Modal */}
       <Dialog open={!!approveUser} onOpenChange={(open) => !open && setApproveUser(null)}>
-        <DialogContent className="bg-card border-border sm:max-w-[425px] rounded-2xl">
+        <DialogContent className="bg-card border-border sm:max-w-[425px] rounded-sm">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-primary" />
@@ -511,14 +511,14 @@ function AdminPage() {
           </DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-3">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Duração da Aprovação
               </Label>
               <Select
                 value={approveDuration}
                 onValueChange={(v) => setApproveDuration(v as TokenDuration)}
               >
-                <SelectTrigger className="w-full bg-background border-border py-6 rounded-xl">
+                <SelectTrigger className="w-full bg-background border-border py-6 rounded-sm">
                   <SelectValue placeholder="Selecione o tempo..." />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
@@ -529,7 +529,7 @@ function AdminPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-start gap-3">
+            <div className="bg-primary/5 border border-primary/20 rounded-sm p-3 flex items-start gap-3">
               <Clock className="w-5 h-5 text-primary mt-0.5" />
               <div className="text-sm text-muted-foreground leading-relaxed">
                 Após este período, o acesso do usuário vai expirar e ele não poderá mais acessar o gerador.
@@ -540,14 +540,14 @@ function AdminPage() {
             <Button
               variant="outline"
               onClick={() => setApproveUser(null)}
-              className="border-border hover:bg-accent w-full sm:w-auto rounded-xl"
+              className="border-border hover:bg-muted w-full sm:w-auto rounded-sm"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleApproveAccess}
               disabled={approving}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold w-full sm:w-auto rounded-xl shadow-lg shadow-primary/20"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold w-full sm:w-auto rounded-sm shadow-lg shadow-primary/20"
             >
               {approving ? (
                 <>
@@ -567,7 +567,7 @@ function AdminPage() {
         open={!!adminChangeTarget}
         onOpenChange={(open) => !open && setAdminChangeTarget(null)}
       >
-        <AlertDialogContent className="bg-card border-border rounded-2xl max-w-sm">
+        <AlertDialogContent className="bg-card border-border rounded-sm max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">Confirmar Ação</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
@@ -583,14 +583,14 @@ function AdminPage() {
           <AlertDialogFooter className="gap-2 mt-2">
             <AlertDialogCancel
               onClick={() => setAdminChangeTarget(null)}
-              className="border-border hover:bg-accent rounded-xl"
+              className="border-border hover:bg-muted rounded-sm"
             >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleToggleAdmin}
               disabled={changingAdmin}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-sm"
             >
               {changingAdmin ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar"}
             </AlertDialogAction>

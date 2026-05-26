@@ -14,10 +14,13 @@ export function RandomizerPanel({
   onRandomizeAll,
 }: RandomizerPanelProps) {
   return (
-    <div className="space-y-3 bg-muted/30 p-4 rounded-2xl border border-border/50">
+    <div className="space-y-3 bg-muted/30 p-4 rounded-sm border border-border/50 relative overflow-hidden">
+      {/* Accent line */}
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-primary/60 to-accent/40" />
+
       <div className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        <Sparkles className="w-4 h-4 text-primary" />
+        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Randomização
         </Label>
       </div>
@@ -26,25 +29,25 @@ export function RandomizerPanel({
           variant="secondary"
           size="sm"
           onClick={onRandomizeBackground}
-          className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all text-xs"
+          className="bg-background border border-border text-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary rounded-sm cursor-pointer font-bold transition-all text-xs group"
         >
-          <Shuffle className="w-3.5 h-3.5 mr-1" /> Fundo
+          <Shuffle className="w-3.5 h-3.5 mr-1 group-hover:rotate-180 transition-transform duration-300" /> Fundo
         </Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={onRandomizeForegrounds}
-          className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all text-xs"
+          className="bg-background border border-border text-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary rounded-sm cursor-pointer font-bold transition-all text-xs group"
         >
-          <Shuffle className="w-3.5 h-3.5 mr-1" /> Posição
+          <Shuffle className="w-3.5 h-3.5 mr-1 group-hover:rotate-180 transition-transform duration-300" /> Posição
         </Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={onRandomizeAll}
-          className="bg-background border border-border text-foreground hover:bg-accent rounded-xl cursor-pointer hover:border-primary/20 shadow-sm font-semibold transition-all text-xs"
+          className="bg-background border border-border text-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary rounded-sm cursor-pointer font-bold transition-all text-xs group"
         >
-          <Shuffle className="w-3.5 h-3.5 mr-1" /> Tudo
+          <Shuffle className="w-3.5 h-3.5 mr-1 group-hover:rotate-180 transition-transform duration-300" /> Tudo
         </Button>
       </div>
     </div>

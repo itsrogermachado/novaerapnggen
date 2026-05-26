@@ -919,23 +919,23 @@ function Index() {
   if (loading || checkingAccess) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-6 transition-colors duration-200">
-        <div className="w-full max-w-sm p-6 bg-card border border-border/80 rounded-2xl shadow-2xl space-y-5 animate-fade-in">
+        <div className="w-full max-w-sm p-6 bg-card border border-border/80 rounded-sm shadow-2xl space-y-5 animate-fade-in">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-muted/60 animate-shimmer" />
+            <div className="w-10 h-10 rounded-sm bg-muted/60 animate-shimmer" />
             <div className="space-y-2 flex-1">
-              <div className="h-4 bg-muted/60 rounded-md w-3/4 animate-shimmer" />
-              <div className="h-3 bg-muted/40 rounded-md w-1/2 animate-shimmer" />
+              <div className="h-4 bg-muted/60 rounded-sm w-3/4 animate-shimmer" />
+              <div className="h-3 bg-muted/40 rounded-sm w-1/2 animate-shimmer" />
             </div>
           </div>
-          <div className="aspect-[4/5] bg-muted/30 rounded-xl border border-border/40 relative overflow-hidden flex items-center justify-center">
+          <div className="aspect-[4/5] bg-muted/30 rounded-sm border border-border/40 relative overflow-hidden flex items-center justify-center">
             <div
               className="absolute inset-0 bg-gradient-to-r from-transparent via-muted-foreground/5 to-transparent animate-shimmer"
               style={{ backgroundSize: "200% 100%" }}
             />
             <Loader2 className="w-8 h-8 animate-spin text-primary/40" />
           </div>
-          <p className="text-center text-xs text-muted-foreground font-semibold tracking-wide animate-pulse">
-            Verificando credenciais de acesso...
+          <p className="text-center text-xs text-muted-foreground font-bold tracking-widest uppercase animate-pulse">
+            Verificando credenciais...
           </p>
         </div>
       </div>
@@ -949,15 +949,15 @@ function Index() {
   if (isActive === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-4 font-sans relative overflow-hidden transition-colors duration-200">
-        <div className="absolute top-0 right-1/4 w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="grain-texture fixed inset-0 pointer-events-none z-[1]" />
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary via-accent to-primary z-50" />
 
-        <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-2xl text-center relative overflow-hidden animate-fade-in transition-colors duration-200">
-          <div className="mx-auto w-16 h-16 bg-destructive/10 border border-destructive/20 rounded-2xl flex items-center justify-center mb-6 shadow-inner animate-pulse">
+        <div className="w-full max-w-md bg-card border border-border rounded-sm p-8 shadow-2xl text-center relative overflow-hidden animate-fade-in transition-colors duration-200 z-10">
+          <div className="mx-auto w-16 h-16 bg-destructive/10 border border-destructive/20 rounded-sm flex items-center justify-center mb-6 shadow-inner animate-pulse">
             <ShieldAlert className="w-8 h-8 text-destructive" />
           </div>
 
-          <h2 className="text-2xl font-bold tracking-tight mb-2 bg-gradient-to-r from-destructive to-primary bg-clip-text text-transparent">
+          <h2 className="text-2xl font-black tracking-tight mb-2 text-foreground">
             Acesso Pendente, Expirado ou Bloqueado
           </h2>
           <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
@@ -975,7 +975,7 @@ function Index() {
                 href={`https://wa.me/${wa.number}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between p-3.5 bg-background border border-border rounded-xl hover:border-green-500/40 hover:bg-green-500/5 transition-all duration-300 group cursor-pointer"
+                className="flex items-center justify-between p-3.5 bg-background border border-border rounded-sm hover:border-green-500/40 hover:bg-green-500/5 transition-all duration-300 group cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
@@ -992,7 +992,7 @@ function Index() {
                     </span>
                   </div>
                 </div>
-                <div className="px-3 py-1.5 bg-green-500/10 text-green-500 rounded-lg text-xs font-bold group-hover:bg-green-500 group-hover:text-white transition-colors">
+                <div className="px-3 py-1.5 bg-green-500/10 text-green-500 rounded-sm text-xs font-bold group-hover:bg-green-500 group-hover:text-white transition-colors">
                   Conversar
                 </div>
               </a>
@@ -1002,7 +1002,7 @@ function Index() {
           <div className="flex flex-col gap-3">
             <Button
               onClick={checkAccess}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-300 group cursor-pointer"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 rounded-sm shadow-lg shadow-primary/20 transition-all duration-300 group cursor-pointer"
             >
               <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
               Verificar Novamente
@@ -1010,7 +1010,7 @@ function Index() {
             <Button
               variant="outline"
               onClick={logout}
-              className="w-full border-border hover:bg-accent text-muted-foreground hover:text-foreground py-6 rounded-xl transition-all duration-300 cursor-pointer"
+              className="w-full border-border hover:bg-muted text-muted-foreground hover:text-foreground py-6 rounded-sm transition-all duration-300 cursor-pointer"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sair da Conta
@@ -1035,10 +1035,10 @@ function Index() {
 
       <main className="max-w-7xl mx-auto p-4 grid lg:grid-cols-[380px_1fr] gap-6">
         {/* Controls Panel */}
-        <Card className="p-5 space-y-6 h-fit order-2 lg:order-1 bg-card border-border/90 shadow-lg transition-all duration-200 animate-slide-in-left rounded-2xl">
+        <Card className="p-5 space-y-6 h-fit order-2 lg:order-1 bg-card border-border/80 shadow-lg transition-all duration-200 animate-slide-in-left rounded-sm">
           {/* Active Layer Editor */}
           {selectedId && (
-            <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 space-y-3.5 animate-fade-in">
+            <div className="bg-primary/5 p-4 rounded-sm border border-primary/20 space-y-3.5 animate-fade-in">
               <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 <span className="text-primary font-bold">
                   Elemento Selecionado:{" "}
@@ -1128,14 +1128,14 @@ function Index() {
                 setFormat(v as Format);
               }}
             >
-              <SelectTrigger className="bg-background border-border hover:border-primary/40 text-foreground rounded-xl transition-all duration-200">
+              <SelectTrigger className="bg-background border-border hover:border-primary/40 text-foreground rounded-sm transition-all duration-200">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-card border-border text-foreground rounded-xl shadow-xl">
-                <SelectItem value="feed" className="rounded-lg">
+              <SelectContent className="bg-card border-border text-foreground rounded-sm shadow-xl">
+                <SelectItem value="feed" className="rounded-sm">
                   {FORMATS.feed.label}
                 </SelectItem>
-                <SelectItem value="story" className="rounded-lg">
+                <SelectItem value="story" className="rounded-sm">
                   {FORMATS.story.label}
                 </SelectItem>
               </SelectContent>
@@ -1153,7 +1153,7 @@ function Index() {
                   Biblioteca de Fundos
                 </Label>
               </div>
-              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
+              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-sm bg-background hover:bg-primary/10 text-foreground hover:border-primary/30 hover:text-primary transition-all duration-200 font-bold">
                 {uploadingBg ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                 ) : (
@@ -1170,7 +1170,7 @@ function Index() {
               </label>
             </div>
             {bgLib.length === 0 ? (
-              <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
+              <div className="border border-dashed border-border/80 rounded-sm p-6 text-center space-y-2 bg-muted/10">
                 <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
                 <div>
                   <p className="text-xs font-semibold text-foreground">Nenhum fundo salvo</p>
@@ -1188,7 +1188,7 @@ function Index() {
                         saveToHistory();
                         selectBackground(b);
                       }}
-                      className={`block w-full aspect-square rounded-xl overflow-hidden border transition-all duration-300 relative ${bgUrl === b.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
+                      className={`block w-full aspect-square rounded-sm overflow-hidden border transition-all duration-300 relative ${bgUrl === b.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
                     >
                       <img
                         src={b.signed_url || b.image_url}
@@ -1203,7 +1203,7 @@ function Index() {
                     </button>
                     <button
                       onClick={() => promptDeleteBackground(b.id, b.name)}
-                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
+                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-sm p-1.5 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
                       title="Excluir fundo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1260,7 +1260,7 @@ function Index() {
                         saveToHistory();
                         selectLogo(l);
                       }}
-                      className={`block w-full aspect-square rounded-xl overflow-hidden border transition-all duration-300 bg-muted/40 relative ${logo?.url === l.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
+                      className={`block w-full aspect-square rounded-sm overflow-hidden border transition-all duration-300 bg-muted/40 relative ${logo?.url === l.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
                     >
                       <img
                         src={l.signed_url || l.image_url}
@@ -1332,7 +1332,7 @@ function Index() {
                     <div key={f.id} className="relative group">
                       <button
                         onClick={() => toggleForeground(f)}
-                        className={`block w-full aspect-square rounded-xl overflow-hidden bg-muted/50 border transition-all relative ${isActive ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
+                        className={`block w-full aspect-square rounded-sm overflow-hidden bg-muted/50 border transition-all relative ${isActive ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
                       >
                         <img src={f.url} alt="" className={`w-full h-full object-contain p-1 ${isActive ? "opacity-100" : "opacity-85"}`} />
                         {isActive && (
@@ -1343,7 +1343,7 @@ function Index() {
                       </button>
                       <button
                         onClick={() => deleteFromHighlightLibrary(f.id)}
-                        className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
+                        className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-sm p-1 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -1368,17 +1368,17 @@ function Index() {
               Qualidade de Exportação
             </Label>
             <Select value={exportScale.toString()} onValueChange={(v) => setExportScale(Number(v))}>
-              <SelectTrigger className="bg-background border border-border text-foreground rounded-xl transition-all">
+              <SelectTrigger className="bg-background border border-border text-foreground rounded-sm transition-all">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-card border border-border text-foreground rounded-xl shadow-lg">
-                <SelectItem value="1" className="rounded-lg">
+              <SelectContent className="bg-card border border-border text-foreground rounded-sm shadow-lg">
+                <SelectItem value="1" className="rounded-sm">
                   Padrão (1x - HD)
                 </SelectItem>
-                <SelectItem value="2" className="rounded-lg">
+                <SelectItem value="2" className="rounded-sm">
                   Alta Resolução (2x - 2K)
                 </SelectItem>
-                <SelectItem value="3" className="rounded-lg">
+                <SelectItem value="3" className="rounded-sm">
                   Ultra HD (3x - 4K)
                 </SelectItem>
               </SelectContent>
@@ -1387,7 +1387,7 @@ function Index() {
 
           <Button
             onClick={download}
-            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary text-primary-foreground font-bold py-6 rounded-xl shadow-lg shadow-primary/20 transition-all duration-300 cursor-pointer hover:scale-[1.01]"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-black py-6 rounded-sm shadow-lg shadow-primary/20 transition-all duration-300 cursor-pointer hover:translate-y-[-1px] hover:shadow-xl uppercase tracking-wider"
             size="lg"
           >
             <Download className="w-4 h-4 mr-2" /> Baixar Imagem
@@ -1400,7 +1400,7 @@ function Index() {
           <div className="flex flex-col items-center gap-4 w-full max-w-sm lg:max-w-md mx-auto relative">
             <div
               ref={previewRef}
-            className={`relative ${aspectClass} w-full bg-muted/45 border border-border/90 rounded-2xl overflow-hidden shadow-2xl transition-all duration-500 select-none touch-none`}
+             className={`relative ${aspectClass} w-full bg-muted/45 border border-border/90 rounded-sm overflow-hidden shadow-2xl transition-all duration-500 select-none touch-none`}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
@@ -1413,7 +1413,7 @@ function Index() {
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               />
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-muted/30 border-2 border-dashed border-border/60 rounded-2xl m-3.5 animate-pulse">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-muted/30 border-2 border-dashed border-border/60 rounded-sm m-3.5 animate-pulse">
                 <ImageIcon className="w-12 h-12 text-muted-foreground/30 mb-3" />
                 <p className="text-sm font-semibold text-foreground">Visualização do Canvas</p>
                 <p className="text-xs text-muted-foreground max-w-[220px] mt-1.5 leading-relaxed">
@@ -1557,7 +1557,7 @@ function Index() {
     </main>
 
       <AlertDialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
-        <AlertDialogContent className="bg-card border border-border text-foreground rounded-2xl max-w-sm">
+        <AlertDialogContent className="bg-card border border-border text-foreground rounded-sm max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground text-xs leading-relaxed">
@@ -1568,13 +1568,13 @@ function Index() {
           <AlertDialogFooter className="gap-2 mt-4">
             <AlertDialogCancel
               onClick={() => setConfirmDelete(null)}
-              className="border-border hover:bg-accent rounded-xl text-foreground text-xs font-semibold py-2 px-4 cursor-pointer"
+              className="border-border hover:bg-muted rounded-sm text-foreground text-xs font-bold py-2 px-4 cursor-pointer"
             >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={executeDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-semibold py-2 px-4 cursor-pointer"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-sm text-xs font-bold py-2 px-4 cursor-pointer"
             >
               Excluir
             </AlertDialogAction>
