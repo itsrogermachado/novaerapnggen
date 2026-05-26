@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Key, Mail, Lock, Loader2, Sparkles } from "lucide-react";
+import { Key, Mail, Lock, Loader2, Layers } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -80,7 +80,7 @@ function AuthPage() {
         {/* Logo */}
         <div className="animate-slide-up flex items-center gap-2.5 mb-2">
           <div className="w-8 h-8 rounded-sm bg-primary flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary-foreground" />
+            <Layers className="w-4 h-4 text-primary-foreground" />
           </div>
           <span className="font-black tracking-tight text-lg">
             Nova Era
@@ -88,7 +88,7 @@ function AuthPage() {
         </div>
 
         <h1 className="animate-slide-up stagger-2 text-2xl font-black tracking-tight mb-1 text-foreground">
-          Gerador de Resultados
+          Estúdio de Resultados
         </h1>
         <p className="animate-slide-up stagger-3 text-sm text-muted-foreground mb-6">
           {mode === "login" ? "Entre para acessar a ferramenta" : "Crie sua conta de membro"}

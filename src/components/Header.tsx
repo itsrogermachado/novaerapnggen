@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Sparkles, Clock, ShieldAlert, LogOut } from "lucide-react";
+import { Layers, Clock, ShieldAlert, LogOut } from "lucide-react";
 
 interface HeaderProps {
   isAdmin: boolean;
@@ -25,14 +25,14 @@ export function Header({
       <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-sm bg-primary flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+            <Layers className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
           <div>
             <h1 className="text-sm sm:text-base font-black tracking-tight">
               Nova Era
             </h1>
             <p className="text-[10px] text-muted-foreground font-medium hidden sm:block uppercase tracking-wider">
-              Gerador de Resultados
+              Estúdio de Resultados
             </p>
           </div>
         </div>

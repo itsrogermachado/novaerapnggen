@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Shuffle } from "lucide-react";
+import { Layers, Shuffle } from "lucide-react";
 
 interface RandomizerPanelProps {
   onRandomizeBackground: () => void;
@@ -19,9 +19,9 @@ export function RandomizerPanel({
       <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-primary/60 to-accent/40" />
 
       <div className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-primary" />
+        <Layers className="w-4 h-4 text-primary" />
         <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          Randomização
+          Composição Rápida
         </Label>
       </div>
       <div className="grid grid-cols-3 gap-2 mt-1">
