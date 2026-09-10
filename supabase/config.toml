@@ -1,1 +1,5 @@
 project_id = "ejixsmqkyeltkqntvcpp"
+
+# Cleanup expired discord images every hour
+[functions.cleanup-discord-images]
+schedule = "0 * * * *"

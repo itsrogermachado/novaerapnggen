@@ -58,6 +58,7 @@ import { MiniCanvas } from "@/components/canvas/MiniCanvas";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { Header } from "@/components/Header";
 import { RandomizerPanel } from "@/components/RandomizerPanel";
+import { LatestSignals } from "@/components/LatestSignals";
 import type { Database } from "@/integrations/supabase/types";
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -1036,6 +1037,8 @@ function Index() {
       <main className="max-w-7xl mx-auto p-4 grid lg:grid-cols-[380px_1fr] gap-6">
         {/* Controls Panel */}
         <Card className="p-5 space-y-6 h-fit order-2 lg:order-1 bg-card border-border/80 shadow-lg transition-all duration-200 animate-slide-in-left rounded-sm">
+          <LatestSignals />
+
           {/* Active Layer Editor */}
           {selectedId && (
             <div className="bg-primary/5 p-4 rounded-sm border border-primary/20 space-y-3.5 animate-fade-in">

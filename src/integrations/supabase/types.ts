@@ -32,6 +32,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      discord_images: {
+        Row: {
+          id: string;
+          image_url: string;
+          storage_path: string;
+          uploaded_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          image_url: string;
+          storage_path: string;
+          uploaded_at?: string;
+          expires_at?: string;
+        };
+        Update: {
+          id?: string;
+          image_url?: string;
+          storage_path?: string;
+          uploaded_at?: string;
+          expires_at?: string;
+        };
+        Relationships: [];
+      };
       logos: {
         Row: {
           created_at: string;
