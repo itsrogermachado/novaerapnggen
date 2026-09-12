@@ -1018,7 +1018,6 @@ function Index() {
         isAdmin={isAdmin}
         timeLeft={timeLeft}
         userEmail={user?.email ?? null}
-        onNavigateToAdmin={() => navigate({ to: "/admin" })}
         onLogout={logout}
       />
 

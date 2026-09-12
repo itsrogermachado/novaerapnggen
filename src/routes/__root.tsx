@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth";
+import { AppNav } from "@/components/AppNav";
 
 import appCss from "../styles.css?url";
 
@@ -168,6 +169,8 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Outlet />
+        {/* Decide sozinha se aparece: só nas rotas do app logado, e só no mobile. */}
+        <AppNav />
         <Toaster richColors position="top-center" />
       </AuthProvider>
     </QueryClientProvider>

@@ -17,6 +17,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { formatTimeAgo, formatCountdown } from "@/lib/time";
+import { AppNavInline } from "@/components/AppNav";
 
 export const Route = createFileRoute("/sinais")({
   component: SinaisPage,
@@ -104,6 +105,8 @@ function SinaisPage() {
               </div>
             </div>
           </div>
+
+          <AppNavInline />
 
           <div className="flex items-center gap-2">
             <Button

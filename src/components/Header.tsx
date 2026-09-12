@@ -1,16 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Layers, Clock, ShieldAlert, LogOut } from "lucide-react";
+import { Layers, Clock, LogOut } from "lucide-react";
+import { AppNavInline } from "@/components/AppNav";
 
 interface HeaderProps {
   isAdmin: boolean;
   timeLeft: string | null;
   userEmail: string | null;
-  onNavigateToAdmin: () => void;
   onLogout: () => void;
 }
 
-export function Header({ isAdmin, timeLeft, userEmail, onNavigateToAdmin, onLogout }: HeaderProps) {
+export function Header({ isAdmin, timeLeft, userEmail, onLogout }: HeaderProps) {
   return (
     <header className="border-b border-border/60 bg-card/90 backdrop-blur-sm sticky top-0 z-50 transition-all duration-200">
       {/* Top accent line */}
@@ -29,6 +29,9 @@ export function Header({ isAdmin, timeLeft, userEmail, onNavigateToAdmin, onLogo
           </div>
         </div>
 
+        {/* No mobile a navegação vive na barra fixa do rodapé (AppNav). */}
+        <AppNavInline />
+
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {!isAdmin && timeLeft && (
             <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-sm border bg-primary/10 text-primary border-primary/20 text-xs font-bold font-mono shadow-sm transition-colors cursor-default">
@@ -43,17 +46,6 @@ export function Header({ isAdmin, timeLeft, userEmail, onNavigateToAdmin, onLogo
             <span className="truncate max-w-[140px] font-mono text-xs">{userEmail}</span>
           </div>
           <ThemeToggle />
-          {isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onNavigateToAdmin}
-              className="border-primary/25 hover:border-primary hover:bg-primary/10 text-primary font-bold transition-all duration-200 cursor-pointer rounded-sm flex items-center gap-1.5"
-            >
-              <ShieldAlert className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Painel Admin</span>
-            </Button>
-          )}
           <Button
             variant="outline"
             size="sm"

@@ -54,6 +54,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AppNavInline } from "@/components/AppNav";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -319,6 +320,8 @@ function AdminPage() {
               </p>
             </div>
           </div>
+          <AppNavInline />
+
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground font-medium hidden md:inline-block px-3 py-1.5 bg-muted border border-border rounded-sm font-mono">
               Logado como: <span className="text-primary font-semibold">{user?.email}</span>
