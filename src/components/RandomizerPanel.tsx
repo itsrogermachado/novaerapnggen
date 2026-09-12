@@ -31,7 +31,8 @@ export function RandomizerPanel({
           onClick={onRandomizeBackground}
           className="bg-background border border-border text-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary rounded-sm cursor-pointer font-bold transition-all text-xs group"
         >
-          <Shuffle className="w-3.5 h-3.5 mr-1 group-hover:rotate-180 transition-transform duration-300" /> Fundo
+          <Shuffle className="w-3.5 h-3.5 mr-1 group-hover:rotate-180 transition-transform duration-300" />{" "}
+          Fundo
         </Button>
         <Button
           variant="secondary"
@@ -39,7 +40,8 @@ export function RandomizerPanel({
           onClick={onRandomizeForegrounds}
           className="bg-background border border-border text-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary rounded-sm cursor-pointer font-bold transition-all text-xs group"
         >
-          <Shuffle className="w-3.5 h-3.5 mr-1 group-hover:rotate-180 transition-transform duration-300" /> Posição
+          <Shuffle className="w-3.5 h-3.5 mr-1 group-hover:rotate-180 transition-transform duration-300" />{" "}
+          Posição
         </Button>
         <Button
           variant="secondary"
@@ -47,7 +49,8 @@ export function RandomizerPanel({
           onClick={onRandomizeAll}
           className="bg-background border border-border text-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary rounded-sm cursor-pointer font-bold transition-all text-xs group"
         >
-          <Shuffle className="w-3.5 h-3.5 mr-1 group-hover:rotate-180 transition-transform duration-300" /> Tudo
+          <Shuffle className="w-3.5 h-3.5 mr-1 group-hover:rotate-180 transition-transform duration-300" />{" "}
+          Tudo
         </Button>
       </div>
     </div>

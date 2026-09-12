@@ -15,10 +15,7 @@ export const FONTS = [
   { id: "cinzel", name: "Cinzel", family: "'Cinzel', serif" },
 ];
 
-export function getForegroundSpace(
-  currentLogo: LogoState,
-  isStory: boolean
-) {
+export function getForegroundSpace(currentLogo: LogoState, isStory: boolean) {
   let fgMinY = isStory ? 0.18 : 0.16;
   let fgMaxY = isStory ? 0.88 : 0.85;
 
@@ -29,7 +26,7 @@ export function getForegroundSpace(
   }
 
   if (fgMinY > fgMaxY - 0.15) {
-    fgMinY = isStory ? 0.22 : 0.20;
+    fgMinY = isStory ? 0.22 : 0.2;
     fgMaxY = isStory ? 0.82 : 0.78;
   }
 
@@ -108,7 +105,7 @@ export function getForegroundCoordinates(
       coords.push({ x: 0.28, y: fgCenterY + dy, size });
       coords.push({ x: 0.72, y: fgCenterY + dy, size });
     } else if (style === 1) {
-      const size = Math.min(0.30, (fgHeightRange * 0.7) / layoutAspectRatio);
+      const size = Math.min(0.3, (fgHeightRange * 0.7) / layoutAspectRatio);
       const dy = fgHeightRange * 0.24;
       coords.push({ x: 0.5, y: fgCenterY - dy, size });
       coords.push({ x: 0.26, y: fgCenterY, size });
@@ -188,7 +185,12 @@ export function getForegroundCoordinates(
   });
 }
 
-export function generateForegroundLayouts(num: number, styleType: number, fgMinY: number, fgMaxY: number) {
+export function generateForegroundLayouts(
+  num: number,
+  styleType: number,
+  fgMinY: number,
+  fgMaxY: number,
+) {
   const coords = getForegroundCoordinates(num, styleType, fgMinY, fgMaxY);
   return coords.map((c) => ({
     x: Math.max(0.05, Math.min(0.95, c.x)),

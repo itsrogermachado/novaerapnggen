@@ -96,7 +96,6 @@ function AdminPage() {
   } | null>(null);
   const [changingAdmin, setChangingAdmin] = useState(false);
 
-
   const loadData = useCallback(async () => {
     try {
       setLoadingData(true);
@@ -212,7 +211,6 @@ function AdminPage() {
       setAdminChangeTarget(null);
       return;
     }
-
 
     try {
       setChangingAdmin(true);
@@ -531,7 +529,8 @@ function AdminPage() {
             <div className="bg-primary/5 border border-primary/20 rounded-sm p-3 flex items-start gap-3">
               <Clock className="w-5 h-5 text-primary mt-0.5" />
               <div className="text-sm text-muted-foreground leading-relaxed">
-                Após este período, o acesso do usuário vai expirar e ele não poderá mais acessar o gerador.
+                Após este período, o acesso do usuário vai expirar e ele não poderá mais acessar o
+                gerador.
               </div>
             </div>
           </div>

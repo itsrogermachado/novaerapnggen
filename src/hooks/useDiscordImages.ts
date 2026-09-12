@@ -35,7 +35,6 @@ export function useDiscordImages() {
     queryFn: fetchDiscordImages,
     refetchInterval: 30_000, // auto-refresh every 30s
     staleTime: 15_000,
-    select: (images) =>
-      images.filter((img) => new Date(img.expires_at) > new Date()),
+    select: (images) => images.filter((img) => new Date(img.expires_at) > new Date()),
   });
 }

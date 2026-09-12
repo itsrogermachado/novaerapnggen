@@ -10,13 +10,7 @@ interface HeaderProps {
   onLogout: () => void;
 }
 
-export function Header({
-  isAdmin,
-  timeLeft,
-  userEmail,
-  onNavigateToAdmin,
-  onLogout,
-}: HeaderProps) {
+export function Header({ isAdmin, timeLeft, userEmail, onNavigateToAdmin, onLogout }: HeaderProps) {
   return (
     <header className="border-b border-border/60 bg-card/90 backdrop-blur-sm sticky top-0 z-50 transition-all duration-200">
       {/* Top accent line */}
@@ -28,9 +22,7 @@ export function Header({
             <Layers className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-sm sm:text-base font-black tracking-tight">
-              Nova Era
-            </h1>
+            <h1 className="text-sm sm:text-base font-black tracking-tight">Nova Era</h1>
             <p className="text-[10px] text-muted-foreground font-medium hidden sm:block uppercase tracking-wider">
               Estúdio de Resultados
             </p>

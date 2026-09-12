@@ -101,8 +101,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Crie imagens profissionais para Instagram com fundos personalizados, logos e textos arrastáveis. Ferramenta exclusiva Nova Era.",
       },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/d61l6PfdYINFTpBHzpQTTB0KdXp1/social-images/social-1779837355669-nova_era_symbol_orange_1_1779837288117.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/d61l6PfdYINFTpBHzpQTTB0KdXp1/social-images/social-1779837355669-nova_era_symbol_orange_1_1779837288117.webp" },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/d61l6PfdYINFTpBHzpQTTB0KdXp1/social-images/social-1779837355669-nova_era_symbol_orange_1_1779837288117.webp",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/d61l6PfdYINFTpBHzpQTTB0KdXp1/social-images/social-1779837355669-nova_era_symbol_orange_1_1779837288117.webp",
+      },
     ],
     links: [
       {

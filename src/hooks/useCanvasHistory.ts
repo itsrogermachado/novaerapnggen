@@ -4,18 +4,22 @@ import { getStateSignature } from "@/lib/layout-utils";
 
 export function useCanvasHistory({
   currentState,
-  setters
+  setters,
 }: {
   currentState: CanvasState;
   setters: {
     setBgUrl: (v: string | null) => void;
     setBgUrlSigned: (v: string | null) => void;
     setBgImg: (v: HTMLImageElement | null) => void;
-    setForegrounds: (v: CanvasState["foregrounds"] | ((prev: CanvasState["foregrounds"]) => CanvasState["foregrounds"])) => void;
+    setForegrounds: (
+      v:
+        | CanvasState["foregrounds"]
+        | ((prev: CanvasState["foregrounds"]) => CanvasState["foregrounds"]),
+    ) => void;
     setLogo: (v: CanvasState["logo"]) => void;
     setFormat: (v: CanvasState["format"]) => void;
     setSelectedId: (v: string | null) => void;
-  }
+  };
 }) {
   const [past, setPast] = useState<CanvasState[]>([]);
   const [future, setFuture] = useState<CanvasState[]>([]);
@@ -73,27 +77,30 @@ export function useCanvasHistory({
     setters.setFormat(next.format);
   }, [future, currentState, setters]);
 
-  const goToHistoryState = useCallback((targetState: CanvasState, index: number, type: "past" | "future") => {
-    if (type === "past") {
-      const newPast = past.slice(0, index);
-      const newFuture = [...past.slice(index + 1), currentState, ...future];
-      setPast(newPast);
-      setFuture(newFuture);
-    } else {
-      const newPast = [...past, currentState, ...future.slice(0, index)];
-      const newFuture = future.slice(index + 1);
-      setPast(newPast);
-      setFuture(newFuture);
-    }
+  const goToHistoryState = useCallback(
+    (targetState: CanvasState, index: number, type: "past" | "future") => {
+      if (type === "past") {
+        const newPast = past.slice(0, index);
+        const newFuture = [...past.slice(index + 1), currentState, ...future];
+        setPast(newPast);
+        setFuture(newFuture);
+      } else {
+        const newPast = [...past, currentState, ...future.slice(0, index)];
+        const newFuture = future.slice(index + 1);
+        setPast(newPast);
+        setFuture(newFuture);
+      }
 
-    setters.setBgUrl(targetState.bgUrl);
-    setters.setBgUrlSigned(targetState.bgUrlSigned);
-    setters.setBgImg(targetState.bgImg);
-    setters.setForegrounds(targetState.foregrounds);
-    setters.setLogo(targetState.logo);
-    setters.setFormat(targetState.format);
-    setters.setSelectedId(null);
-  }, [past, future, currentState, setters]);
+      setters.setBgUrl(targetState.bgUrl);
+      setters.setBgUrlSigned(targetState.bgUrlSigned);
+      setters.setBgImg(targetState.bgImg);
+      setters.setForegrounds(targetState.foregrounds);
+      setters.setLogo(targetState.logo);
+      setters.setFormat(targetState.format);
+      setters.setSelectedId(null);
+    },
+    [past, future, currentState, setters],
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -119,5 +126,16 @@ export function useCanvasHistory({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
 
-  return { past, future, setPast, setFuture, saveToHistory, undo, redo, goToHistoryState, historyEnabled, setHistoryEnabled };
+  return {
+    past,
+    future,
+    setPast,
+    setFuture,
+    saveToHistory,
+    undo,
+    redo,
+    goToHistoryState,
+    historyEnabled,
+    setHistoryEnabled,
+  };
 }

@@ -82,9 +82,7 @@ function AuthPage() {
           <div className="w-8 h-8 rounded-sm bg-primary flex items-center justify-center">
             <Layers className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-black tracking-tight text-lg">
-            Nova Era
-          </span>
+          <span className="font-black tracking-tight text-lg">Nova Era</span>
         </div>
 
         <h1 className="animate-slide-up stagger-2 text-2xl font-black tracking-tight mb-1 text-foreground">
@@ -161,9 +159,7 @@ function AuthPage() {
           onClick={() => setMode(mode === "login" ? "signup" : "login")}
           className="animate-slide-up stagger-6 mt-5 text-sm text-primary hover:text-primary/80 transition-colors hover:underline w-full text-center cursor-pointer font-semibold"
         >
-          {mode === "login"
-            ? "Não tem conta? Cadastre-se"
-            : "Já tem uma conta? Entrar"}
+          {mode === "login" ? "Não tem conta? Cadastre-se" : "Já tem uma conta? Entrar"}
         </button>
       </Card>
     </div>

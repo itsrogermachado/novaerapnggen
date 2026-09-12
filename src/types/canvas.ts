@@ -1,7 +1,5 @@
 export type Format = "feed" | "story";
 
-
-
 export type LibraryItem = {
   id: string;
   name: string;
@@ -41,5 +39,4 @@ export type CanvasState = {
 export interface ElementLayouts {
   foregrounds: { x: number; y: number; size: number }[];
   logo: { x: number; y: number; size: number } | null;
-
 }

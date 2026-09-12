@@ -13,7 +13,7 @@ import {
   Menu,
   X,
   Crosshair,
-  CheckCircle2
+  CheckCircle2,
 } from "lucide-react";
 import logoImg from "@/assets/nova-era-logo.webp";
 
@@ -36,7 +36,7 @@ function useScrollReveal() {
           observer.unobserve(el);
         }
       },
-      { threshold: 0.15 }
+      { threshold: 0.15 },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -91,18 +91,26 @@ function LandingPage() {
             <div className="w-6 h-6 bg-primary flex items-center justify-center">
               <Layers className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
-            <img src={logoImg} alt="Nova Era" className="h-4 w-auto hidden sm:block grayscale hover:grayscale-0 transition-all" />
-            <span className="font-bold tracking-tight text-sm uppercase sm:hidden">
-              Nova Era
-            </span>
+            <img
+              src={logoImg}
+              alt="Nova Era"
+              className="h-4 w-auto hidden sm:block grayscale hover:grayscale-0 transition-all"
+            />
+            <span className="font-bold tracking-tight text-sm uppercase sm:hidden">Nova Era</span>
           </div>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-6">
-            <a href="#ferramentas" className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">
+            <a
+              href="#ferramentas"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+            >
               Ferramentas
             </a>
-            <a href="#recursos" className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">
+            <a
+              href="#recursos"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+            >
               Recursos
             </a>
           </nav>
@@ -145,12 +153,27 @@ function LandingPage() {
         {mobileMenuOpen && (
           <div className="md:hidden border-b border-border bg-background absolute left-0 right-0 p-4 space-y-4 shadow-xl z-40">
             <nav className="flex flex-col gap-4">
-              <a href="#ferramentas" onClick={() => setMobileMenuOpen(false)} className="text-xs font-bold uppercase tracking-widest text-foreground">Ferramentas</a>
-              <a href="#recursos" onClick={() => setMobileMenuOpen(false)} className="text-xs font-bold uppercase tracking-widest text-foreground">Recursos</a>
+              <a
+                href="#ferramentas"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-bold uppercase tracking-widest text-foreground"
+              >
+                Ferramentas
+              </a>
+              <a
+                href="#recursos"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-bold uppercase tracking-widest text-foreground"
+              >
+                Recursos
+              </a>
             </nav>
             <div className="pt-2">
               <Button
-                onClick={() => { setMobileMenuOpen(false); navigate({ to: user ? "/app" : "/auth" }); }}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate({ to: user ? "/app" : "/auth" });
+                }}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 rounded-none uppercase tracking-wider"
               >
                 {user ? "Abrir Estúdio" : "Acessar Plataforma"}
@@ -163,24 +186,26 @@ function LandingPage() {
       {/* ─── HERO SECTION (Abstrato & Brutalista) ─── */}
       <section className="relative pt-24 pb-16 md:pt-40 md:pb-24 px-4 max-w-7xl mx-auto border-b border-border/20">
         <div className="relative z-10 flex flex-col md:flex-row gap-12 items-center">
-          
           {/* Esquerda: Tipografia Massiva */}
           <div className="flex-1 w-full text-left">
             <div className="animate-slide-up inline-flex items-center gap-2 mb-6">
               <Crosshair className="w-4 h-4 text-primary" />
-              <span className="text-xs font-bold text-primary uppercase tracking-[0.2em]">Estúdio de Composição Visual</span>
+              <span className="text-xs font-bold text-primary uppercase tracking-[0.2em]">
+                Estúdio de Composição Visual
+              </span>
             </div>
-            
+
             <h1 className="animate-slide-up stagger-2 text-5xl sm:text-7xl lg:text-[6rem] font-black tracking-tighter leading-[0.9] text-foreground mb-8">
-              CONSTRUA <br/>
-              RESULTADOS <br/>
+              CONSTRUA <br />
+              RESULTADOS <br />
               <span className="text-muted-foreground">PRECISOS.</span>
             </h1>
-            
+
             <p className="animate-slide-up stagger-3 text-sm md:text-base text-muted-foreground max-w-md font-medium leading-relaxed mb-8 border-l-2 border-primary pl-4">
-              Interface profissional desenhada para velocidade e escala. Sem jargões mágicos, apenas controle absoluto sobre suas composições gráficas.
+              Interface profissional desenhada para velocidade e escala. Sem jargões mágicos, apenas
+              controle absoluto sobre suas composições gráficas.
             </p>
-            
+
             <div className="animate-slide-up stagger-4 flex flex-col sm:flex-row items-start gap-4">
               <Button
                 onClick={() => navigate({ to: user ? "/app" : "/auth" })}
@@ -206,33 +231,38 @@ function LandingPage() {
               </div>
             </div>
           </div>
-          
         </div>
       </section>
 
       {/* ─── FEATURES GRID (Bento Minimalista) ─── */}
       <section id="ferramentas" className="py-24 px-4 bg-muted/20">
         <div className="max-w-7xl mx-auto">
-          <div 
+          <div
             ref={featuresReveal.ref}
-            className={`transition-all duration-700 transform ${featuresReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+            className={`transition-all duration-700 transform ${featuresReveal.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
           >
             <div className="flex items-center gap-3 mb-12 border-b border-border/40 pb-4">
-              <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight">Ferramentas de Layout</h2>
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">v2.0</span>
+              <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
+                Ferramentas de Layout
+              </h2>
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                v2.0
+              </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {features.map((item, idx) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="bg-card border border-border/60 p-6 hover:border-primary/50 transition-colors duration-300 group"
                   style={{ transitionDelay: `${idx * 100}ms` }}
                 >
                   <div className="w-10 h-10 border border-border flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
                     {item.icon}
                   </div>
-                  <h3 className="font-bold text-base uppercase tracking-wider mb-2">{item.title}</h3>
+                  <h3 className="font-bold text-base uppercase tracking-wider mb-2">
+                    {item.title}
+                  </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
                 </div>
               ))}
@@ -244,18 +274,25 @@ function LandingPage() {
       {/* ─── STATS / SOCIAL PROOF (Sóbrio) ─── */}
       <section id="recursos" className="py-24 px-4 border-t border-border/20">
         <div className="max-w-7xl mx-auto">
-          <div 
+          <div
             ref={statsReveal.ref}
-            className={`grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 transition-all duration-700 transform ${statsReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+            className={`grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 transition-all duration-700 transform ${statsReveal.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
           >
             {[
               { label: "Renderização", value: "Sub-segundo" },
               { label: "Resolução Máx", value: "4K UHD" },
-              { label: "Disponibilidade", value: "99.9%" }
+              { label: "Disponibilidade", value: "99.9%" },
             ].map((stat, idx) => (
-              <div key={idx} className="flex flex-col items-center md:items-start border-l border-primary/30 pl-6">
-                <span className="text-3xl md:text-5xl font-black text-foreground mb-1 tracking-tighter">{stat.value}</span>
-                <span className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{stat.label}</span>
+              <div
+                key={idx}
+                className="flex flex-col items-center md:items-start border-l border-primary/30 pl-6"
+              >
+                <span className="text-3xl md:text-5xl font-black text-foreground mb-1 tracking-tighter">
+                  {stat.value}
+                </span>
+                <span className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
+                  {stat.label}
+                </span>
               </div>
             ))}
           </div>
@@ -265,9 +302,9 @@ function LandingPage() {
       {/* ─── CTA BOTTOM ─── */}
       <section className="py-24 px-4 bg-card border-t border-border/40">
         <div className="max-w-3xl mx-auto text-center">
-          <div 
+          <div
             ref={ctaReveal.ref}
-            className={`transition-all duration-700 transform ${ctaReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+            className={`transition-all duration-700 transform ${ctaReveal.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
           >
             <Layers className="w-8 h-8 mx-auto text-primary mb-6" />
             <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-6">

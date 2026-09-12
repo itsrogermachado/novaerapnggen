@@ -51,11 +51,7 @@ export function LatestSignals() {
       {!isLoading && displayImages.length > 0 && (
         <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin">
           {displayImages.map((img) => (
-            <Link
-              key={img.id}
-              to="/sinais"
-              className="group shrink-0 w-[120px] cursor-pointer"
-            >
+            <Link key={img.id} to="/sinais" className="group shrink-0 w-[120px] cursor-pointer">
               <Card className="overflow-hidden border-border/60 bg-card hover:border-primary/30 transition-all duration-200 rounded-sm relative">
                 {/* Accent line on hover */}
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-accent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left z-10" />

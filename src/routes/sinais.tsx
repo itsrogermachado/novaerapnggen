@@ -97,9 +97,7 @@ function SinaisPage() {
                 <Layers className="w-3.5 h-3.5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-sm sm:text-base font-black tracking-tight">
-                  Sinais
-                </h1>
+                <h1 className="text-sm sm:text-base font-black tracking-tight">Sinais</h1>
                 <p className="text-[10px] text-muted-foreground font-medium hidden sm:block uppercase tracking-wider">
                   Últimas 24 horas
                 </p>
@@ -115,9 +113,7 @@ function SinaisPage() {
               disabled={isRefetching}
               className="border-border hover:bg-muted cursor-pointer rounded-sm flex items-center gap-1.5"
             >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${isRefetching ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Atualizar</span>
             </Button>
             <ThemeToggle />
@@ -159,12 +155,10 @@ function SinaisPage() {
             <div className="w-16 h-16 rounded-sm bg-muted flex items-center justify-center mb-4">
               <ImageIcon className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              Nenhum sinal no momento
-            </h2>
+            <h2 className="text-xl font-bold text-foreground mb-2">Nenhum sinal no momento</h2>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Os sinais enviados pelo bot do Discord aparecerão aqui automaticamente
-              e ficam disponíveis por 24 horas.
+              Os sinais enviados pelo bot do Discord aparecerão aqui automaticamente e ficam
+              disponíveis por 24 horas.
             </p>
           </div>
         )}
