@@ -173,7 +173,7 @@ function AdminPage() {
         .update({
           status: "approved",
           expires_at: expiresAt.toISOString(),
-        } as any)
+        })
         .eq("id", approveUser.id);
       if (error) throw error;
 
@@ -191,7 +191,7 @@ function AdminPage() {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ status: "revoked" } as any)
+        .update({ status: "revoked" })
         .eq("id", profileId);
       if (error) throw error;
 

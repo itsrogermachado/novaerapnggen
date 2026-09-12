@@ -109,7 +109,7 @@ function Index() {
       if (activeErr) throw activeErr;
       if (profileErr) throw profileErr;
 
-      const profile = profileData as any;
+      const profile = profileData;
       setIsActive(!!active);
       setIsAdmin(!!profile?.is_admin);
       if (profile?.expires_at) {

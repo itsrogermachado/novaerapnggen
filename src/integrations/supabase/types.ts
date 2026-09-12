@@ -80,72 +80,30 @@ export type Database = {
         };
         Relationships: [];
       };
-      invite_tokens: {
-        Row: {
-          created_at: string;
-          created_by: string;
-          description: string | null;
-          expires_at: string;
-          id: string;
-          is_revoked: boolean;
-          token: string;
-          used_by: string | null;
-        };
-        Insert: {
-          created_at?: string;
-          created_by: string;
-          description?: string | null;
-          expires_at: string;
-          id?: string;
-          is_revoked?: boolean;
-          token: string;
-          used_by?: string | null;
-        };
-        Update: {
-          created_at?: string;
-          created_by?: string;
-          description?: string | null;
-          expires_at?: string;
-          id?: string;
-          is_revoked?: boolean;
-          token?: string;
-          used_by?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "invite_tokens_created_by_fkey";
-            columns: ["created_by"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "invite_tokens_used_by_fkey";
-            columns: ["used_by"];
-            isOneToOne: true;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       profiles: {
         Row: {
           created_at: string;
           email: string | null;
+          expires_at: string | null;
           id: string;
           is_admin: boolean;
+          status: string;
         };
         Insert: {
           created_at?: string;
           email?: string | null;
+          expires_at?: string | null;
           id: string;
           is_admin?: boolean;
+          status?: string;
         };
         Update: {
           created_at?: string;
           email?: string | null;
+          expires_at?: string | null;
           id?: string;
           is_admin?: boolean;
+          status?: string;
         };
         Relationships: [
           {
