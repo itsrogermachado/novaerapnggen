@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { safeLogError } from "@/lib/log";
 import {
   Users,
   Search,
@@ -69,12 +70,6 @@ interface Profile {
   created_at: string;
 }
 
-function safeLogError(message: string, error?: any) {
-  if (import.meta.env.DEV) {
-    console.error(message, error);
-  }
-}
-
 function AdminPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -82,6 +77,9 @@ function AdminPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [users, setUsers] = useState<Profile[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  // Marcado quando os dados chegam, nunca durante o render: um `new Date()` no JSX
+  // produz horários diferentes no servidor e no cliente e quebra a hidratação.
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
   // Search & Filter
   const [userSearch, setUserSearch] = useState("");
@@ -110,6 +108,7 @@ function AdminPage() {
       if (profilesErr) throw profilesErr;
 
       setUsers((profilesData as unknown as Profile[]) || []);
+      setLastLoadedAt(new Date());
     } catch (err) {
       safeLogError("Erro ao carregar dados do painel:", err);
       toast.error("Erro ao carregar dados administrativos.");
@@ -346,7 +345,7 @@ function AdminPage() {
             <h2 className="text-lg font-bold">Usuários Registrados</h2>
           </div>
           <div className="text-xs text-muted-foreground font-medium z-10">
-            Última atualização: {new Date().toLocaleTimeString()}
+            Última atualização: {lastLoadedAt ? lastLoadedAt.toLocaleTimeString("pt-BR") : "—"}
           </div>
         </div>
 

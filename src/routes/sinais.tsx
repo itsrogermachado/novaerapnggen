@@ -16,6 +16,7 @@ import {
   ChevronRight,
   RefreshCw,
 } from "lucide-react";
+import { formatTimeAgo, formatCountdown } from "@/lib/time";
 
 export const Route = createFileRoute("/sinais")({
   component: SinaisPage,
@@ -23,26 +24,6 @@ export const Route = createFileRoute("/sinais")({
     meta: [{ title: "Nova Era — Sinais" }],
   }),
 });
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "agora";
-  if (mins < 60) return `há ${mins}min`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `há ${hours}h`;
-  return `há ${Math.floor(hours / 24)}d`;
-}
-
-function formatCountdown(expiresAt: string): string {
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  if (diff <= 0) return "Expirado";
-  const h = Math.floor(diff / 3_600_000);
-  const m = Math.floor((diff % 3_600_000) / 60_000);
-  if (h > 0) return `${h}h ${m}m`;
-  const s = Math.floor((diff % 60_000) / 1_000);
-  return `${m}m ${s}s`;
-}
 
 function SinaisPage() {
   const navigate = useNavigate();

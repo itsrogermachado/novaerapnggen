@@ -15,7 +15,7 @@ import {
   Crosshair,
   CheckCircle2
 } from "lucide-react";
-import logoImg from "../../nova_era_logo.png";
+import logoImg from "@/assets/nova-era-logo.webp";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,

@@ -2,24 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useDiscordImages } from "@/hooks/useDiscordImages";
 import { Card } from "@/components/ui/card";
 import { ImageIcon, Clock, ArrowRight, Loader2 } from "lucide-react";
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "agora";
-  if (mins < 60) return `${mins}min`;
-  const hours = Math.floor(mins / 60);
-  return `${hours}h`;
-}
-
-function formatCountdown(expiresAt: string): string {
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  if (diff <= 0) return "Exp.";
-  const h = Math.floor(diff / 3_600_000);
-  const m = Math.floor((diff % 3_600_000) / 60_000);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
+import { formatTimeAgo, formatCountdown } from "@/lib/time";
 
 export function LatestSignals() {
   const { data: images, isLoading } = useDiscordImages();
@@ -88,11 +71,11 @@ export function LatestSignals() {
 
                 <div className="px-1.5 py-1.5 flex items-center justify-between">
                   <span className="text-[10px] text-muted-foreground font-medium">
-                    {formatTimeAgo(img.uploaded_at)}
+                    {formatTimeAgo(img.uploaded_at, true)}
                   </span>
                   <span className="text-[10px] font-mono text-primary/70 flex items-center gap-0.5">
                     <Clock className="w-2.5 h-2.5" />
-                    {formatCountdown(img.expires_at)}
+                    {formatCountdown(img.expires_at, true)}
                   </span>
                 </div>
               </Card>

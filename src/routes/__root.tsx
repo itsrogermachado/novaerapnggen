@@ -73,7 +73,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      // viewport-fit=cover é o que habilita env(safe-area-inset-*) no iPhone,
+      // usado pela barra de abas fixa no rodapé (AppNav).
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
+      },
       { title: "Nova Era — Gerador de Resultados" },
       {
         name: "description",
@@ -96,9 +101,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Crie imagens profissionais para Instagram com fundos personalizados, logos e textos arrastáveis. Ferramenta exclusiva Nova Era.",
       },
-      { name: "description", content: "Insta Canvas Creator generates custom Instagram images with drag-and-drop text and background uploads." },
-      { property: "og:description", content: "Insta Canvas Creator generates custom Instagram images with drag-and-drop text and background uploads." },
-      { name: "twitter:description", content: "Insta Canvas Creator generates custom Instagram images with drag-and-drop text and background uploads." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/d61l6PfdYINFTpBHzpQTTB0KdXp1/social-images/social-1779837355669-nova_era_symbol_orange_1_1779837288117.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/d61l6PfdYINFTpBHzpQTTB0KdXp1/social-images/social-1779837355669-nova_era_symbol_orange_1_1779837288117.webp" },
     ],
@@ -112,9 +114,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.gstatic.com",
         crossOrigin: "anonymous",
       },
+      // Só as duas famílias do design system. As sete anteriores (Inter, Montserrat,
+      // Poppins, Playfair, Bebas, Lora, Cinzel) serviam ao seletor de fontes que foi
+      // removido em maio. Carregadas aqui, e não por @import no CSS, para não
+      // serializar o download atrás do stylesheet.
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poppins:wght@300;400;500;600;700;800&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap",
       },
       {
         rel: "stylesheet",

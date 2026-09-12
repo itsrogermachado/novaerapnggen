@@ -32,8 +32,6 @@ import {
   ImageIcon,
   Loader2,
   Shuffle,
-  Mail,
-  Copy,
   Check,
   RefreshCw,
   ShieldAlert,
@@ -41,25 +39,22 @@ import {
   Redo2,
   Palette,
   Layers,
-  Type,
-  Sparkles,
-  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { safeLogError } from "@/lib/log";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/app")({
   component: Index,
 });
 
-import { Format, LibraryItem, Foreground, LogoState, CanvasState, ElementLayouts } from "@/types/canvas";
-import { FORMATS, FONTS, getForegroundSpace, getForegroundCoordinates, generateForegroundLayouts, generateCohesiveLayout, getStateSignature } from "@/lib/layout-utils";
+import { Format, LibraryItem, Foreground, LogoState, CanvasState } from "@/types/canvas";
+import { FORMATS, getForegroundSpace, getForegroundCoordinates, generateForegroundLayouts, generateCohesiveLayout, getStateSignature } from "@/lib/layout-utils";
 import { MiniCanvas } from "@/components/canvas/MiniCanvas";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { Header } from "@/components/Header";
 import { RandomizerPanel } from "@/components/RandomizerPanel";
 import { LatestSignals } from "@/components/LatestSignals";
-import type { Database } from "@/integrations/supabase/types";
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -78,12 +73,6 @@ function sanitizeFilename(name: string): string {
     .slice(0, 60);
 }
 
-function safeLogError(message: string, error?: any) {
-  if (import.meta.env.DEV) {
-    console.error(message, error);
-  }
-}
-
 function Index() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -91,7 +80,6 @@ function Index() {
   const [isActive, setIsActive] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [checkingAccess, setCheckingAccess] = useState<boolean>(true);
-  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
@@ -168,13 +156,6 @@ function Index() {
     }
   }, [user, loading, navigate, checkAccess]);
 
-  const copyToClipboard = (email: string) => {
-    navigator.clipboard.writeText(email);
-    setCopiedEmail(email);
-    toast.success("E-mail copiado!");
-    setTimeout(() => setCopiedEmail(null), 2000);
-  };
-
   const [format, setFormat] = useState<Format>("feed");
 
   // Background library
@@ -196,11 +177,10 @@ function Index() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [exportScale, setExportScale] = useState<number>(1);
-  const [previewWidth, setPreviewWidth] = useState<number>(400);
 
   const previewRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
-    kind: "text" | "logo" | "foreground";
+    kind: "logo" | "foreground";
     id?: string;
     offX: number;
     offY: number;
@@ -218,20 +198,6 @@ function Index() {
     currentState: { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, format },
     setters: { setBgUrl, setBgUrlSigned, setBgImg, setForegrounds, setLogo, setFormat, setSelectedId }
   });
-
-  // ResizeObserver for dynamic text scaling
-  useEffect(() => {
-    const el = previewRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      if (entries[0]) {
-        setPreviewWidth(entries[0].contentRect.width);
-      }
-    });
-    observer.observe(el);
-    setPreviewWidth(el.getBoundingClientRect().width || 400);
-    return () => observer.disconnect();
-  }, [isActive, format]);
 
   // Auto-arrange foregrounds when their count or format changes
   useEffect(() => {
@@ -839,9 +805,7 @@ function Index() {
     const cx = Math.max(0, Math.min(1, x));
     const cy = Math.max(0, Math.min(1, y));
 
-    if (dragRef.current.kind === "text" && dragRef.current.id) {
-      
-    } else if (dragRef.current.kind === "logo" && logo) {
+    if (dragRef.current.kind === "logo" && logo) {
       setLogo({ ...logo, x: cx, y: cy });
     } else if (dragRef.current.kind === "foreground" && dragRef.current.id) {
       updateForeground(dragRef.current.id, { x: cx, y: cy });
