@@ -84,6 +84,10 @@ export function useResultados(periodo: Periodo = "hoje") {
       let q = supabase
         .from("discord_images")
         .select(CAMPOS)
+        // A limpeza roda de hora em hora, então existe uma janela em que a linha
+        // já venceu mas ainda está no banco. Não faz sentido mostrar algo que
+        // está para ser apagado.
+        .gt("expires_at", new Date().toISOString())
         // id desempata o que foi publicado no mesmo instante — comum quando o
         // bot manda um lote de prints de uma vez.
         .order("uploaded_at", { ascending: false })

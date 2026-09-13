@@ -480,3 +480,43 @@ lovable-badge,
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* ─── SLIDERS TOCÁVEIS ───
+   A trilha continua fina, mas a área que o dedo acerta tem 44px. Sem isto os
+   controles de tamanho eram uma faixa de ~6px, impossível de acertar no toque. */
+.slider-toque {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 44px;
+  background: transparent;
+  touch-action: none;
+}
+.slider-toque::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-muted);
+}
+.slider-toque::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-muted);
+}
+.slider-toque::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-background);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+}
+.slider-toque::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-background);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+}

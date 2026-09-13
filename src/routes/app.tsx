@@ -43,6 +43,8 @@ import {
 import { toast } from "sonner";
 import { safeLogError } from "@/lib/log";
 import { useImportarResultados } from "@/hooks/useImportarResultados";
+import { useProfile } from "@/hooks/useProfile";
+import { comprimirImagem, TIPOS_ACEITOS, ImagemInvalidaError } from "@/lib/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/app")({
@@ -97,48 +99,23 @@ function Index() {
   }, [navigate]);
   const { user, loading } = useAuth();
 
-  const [isActive, setIsActive] = useState<boolean | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [checkingAccess, setCheckingAccess] = useState<boolean>(true);
-
-  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+  // access separa "negado" de "não consegui verificar". Antes as duas coisas
+  // caíam no mesmo catch, então uma oscilação de rede levava quem estava em dia
+  // para a tela de acesso bloqueado.
+  const { isAdmin, access, expiresAt, refetch: recheckAccess, isRefetching } = useProfile();
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
-
-  const checkAccess = useCallback(async () => {
-    if (!user) return;
-    try {
-      setCheckingAccess(true);
-
-      const { data: active, error: activeErr } = await supabase.rpc("is_user_active", {
-        user_uuid: user.id,
-      });
-
-      const { data: profileData, error: profileErr } = await supabase
-        .from("profiles")
-        .select("is_admin, expires_at")
-        .eq("id", user.id)
-        .single();
-
-      if (activeErr) throw activeErr;
-      if (profileErr) throw profileErr;
-
-      const profile = profileData;
-      setIsActive(!!active);
-      setIsAdmin(!!profile?.is_admin);
-      if (profile?.expires_at) {
-        setExpiresAt(new Date(profile.expires_at));
-      }
-    } catch (err) {
-      safeLogError("Erro ao verificar acesso:", err);
-      setIsActive(false);
-      setIsAdmin(false);
-    } finally {
-      setCheckingAccess(false);
-    }
-  }, [user]);
+  // Vira true quando o contador chega a zero com a aba aberta.
+  const [expirouAgora, setExpirouAgora] = useState(false);
 
   useEffect(() => {
-    if (isAdmin || !expiresAt) return;
+    if (isAdmin || !expiresAt) {
+      setTimeLeft(null);
+      return;
+    }
+
+    // Portador mutável: a closure abaixo precisa ler o id do intervalo antes
+    // de ele existir, o que um `let` atribuído uma única vez não permite.
+    const timer: { id?: ReturnType<typeof setInterval> } = {};
 
     const updateTimeLeft = () => {
       const now = new Date();
@@ -146,7 +123,10 @@ function Index() {
 
       if (diff <= 0) {
         setTimeLeft("Expirado");
-        setIsActive(false);
+        setExpirouAgora(true);
+        // Nada mais a contar: para o intervalo em vez de redesenhar a tela
+        // uma vez por segundo para sempre.
+        if (timer.id) clearInterval(timer.id);
         return;
       }
 
@@ -162,19 +142,17 @@ function Index() {
     };
 
     updateTimeLeft();
-    const interval = setInterval(updateTimeLeft, 1000);
-    return () => clearInterval(interval);
+    timer.id = setInterval(updateTimeLeft, 1000);
+    return () => {
+      if (timer.id) clearInterval(timer.id);
+    };
   }, [expiresAt, isAdmin]);
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate({ to: "/auth" });
-      } else {
-        checkAccess();
-      }
+    if (!loading && !user) {
+      navigate({ to: "/auth" });
     }
-  }, [user, loading, navigate, checkAccess]);
+  }, [user, loading, navigate]);
 
   const [format, setFormat] = useState<Format>("feed");
 
@@ -249,12 +227,21 @@ function Index() {
     aoConcluir: limparParametroResultados,
   });
 
-  // Auto-arrange foregrounds when their count or format changes
+  // Rearranja os destaques quando a QUANTIDADE ou o FORMATO muda.
+  //
+  // Antes rodava também ao mexer na logo, e recolocava todos os destaques na
+  // grade: quem tinha posicionado dois à mão e adicionava um terceiro via os
+  // dois primeiros pularem de volta — e, como não passava pelo histórico, o
+  // Ctrl+Z não trazia de volta. Agora o gatilho é só contagem e formato, e a
+  // posição da logo entra apenas como referência de espaço.
+  const logoRef = useRef(logo);
+  logoRef.current = logo;
+
   useEffect(() => {
     if (foregrounds.length === 0) return;
 
     const isStory = format === "story";
-    const { fgMinY, fgMaxY } = getForegroundSpace(logo, isStory);
+    const { fgMinY, fgMaxY } = getForegroundSpace(logoRef.current, isStory);
     const coords = getForegroundCoordinates(foregrounds.length, 0, fgMinY, fgMaxY);
 
     setForegrounds((p) => {
@@ -281,11 +268,18 @@ function Index() {
         };
       });
     });
-  }, [foregrounds.length, format, !!logo]);
+  }, [foregrounds.length, format]);
 
   // Helper for generating state signature
 
-  const getSignedUrlForStorageUrl = async (
+  /**
+   * Os buckets `backgrounds` e `logos` foram criados com public = true e têm
+   * policy de leitura aberta, então assinar a URL não protege nada — só custava
+   * uma ida à rede por item a cada abertura do app. A função continua aqui,
+   * inerte, para o dia em que os buckets forem fechados: aí basta voltar a
+   * chamá-la.
+   */
+  const _getSignedUrlForStorageUrl = async (
     bucket: "backgrounds" | "logos",
     storageUrl: string,
   ): Promise<string> => {
@@ -319,29 +313,11 @@ function Index() {
     let bgData = (bg.data || []) as LibraryItem[];
     let lgData = (lg.data || []) as LibraryItem[];
 
-    try {
-      const signedBgs = await Promise.all(
-        bgData.map(async (item) => {
-          const signedUrl = await getSignedUrlForStorageUrl("backgrounds", item.image_url);
-          return { ...item, signed_url: signedUrl, signed_at: Date.now() };
-        }),
-      );
-      bgData = signedBgs;
-    } catch (e) {
-      safeLogError("Error signing background URLs:", e);
-    }
-
-    try {
-      const signedLgs = await Promise.all(
-        lgData.map(async (item) => {
-          const signedUrl = await getSignedUrlForStorageUrl("logos", item.image_url);
-          return { ...item, signed_url: signedUrl, signed_at: Date.now() };
-        }),
-      );
-      lgData = signedLgs;
-    } catch (e) {
-      safeLogError("Error signing logo URLs:", e);
-    }
+    // Buckets públicos: a URL já serve direto. Antes daqui saía uma chamada
+    // createSignedUrl por fundo E por logo a cada abertura do app — com 40
+    // fundos, 40 idas à rede antes da primeira imagem aparecer.
+    bgData = bgData.map((item) => ({ ...item, signed_url: item.image_url }));
+    lgData = lgData.map((item) => ({ ...item, signed_url: item.image_url }));
 
     setBgLib(bgData);
     setLogoLib(lgData);
@@ -353,9 +329,18 @@ function Index() {
 
   const uploadToBucket = async (bucket: "backgrounds" | "logos", file: File) => {
     if (!user) throw new Error("Não autenticado");
-    const ext = file.name.split(".").pop() || "png";
+
+    // Foto de celular chega com 3-5MB e milhares de pixels de lado, para virar
+    // um fundo de 1080px. Logo precisa de transparência, então continua PNG.
+    const ehLogo = bucket === "logos";
+    const conteudo = ehLogo ? file : await comprimirImagem(file, { maxLado: 2160, qualidade: 0.9 });
+    const ext = ehLogo ? file.name.split(".").pop() || "png" : "webp";
+    const tipo = ehLogo ? file.type : "image/webp";
+
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(path, conteudo, { upsert: false, contentType: tipo });
     if (error) throw error;
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     return data.publicUrl;
@@ -375,8 +360,7 @@ function Index() {
         .single();
       if (error) throw error;
 
-      const signedUrl = await getSignedUrlForStorageUrl("backgrounds", url);
-      const newItem = { ...(data as LibraryItem), signed_url: signedUrl, signed_at: Date.now() };
+      const newItem = { ...(data as LibraryItem), signed_url: url };
 
       setBgLib((p) => [newItem, ...p]);
       await selectBackground(newItem);
@@ -399,23 +383,11 @@ function Index() {
         return;
       }
 
-      let signedUrl =
+      // URL pública não expira e não precisa ser reassinada; a mutação direta
+      // de itemOrUrl.signed_url que existia aqui escrevia dentro do array de
+      // state sem passar por setState.
+      const signedUrl =
         typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.signed_url || itemOrUrl.image_url;
-
-      const isExpired =
-        typeof itemOrUrl !== "string" &&
-        (!itemOrUrl.signed_at || Date.now() - itemOrUrl.signed_at > 7000 * 1000);
-
-      if (
-        isExpired ||
-        (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/backgrounds/"))
-      ) {
-        signedUrl = await getSignedUrlForStorageUrl("backgrounds", url);
-        if (typeof itemOrUrl !== "string") {
-          itemOrUrl.signed_url = signedUrl;
-          itemOrUrl.signed_at = Date.now();
-        }
-      }
 
       const img = await loadImage(signedUrl);
       setBgImg(img);
@@ -485,8 +457,7 @@ function Index() {
         .single();
       if (error) throw error;
 
-      const signedUrl = await getSignedUrlForStorageUrl("logos", url);
-      const newItem = { ...(data as LibraryItem), signed_url: signedUrl, signed_at: Date.now() };
+      const newItem = { ...(data as LibraryItem), signed_url: url };
 
       setLogoLib((p) => [newItem, ...p]);
       await selectLogo(newItem);
@@ -508,23 +479,8 @@ function Index() {
         return;
       }
 
-      let signedUrl =
+      const signedUrl =
         typeof itemOrUrl === "string" ? itemOrUrl : itemOrUrl.signed_url || itemOrUrl.image_url;
-
-      const isExpired =
-        typeof itemOrUrl !== "string" &&
-        (!itemOrUrl.signed_at || Date.now() - itemOrUrl.signed_at > 7000 * 1000);
-
-      if (
-        isExpired ||
-        (typeof itemOrUrl === "string" && url.includes("/storage/v1/object/public/logos/"))
-      ) {
-        signedUrl = await getSignedUrlForStorageUrl("logos", url);
-        if (typeof itemOrUrl !== "string") {
-          itemOrUrl.signed_url = signedUrl;
-          itemOrUrl.signed_at = Date.now();
-        }
-      }
 
       const img = await loadImage(signedUrl);
       setLogo({ url, signedUrl, img, x: 0.5, y: 0.08, size: 0.25 });
@@ -917,7 +873,9 @@ function Index() {
       a.href = URL.createObjectURL(blob);
       a.download = `gerador-resultados-${format}-hd.png`;
       a.click();
-      URL.revokeObjectURL(a.href);
+      // Revogar na linha seguinte ao click cancela o download em alguns
+      // navegadores, que ainda não começaram a gravar. Um tick depois é seguro.
+      setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
     }, "image/png");
   };
 
@@ -926,7 +884,7 @@ function Index() {
     navigate({ to: "/auth" });
   };
 
-  if (loading || checkingAccess) {
+  if (loading || access === "checking") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-6 transition-colors duration-200">
         <div className="w-full max-w-sm p-6 bg-card border border-border/80 rounded-sm shadow-2xl space-y-5 animate-fade-in">
@@ -956,7 +914,54 @@ function Index() {
     return null;
   }
 
-  if (isActive === false) {
+  // Falha ao LER o perfil não é acesso negado. Isso acontece o tempo todo no
+  // celular — túnel, elevador, 4G oscilando — e antes levava quem estava em dia
+  // para a tela de "acesso bloqueado", com os telefones do suporte.
+  if (access === "unknown") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4 text-foreground">
+        <div className="w-full max-w-md rounded-sm border border-border bg-card p-8 text-center shadow-2xl">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-muted">
+            <RefreshCw className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h2 className="mb-2 text-2xl font-black tracking-tight">Sem conexão com o servidor</h2>
+          <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
+            Não deu para confirmar seu acesso agora. Seu acesso continua valendo — é a conexão que
+            falhou. Verifique a internet e tente de novo.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => recheckAccess()}
+              disabled={isRefetching}
+              className="min-h-[48px] w-full rounded-sm bg-primary font-bold text-primary-foreground hover:bg-primary/90"
+            >
+              {isRefetching ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Tentando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Tentar novamente
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={logout}
+              className="min-h-[48px] w-full rounded-sm border-border text-muted-foreground"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair da conta
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (access === "denied" || expirouAgora) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-4 font-sans relative overflow-hidden transition-colors duration-200">
         <div className="grain-texture fixed inset-0 pointer-events-none z-[1]" />
@@ -1013,7 +1018,7 @@ function Index() {
 
           <div className="flex flex-col gap-3">
             <Button
-              onClick={checkAccess}
+              onClick={() => recheckAccess()}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 rounded-sm shadow-lg shadow-primary/20 transition-all duration-300 group cursor-pointer"
             >
               <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
@@ -1044,7 +1049,7 @@ function Index() {
         onLogout={logout}
       />
 
-      <main className="max-w-7xl mx-auto p-4 grid lg:grid-cols-[380px_1fr] gap-6">
+      <main className="mx-auto flex max-w-7xl flex-col gap-6 p-4 lg:grid lg:grid-cols-[380px_1fr_auto]">
         {/* Controls Panel */}
         <Card className="p-5 space-y-6 h-fit order-2 lg:order-1 bg-card border-border/80 shadow-lg transition-all duration-200 animate-slide-in-left rounded-sm">
           <UltimosResultados />
@@ -1091,7 +1096,7 @@ function Index() {
                     value={logo.size}
                     onPointerDown={() => saveToHistory()}
                     onChange={(e) => setLogo({ ...logo, size: +e.target.value })}
-                    className="w-full accent-primary h-1.5 bg-background rounded-lg cursor-pointer"
+                    className="slider-toque w-full accent-primary cursor-pointer"
                   />
                 </div>
               )}
@@ -1114,7 +1119,7 @@ function Index() {
                           value={fgItem.size}
                           onPointerDown={() => saveToHistory()}
                           onChange={(e) => updateForeground(selectedId, { size: +e.target.value })}
-                          className="w-full accent-primary h-1.5 bg-background rounded-lg cursor-pointer"
+                          className="slider-toque w-full accent-primary cursor-pointer"
                         />
                       </>
                     );
@@ -1214,7 +1219,7 @@ function Index() {
                     </button>
                     <button
                       onClick={() => promptDeleteBackground(b.id, b.name)}
-                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-sm p-1.5 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
+                      className="absolute top-1 right-1 flex h-11 w-11 items-center justify-center rounded-sm bg-destructive/90 text-destructive-foreground opacity-100 shadow-lg transition hover:bg-destructive [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                       title="Excluir fundo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1286,7 +1291,7 @@ function Index() {
                     </button>
                     <button
                       onClick={() => promptDeleteLogo(l.id, l.name)}
-                      className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
+                      className="absolute top-1 right-1 flex h-11 w-11 items-center justify-center rounded-sm bg-destructive/90 text-destructive-foreground opacity-100 shadow-lg transition hover:bg-destructive [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                       title="Excluir logo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1358,7 +1363,7 @@ function Index() {
                       </button>
                       <button
                         onClick={() => deleteFromHighlightLibrary(f.id)}
-                        className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-sm p-1 opacity-0 group-hover:opacity-100 transition shadow-lg hover:bg-destructive cursor-pointer"
+                        className="absolute top-1 right-1 flex h-10 w-10 items-center justify-center rounded-sm bg-destructive/90 text-destructive-foreground opacity-100 shadow-lg transition hover:bg-destructive [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -1376,43 +1381,16 @@ function Index() {
             onRandomizeForegrounds={randomizeForegrounds}
             onRandomizeAll={randomizeAll}
           />
-
-          {/* Export upscale scale option */}
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Qualidade de Exportação
-            </Label>
-            <Select value={exportScale.toString()} onValueChange={(v) => setExportScale(Number(v))}>
-              <SelectTrigger className="bg-background border border-border text-foreground rounded-sm transition-all">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border border-border text-foreground rounded-sm shadow-lg">
-                <SelectItem value="1" className="rounded-sm">
-                  Padrão (1x - HD)
-                </SelectItem>
-                <SelectItem value="2" className="rounded-sm">
-                  Alta Resolução (2x - 2K)
-                </SelectItem>
-                <SelectItem value="3" className="rounded-sm">
-                  Ultra HD (3x - 4K)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button
-            onClick={download}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-black py-6 rounded-sm shadow-lg shadow-primary/20 transition-all duration-300 cursor-pointer hover:translate-y-[-1px] hover:shadow-xl uppercase tracking-wider"
-            size="lg"
-          >
-            <Download className="w-4 h-4 mr-2" /> Baixar Imagem
-          </Button>
         </Card>
 
         {/* Canvas & Visual History Wrapper */}
-        <div className="grid lg:grid-cols-[1fr_200px] xl:grid-cols-[1fr_240px] gap-6 order-1 lg:order-2 w-full h-full">
+        {/* Canvas fixo foi tentado e descartado: com 4:5 ele ocupa ~450px dos 844px
+            de um iPhone, mais da metade da tela, e sobrepunha justamente os
+            controles que a gente queria alcançar. O ganho real veio de tirar a
+            Linha do Tempo da frente dos controles. */}
+        <div className="order-1 w-full lg:order-2">
           {/* Canvas Preview Area */}
-          <div className="flex flex-col items-center gap-4 w-full max-w-sm lg:max-w-md mx-auto relative">
+          <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 lg:max-w-md">
             <div
               ref={previewRef}
               data-canvas="preview"
@@ -1485,91 +1463,125 @@ function Index() {
                 </div>
               )}
             </div>
+
+            {/* Exportar fica colado no canvas, não no fim do painel de
+                  controles: é a ação principal e antes vivia a 84% da rolagem
+                  da página no celular. */}
+            <div className="flex w-full items-stretch gap-2">
+              <Select
+                value={exportScale.toString()}
+                onValueChange={(v) => setExportScale(Number(v))}
+              >
+                <SelectTrigger
+                  aria-label="Qualidade de exportação"
+                  className="h-14 w-[104px] shrink-0 rounded-sm border border-border bg-background text-foreground"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-sm border border-border bg-card text-foreground shadow-lg">
+                  <SelectItem value="1" className="rounded-sm">
+                    1x · HD
+                  </SelectItem>
+                  <SelectItem value="2" className="rounded-sm">
+                    2x · 2K
+                  </SelectItem>
+                  <SelectItem value="3" className="rounded-sm">
+                    3x · 4K
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                onClick={download}
+                className="h-14 flex-1 rounded-sm bg-primary font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-300 hover:translate-y-[-1px] hover:bg-primary/90 hover:shadow-xl"
+              >
+                <Download className="mr-2 h-4 w-4" /> Baixar Imagem
+              </Button>
+            </div>
           </div>
-
-          {/* Visual History Panel */}
-          <Card className="p-4 flex flex-col h-[500px] lg:h-full lg:max-h-[85vh] bg-card/60 backdrop-blur-xl border-border/60 shadow-2xl overflow-hidden order-3 lg:order-none relative">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
-              <div className="flex items-center gap-2">
-                <Undo2 className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-semibold tracking-wide">Linha do Tempo</h3>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                    Gravar
-                  </span>
-                  <Switch
-                    checked={historyEnabled}
-                    onCheckedChange={(val) => {
-                      setHistoryEnabled(val);
-                      if (val) {
-                        toast.success("Gravação de histórico ativada");
-                      } else {
-                        toast.info("Gravação de histórico pausada");
-                      }
-                    }}
-                    className="scale-75 origin-right"
-                  />
-                </div>
-                {(past.length > 0 || future.length > 0) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setPast([]);
-                      setFuture([]);
-                      toast.success("Histórico limpo!");
-                    }}
-                    className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-                    title="Limpar histórico"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-1" />
-                    Limpar
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 gap-3 custom-scrollbar content-start">
-              {past.length === 0 && future.length === 0 && (
-                <div className="text-center text-xs text-muted-foreground py-6 col-span-2">
-                  Faça alterações no canvas para vê-las aqui.
-                </div>
-              )}
-
-              {past.map((state, idx) => (
-                <MiniCanvas
-                  key={`past-${idx}`}
-                  state={state}
-                  aspectClass={aspectClass}
-                  onClick={() => goToHistoryState(state, idx, "past")}
-                />
-              ))}
-
-              {/* Current State Indicator */}
-              {(past.length > 0 || future.length > 0) && (
-                <div className="relative">
-                  <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
-                  <MiniCanvas
-                    state={{ bgUrl, bgUrlSigned, bgImg, foregrounds, logo, format }}
-                    aspectClass={aspectClass}
-                    isActive={true}
-                    onClick={() => {}}
-                  />
-                </div>
-              )}
-
-              {future.map((state, idx) => (
-                <MiniCanvas
-                  key={`future-${idx}`}
-                  state={state}
-                  aspectClass={aspectClass}
-                  onClick={() => goToHistoryState(state, idx, "future")}
-                />
-              ))}
-            </div>
-          </Card>
         </div>
+        {/* Visual History Panel */}
+        <Card className="relative order-3 flex flex-col overflow-hidden rounded-sm border-border/60 bg-card/60 p-4 shadow-2xl backdrop-blur-xl lg:order-3 lg:h-full lg:max-h-[85vh] lg:w-[200px] xl:w-[240px]">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <Undo2 className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold tracking-wide">Linha do Tempo</h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                  Gravar
+                </span>
+                <Switch
+                  checked={historyEnabled}
+                  onCheckedChange={(val) => {
+                    setHistoryEnabled(val);
+                    if (val) {
+                      toast.success("Gravação de histórico ativada");
+                    } else {
+                      toast.info("Gravação de histórico pausada");
+                    }
+                  }}
+                  className="scale-75 origin-right"
+                />
+              </div>
+              {(past.length > 0 || future.length > 0) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setPast([]);
+                    setFuture([]);
+                    toast.success("Histórico limpo!");
+                  }}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                  title="Limpar histórico"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="grid max-h-[240px] flex-1 grid-cols-3 content-start gap-3 overflow-y-auto pr-2 custom-scrollbar sm:grid-cols-4 lg:max-h-none lg:grid-cols-2">
+            {past.length === 0 && future.length === 0 && (
+              <div className="text-center text-xs text-muted-foreground py-6 col-span-2">
+                Faça alterações no canvas para vê-las aqui.
+              </div>
+            )}
+
+            {past.map((state, idx) => (
+              <MiniCanvas
+                key={`past-${idx}`}
+                state={state}
+                aspectClass={aspectClass}
+                onClick={() => goToHistoryState(state, idx, "past")}
+              />
+            ))}
+
+            {/* Current State Indicator */}
+            {(past.length > 0 || future.length > 0) && (
+              <div className="relative">
+                <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
+                <MiniCanvas
+                  state={{ bgUrl, bgUrlSigned, bgImg, foregrounds, logo, format }}
+                  aspectClass={aspectClass}
+                  isActive={true}
+                  onClick={() => {}}
+                />
+              </div>
+            )}
+
+            {future.map((state, idx) => (
+              <MiniCanvas
+                key={`future-${idx}`}
+                state={state}
+                aspectClass={aspectClass}
+                onClick={() => goToHistoryState(state, idx, "future")}
+              />
+            ))}
+          </div>
+        </Card>
       </main>
 
       <AlertDialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
