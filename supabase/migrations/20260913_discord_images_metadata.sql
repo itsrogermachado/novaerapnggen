@@ -32,6 +32,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS discord_images_message_path_key
 
 -- 2) Leitura: `auth.role()` é o padrão antigo do Supabase. A forma atual é
 --    restringir a policy ao papel com TO authenticated.
+--    Os DROP antes de cada CREATE existem porque CREATE POLICY não aceita
+--    IF NOT EXISTS: sem eles a migration só rodaria uma vez.
 DROP POLICY IF EXISTS "authenticated users can view discord images" ON public.discord_images;
 
 CREATE POLICY "sinais visíveis para autenticados"
@@ -42,12 +44,14 @@ CREATE POLICY "sinais visíveis para autenticados"
 
 -- 3) Envio manual pelo painel: só admin. É o que permite testar e operar a aba
 --    enquanto o bot não existe, e serve de plano B depois, quando ele cair.
+DROP POLICY IF EXISTS "admins inserem sinais manualmente" ON public.discord_images;
 CREATE POLICY "admins inserem sinais manualmente"
   ON public.discord_images
   FOR INSERT
   TO authenticated
   WITH CHECK (public.check_is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "admins removem sinais" ON public.discord_images;
 CREATE POLICY "admins removem sinais"
   ON public.discord_images
   FOR DELETE
@@ -56,17 +60,22 @@ CREATE POLICY "admins removem sinais"
 
 -- check_is_admin é SECURITY DEFINER e teve o EXECUTE revogado de authenticated
 -- na migration de maio (20260522151000). Uma policy é avaliada com as
--- permissões de quem consulta, então sem esta concessão as políticas acima
+-- permissões de quem consulta, então sem a concessão as políticas acima
 -- falhariam com "permission denied for function check_is_admin".
+--
+-- Verificado no banco em 13/09/2026: a permissão JÁ estava presente, então este
+-- GRANT é um no-op. Fica como garantia para ambientes recriados do zero.
 GRANT EXECUTE ON FUNCTION public.check_is_admin(uuid) TO authenticated;
 
 -- 4) Escrita no bucket pelo painel (o bot usa service role e não passa por RLS).
+DROP POLICY IF EXISTS "admins enviam sinais para o bucket" ON storage.objects;
 CREATE POLICY "admins enviam sinais para o bucket"
   ON storage.objects
   FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'discord-images' AND public.check_is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "admins removem sinais do bucket" ON storage.objects;
 CREATE POLICY "admins removem sinais do bucket"
   ON storage.objects
   FOR DELETE
