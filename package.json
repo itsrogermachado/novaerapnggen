@@ -68,6 +68,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
+    "playwright": "^1.63.0",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
@@ -81,7 +82,9 @@
     "dev": "vite dev",
     "format": "prettier --write .",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "node tests/run.mjs",
+    "check": "tsc --noEmit && eslint ."
   },
   "sideEffects": false,
   "type": "module"

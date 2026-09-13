@@ -1,0 +1,46 @@
+# Testes de navegador
+
+Rodam o app de verdade no Chromium — SSR, hidratação, router e CSS — com a
+sessão do Supabase e todas as respostas da API interceptadas por fixtures
+locais.
+
+**Nada toca a produção.** Nenhuma conta é criada, nenhuma linha é escrita,
+nenhuma imagem sobe. Todas as chamadas para `*.supabase.co` são interceptadas
+antes de sair do navegador.
+
+## Rodando
+
+```bash
+npm run dev            # em um terminal, precisa estar em :5199
+npm run test:e2e       # em outro
+```
+
+Um arquivo isolado:
+
+```bash
+node tests/t-mobile.mjs
+```
+
+## O que cada arquivo cobre
+
+| Arquivo            | Cobertura |
+| ------------------ | --------- |
+| `t-fase1`          | Barra de abas: existe sem dados, alvos de toque, some fora do app, Admin só para admin |
+| `t-fase2`          | Aba com dados reais, badge, descarte de vencido, estado vazio, lightbox, envio manual |
+| `t-resultados`     | Nome correto na interface, filtro de data, fluxo resultado → canvas |
+| `t-paginacao`      | 75 resultados num dia: páginas de 30, acúmulo, fim da lista |
+| `t-mobile`         | Ordem de empilhamento, alcance do botão Baixar, excluir no toque, sliders, desktop preservado |
+
+## Como o mock funciona
+
+`harness.mjs` injeta uma sessão falsa em `localStorage` e intercepta
+`/rest/v1/**` e `/auth/v1/**`. Ele imita o que o `supabase-js` realmente faz:
+
+- `.single()` manda `Accept: application/vnd.pgrst.object+json` e recebe um
+  objeto; sem ele, recebe uma lista.
+- Paginação vai como `offset`/`limit` na query string, não como header `Range`.
+- Contagem vai como `Prefer: count=exact`, e a resposta traz `content-range`.
+
+Viewports abaixo de 768px sobem com `isMobile`/`hasTouch`, que é o que faz o
+Chromium reportar `hover: none` — sem isso os testes de toque passariam de
+mentira.
