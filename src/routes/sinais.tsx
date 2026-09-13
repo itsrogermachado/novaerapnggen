@@ -190,6 +190,11 @@ function SinaisPage() {
                 </div>
 
                 {/* Info footer */}
+                {img.caption && (
+                  <p className="px-3 pt-2 text-xs font-semibold leading-snug line-clamp-2">
+                    {img.caption}
+                  </p>
+                )}
                 <div className="px-3 py-2.5 flex items-center justify-between">
                   <span className="text-xs text-muted-foreground font-medium">
                     {formatTimeAgo(img.uploaded_at)}

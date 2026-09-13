@@ -39,6 +39,12 @@ export type Database = {
           storage_path: string;
           uploaded_at: string;
           expires_at: string;
+          discord_message_id: string | null;
+          channel_id: string | null;
+          author: string | null;
+          caption: string | null;
+          source: string;
+          status: string;
         };
         Insert: {
           id?: string;
@@ -46,6 +52,12 @@ export type Database = {
           storage_path: string;
           uploaded_at?: string;
           expires_at?: string;
+          discord_message_id?: string | null;
+          channel_id?: string | null;
+          author?: string | null;
+          caption?: string | null;
+          source?: string;
+          status?: string;
         };
         Update: {
           id?: string;
@@ -53,6 +65,12 @@ export type Database = {
           storage_path?: string;
           uploaded_at?: string;
           expires_at?: string;
+          discord_message_id?: string | null;
+          channel_id?: string | null;
+          author?: string | null;
+          caption?: string | null;
+          source?: string;
+          status?: string;
         };
         Relationships: [];
       };
