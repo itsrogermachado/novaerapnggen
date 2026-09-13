@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Resultado {
@@ -10,10 +10,15 @@ export interface Resultado {
   author: string | null;
 }
 
-/** Um dia movimentado não pode virar uma resposta de milhares de linhas no 4G. */
-const MAX_RESULTADOS = 200;
+/**
+ * Quantos resultados por página.
+ *
+ * Em dia cheio passa fácil de 60 prints, e a retenção é de 30 dias — ou seja, o
+ * total pode chegar à casa dos milhares. Por isso a lista pagina em vez de ter
+ * um teto: um limite fixo esconderia resultado sem o usuário perceber.
+ */
+export const POR_PAGINA = 30;
 
-/** Períodos do filtro de data da aba. */
 export type Periodo = "hoje" | "ontem" | "7d" | "30d" | "tudo";
 
 export const PERIODOS: { valor: Periodo; rotulo: string }[] = [
@@ -53,31 +58,37 @@ export function intervaloDe(periodo: Periodo): { de: Date | null; ate: Date | nu
   }
 }
 
+const CAMPOS = "id, image_url, uploaded_at, expires_at, caption, author";
+
 /**
- * Resultados que o bot publica, lidos direto da tabela.
+ * Resultados que o bot publica, lidos direto da tabela e paginados.
  *
  * Antes isto passava por GET /api/discord-images, que usava a service role key
  * para servir uma consulta que a RLS já permite a qualquer autenticado — e que
  * nunca chegou a existir: o gerador de rotas não reconhece aquele arquivo, então
- * o endpoint respondia 404 e a aba ficava permanentemente vazia. Lendo pelo
- * cliente, a aba funciona sem endpoint nenhum.
+ * o endpoint respondia 404 e a aba ficava permanentemente vazia.
  *
- * A janela de datas vai na consulta, não em filtro no cliente: assim "30 dias"
- * não obriga a baixar tudo para descartar depois.
+ * A janela de datas vai na consulta, não em filtro no cliente, para "30 dias"
+ * não obrigar a baixar tudo e descartar depois.
  */
-export function useResultados(periodo: Periodo = "tudo") {
-  return useQuery({
+export function useResultados(periodo: Periodo = "hoje") {
+  const query = useInfiniteQuery({
     queryKey: ["resultados", periodo],
+    initialPageParam: 0,
     refetchInterval: 30_000,
     staleTime: 15_000,
-    queryFn: async (): Promise<Resultado[]> => {
+    queryFn: async ({ pageParam }): Promise<Resultado[]> => {
       const { de, ate } = intervaloDe(periodo);
+      const inicio = (pageParam as number) * POR_PAGINA;
 
       let q = supabase
         .from("discord_images")
-        .select("id, image_url, uploaded_at, expires_at, caption, author")
+        .select(CAMPOS)
+        // id desempata o que foi publicado no mesmo instante — comum quando o
+        // bot manda um lote de prints de uma vez.
         .order("uploaded_at", { ascending: false })
-        .limit(MAX_RESULTADOS);
+        .order("id", { ascending: false })
+        .range(inicio, inicio + POR_PAGINA - 1);
 
       if (de) q = q.gte("uploaded_at", de.toISOString());
       if (ate) q = q.lt("uploaded_at", ate.toISOString());
@@ -86,11 +97,38 @@ export function useResultados(periodo: Periodo = "tudo") {
       if (error) throw error;
       return (data ?? []) as Resultado[];
     },
+    // Página cheia significa que provavelmente há mais; página curta é o fim.
+    getNextPageParam: (ultima, todas) => (ultima.length === POR_PAGINA ? todas.length : undefined),
   });
+
+  return {
+    ...query,
+    /** Todas as páginas já carregadas, achatadas. */
+    resultados: query.data?.pages.flat() ?? [],
+  };
 }
 
-/** Só a contagem do dia, para o badge da aba. */
+/**
+ * Só a contagem do dia, para o badge da aba.
+ *
+ * Usa `head: true`: o Postgres devolve o total no cabeçalho sem transferir
+ * nenhuma linha, então o badge não puxa imagem à toa.
+ */
 export function useContagemHoje() {
-  const { data } = useResultados("hoje");
-  return data?.length ?? 0;
+  const { data } = useQuery({
+    queryKey: ["resultados-contagem", "hoje"],
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    queryFn: async (): Promise<number> => {
+      const { de } = intervaloDe("hoje");
+      const { count, error } = await supabase
+        .from("discord_images")
+        .select("id", { count: "exact", head: true })
+        .gte("uploaded_at", de!.toISOString());
+
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  return data ?? 0;
 }

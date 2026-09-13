@@ -32,7 +32,15 @@ function ResultadosPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [periodo, setPeriodo] = useState<Periodo>("hoje");
-  const { data: images, isLoading, refetch, isRefetching } = useResultados(periodo);
+  const {
+    resultados: images,
+    isLoading,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useResultados(periodo);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   // Seleção para levar vários resultados de uma vez ao estúdio.
@@ -173,7 +181,8 @@ function ResultadosPage() {
           <div className="animate-fade-in mb-6 flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 rounded-sm border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
               <ImageIcon className="h-3.5 w-3.5" />
-              {images.length} {images.length === 1 ? "resultado" : "resultados"}
+              {images.length}
+              {hasNextPage ? "+" : ""} {images.length === 1 ? "resultado" : "resultados"}
             </div>
             <div className="flex items-center gap-1.5 rounded-sm border border-border/40 bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
               <Clock className="h-3.5 w-3.5" />
@@ -211,6 +220,29 @@ function ResultadosPage() {
               Os resultados que o bot do Discord publicar aparecem aqui automaticamente. Troque o
               período acima para ver outros dias.
             </p>
+          </div>
+        )}
+
+        {/* Carregar mais — botão explícito em vez de scroll infinito: no celular
+            o scroll infinito briga com a barra de abas e nunca deixa chegar ao
+            fim da página. */}
+        {hasNextPage && (
+          <div className="mt-6 flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="h-12 min-w-[200px] rounded-sm border-border font-bold"
+            >
+              {isFetchingNextPage ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Carregando...
+                </>
+              ) : (
+                "Carregar mais"
+              )}
+            </Button>
           </div>
         )}
 

@@ -5,14 +5,16 @@ import { ImageIcon, Clock, ArrowRight, Loader2 } from "lucide-react";
 import { formatTimeAgo, formatCountdown } from "@/lib/time";
 
 export function UltimosResultados() {
-  const { data: images, isLoading } = useResultados();
+  // O carrossel mostra só os de hoje — é o que interessa a quem está montando
+  // arte agora. O histórico completo fica na aba Resultados.
+  const { resultados: images, isLoading } = useResultados("hoje");
 
-  // Don't render the section if no images and not loading
-  if (!isLoading && (!images || images.length === 0)) {
+  // Sem resultados e sem estar carregando, a seção inteira some.
+  if (!isLoading && images.length === 0) {
     return null;
   }
 
-  const displayImages = images?.slice(0, 6) ?? [];
+  const displayImages = images.slice(0, 6);
 
   return (
     <div className="animate-fade-in">
@@ -25,7 +27,7 @@ export function UltimosResultados() {
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Últimos Resultados
           </h3>
-          {images && images.length > 0 && (
+          {images.length > 0 && (
             <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm">
               {images.length}
             </span>

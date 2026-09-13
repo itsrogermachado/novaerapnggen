@@ -26,7 +26,7 @@ const MAX_ARQUIVOS = 20;
 export function EnviarResultado() {
   const [enviando, setEnviando] = useState(false);
   const [legenda, setLegenda] = useState("");
-  const [horas, setHoras] = useState(24);
+  const [horas, setHoras] = useState(24 * 30);
   const [selecionados, setSelecionados] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -108,7 +108,8 @@ export function EnviarResultado() {
           Enviar resultado manualmente
         </CardTitle>
         <CardDescription>
-          Publica direto na aba Resultados, sem passar pelo bot. Some sozinho quando o prazo vence.
+          Publica direto na aba Resultados, sem passar pelo bot. Sai do ar sozinho quando o prazo
+          vence.
         </CardDescription>
       </CardHeader>
 
@@ -142,11 +143,9 @@ export function EnviarResultado() {
               onChange={(e) => setHoras(Number(e.target.value))}
               className="h-9 w-full sm:w-36 rounded-sm border border-border bg-background px-3 text-sm"
             >
-              <option value={1}>1 hora</option>
-              <option value={6}>6 horas</option>
-              <option value={12}>12 horas</option>
-              <option value={24}>24 horas</option>
-              <option value={48}>48 horas</option>
+              <option value={24}>1 dia</option>
+              <option value={24 * 7}>7 dias</option>
+              <option value={24 * 30}>30 dias (padrão)</option>
             </select>
           </div>
         </div>
