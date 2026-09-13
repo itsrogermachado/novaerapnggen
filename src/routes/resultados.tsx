@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
-import { useDiscordImages } from "@/hooks/useDiscordImages";
+import { useResultados, PERIODOS, type Periodo } from "@/hooks/useResultados";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -15,23 +15,40 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  Check,
+  Wand2,
 } from "lucide-react";
 import { formatTimeAgo, formatCountdown } from "@/lib/time";
 import { AppNavInline } from "@/components/AppNav";
 
-export const Route = createFileRoute("/sinais")({
-  component: SinaisPage,
+export const Route = createFileRoute("/resultados")({
+  component: ResultadosPage,
   head: () => ({
-    meta: [{ title: "Nova Era — Sinais" }],
+    meta: [{ title: "Nova Era — Resultados" }],
   }),
 });
 
-function SinaisPage() {
+function ResultadosPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const { data: images, isLoading, refetch, isRefetching } = useDiscordImages();
+  const [periodo, setPeriodo] = useState<Periodo>("hoje");
+  const { data: images, isLoading, refetch, isRefetching } = useResultados(periodo);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // Seleção para levar vários resultados de uma vez ao estúdio.
+  const [selecionados, setSelecionados] = useState<string[]>([]);
+
+  const alternarSelecao = useCallback((id: string) => {
+    setSelecionados((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  }, []);
+
+  const usarNoEstudio = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      navigate({ to: "/app", search: { resultados: ids.join(",") } });
+    },
+    [navigate],
+  );
   const [, setTick] = useState(0);
 
   // Redirect unauthenticated users
@@ -98,7 +115,7 @@ function SinaisPage() {
                 <Layers className="w-3.5 h-3.5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-sm sm:text-base font-black tracking-tight">Sinais</h1>
+                <h1 className="text-sm sm:text-base font-black tracking-tight">Resultados</h1>
                 <p className="text-[10px] text-muted-foreground font-medium hidden sm:block uppercase tracking-wider">
                   Últimas 24 horas
                 </p>
@@ -126,16 +143,41 @@ function SinaisPage() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 py-6 relative z-10">
+        {/* Filtro de data — fica sempre visível: com a lista vazia é justamente
+            quando o usuário precisa trocar de período. Rola na horizontal no
+            celular em vez de quebrar em duas linhas. */}
+        <div
+          role="group"
+          aria-label="Filtrar por data"
+          className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-thin"
+        >
+          {PERIODOS.map((p) => (
+            <button
+              key={p.valor}
+              type="button"
+              aria-pressed={periodo === p.valor}
+              onClick={() => setPeriodo(p.valor)}
+              className={`h-11 shrink-0 rounded-sm border px-4 text-xs font-bold uppercase tracking-wider transition-colors ${
+                periodo === p.valor
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              }`}
+            >
+              {p.rotulo}
+            </button>
+          ))}
+        </div>
+
         {/* Stats bar */}
         {images && images.length > 0 && (
-          <div className="animate-fade-in flex items-center gap-3 mb-6">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border bg-primary/10 text-primary border-primary/20 text-xs font-bold">
-              <ImageIcon className="w-3.5 h-3.5" />
-              {images.length} {images.length === 1 ? "sinal" : "sinais"} ativos
+          <div className="animate-fade-in mb-6 flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-sm border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+              <ImageIcon className="h-3.5 w-3.5" />
+              {images.length} {images.length === 1 ? "resultado" : "resultados"}
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border bg-muted/50 border-border/40 text-muted-foreground text-xs font-medium">
-              <Clock className="w-3.5 h-3.5" />
-              Atualização automática a cada 30s
+            <div className="flex items-center gap-1.5 rounded-sm border border-border/40 bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              Atualiza a cada 30s
             </div>
           </div>
         )}
@@ -158,11 +200,47 @@ function SinaisPage() {
             <div className="w-16 h-16 rounded-sm bg-muted flex items-center justify-center mb-4">
               <ImageIcon className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Nenhum sinal no momento</h2>
+            <h2 className="text-xl font-bold text-foreground mb-2">
+              {periodo === "hoje"
+                ? "Nenhum resultado hoje"
+                : periodo === "ontem"
+                  ? "Nenhum resultado ontem"
+                  : "Nenhum resultado no período"}
+            </h2>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Os sinais enviados pelo bot do Discord aparecerão aqui automaticamente e ficam
-              disponíveis por 24 horas.
+              Os resultados que o bot do Discord publicar aparecem aqui automaticamente. Troque o
+              período acima para ver outros dias.
             </p>
+          </div>
+        )}
+
+        {/* Barra de ação da seleção */}
+        {selecionados.length > 0 && (
+          <div
+            className="fixed inset-x-0 z-40 px-4 animate-fade-in"
+            style={{ bottom: "calc(56px + env(safe-area-inset-bottom, 0px) + 12px)" }}
+          >
+            <div className="mx-auto flex max-w-lg items-center gap-2 rounded-sm border border-primary/30 bg-card/95 p-2 shadow-2xl backdrop-blur-sm">
+              <span className="pl-2 text-xs font-bold tabular-nums">
+                {selecionados.length} {selecionados.length === 1 ? "selecionado" : "selecionados"}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelecionados([])}
+                className="ml-auto h-9 text-xs text-muted-foreground"
+              >
+                Limpar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => usarNoEstudio(selecionados)}
+                className="h-9 rounded-sm bg-primary font-bold text-primary-foreground hover:bg-primary/90"
+              >
+                <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+                Usar no estúdio
+              </Button>
+            </div>
           </div>
         )}
 
@@ -179,11 +257,47 @@ function SinaisPage() {
                 {/* Accent line on hover */}
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-accent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left z-10" />
 
+                {/* Seleção — sempre visível: no toque não existe hover. */}
+                <button
+                  type="button"
+                  aria-label={
+                    selecionados.includes(img.id)
+                      ? "Remover da seleção"
+                      : "Selecionar para usar no estúdio"
+                  }
+                  aria-pressed={selecionados.includes(img.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    alternarSelecao(img.id);
+                  }}
+                  className={`absolute left-2 top-2 z-20 flex h-11 w-11 items-center justify-center rounded-sm border-2 transition-colors ${
+                    selecionados.includes(img.id)
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-white/70 bg-black/35 text-white/90 backdrop-blur-sm hover:bg-black/55"
+                  }`}
+                >
+                  <Check className="h-5 w-5" strokeWidth={3} />
+                </button>
+
+                {/* Atalho para levar só este resultado */}
+                <button
+                  type="button"
+                  aria-label="Usar este resultado no estúdio"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    usarNoEstudio([img.id]);
+                  }}
+                  className="absolute right-2 top-2 z-20 flex h-11 items-center gap-1.5 rounded-sm border-2 border-white/70 bg-black/35 px-2.5 text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition-colors hover:bg-primary hover:border-primary"
+                >
+                  <Wand2 className="h-4 w-4" />
+                  Usar
+                </button>
+
                 {/* Image */}
                 <div className="aspect-[4/3] overflow-hidden bg-muted">
                   <img
                     src={img.image_url}
-                    alt="Sinal"
+                    alt="Resultado"
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
@@ -251,10 +365,22 @@ function SinaisPage() {
           {/* Image */}
           <img
             src={images[lightboxIndex].image_url}
-            alt="Sinal ampliado"
+            alt="Resultado ampliado"
             className="max-w-[90vw] max-h-[85vh] object-contain rounded-sm shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
+
+          {/* Usar no estúdio, direto do lightbox */}
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              usarNoEstudio([images[lightboxIndex].id]);
+            }}
+            className="absolute bottom-24 left-1/2 z-10 h-11 -translate-x-1/2 rounded-sm bg-primary px-5 font-bold text-primary-foreground hover:bg-primary/90"
+          >
+            <Wand2 className="mr-2 h-4 w-4" />
+            Usar no estúdio
+          </Button>
 
           {/* Info bar */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-5 py-2.5 rounded-sm bg-white/10 backdrop-blur-md text-white text-sm font-medium">

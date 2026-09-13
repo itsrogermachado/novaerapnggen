@@ -14,16 +14,16 @@ import { comprimirImagem, TIPOS_ACEITOS } from "@/lib/image";
 const MAX_ARQUIVOS = 20;
 
 /**
- * Envio manual de sinais pelo painel admin.
+ * Envio manual de resultados pelo painel admin.
  *
  * Existe por dois motivos: enquanto o bot do Discord não existe, é o que
- * alimenta a aba de Sinais com dados reais; e depois que ele existir, continua
+ * alimenta a aba de Resultados com dados reais; e depois que ele existir, continua
  * sendo o plano B para quando cair.
  *
  * Grava direto no bucket e na tabela — o RLS só libera para admin — sem passar
  * pelo endpoint, que é território do bot.
  */
-export function EnviarSinal() {
+export function EnviarResultado() {
   const [enviando, setEnviando] = useState(false);
   const [legenda, setLegenda] = useState("");
   const [horas, setHoras] = useState(24);
@@ -81,7 +81,7 @@ export function EnviarSinal() {
 
         enviados++;
       } catch (err) {
-        safeLogError("Falha ao enviar sinal:", err);
+        safeLogError("Falha ao enviar resultado:", err);
         falhas.push(file.name);
       }
     }
@@ -92,8 +92,8 @@ export function EnviarSinal() {
     if (inputRef.current) inputRef.current.value = "";
 
     if (enviados > 0) {
-      toast.success(`${enviados} ${enviados === 1 ? "sinal enviado" : "sinais enviados"}`);
-      queryClient.invalidateQueries({ queryKey: ["discord-images"] });
+      toast.success(`${enviados} ${enviados === 1 ? "resultado enviado" : "resultados enviados"}`);
+      queryClient.invalidateQueries({ queryKey: ["resultados"] });
     }
     if (falhas.length > 0) {
       toast.error(`Não foi possível enviar: ${falhas.join(", ")}`);
@@ -105,22 +105,25 @@ export function EnviarSinal() {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Radio className="w-4 h-4 text-primary" />
-          Enviar sinal manualmente
+          Enviar resultado manualmente
         </CardTitle>
         <CardDescription>
-          Publica direto na aba Sinais, sem passar pelo bot. Some sozinho quando o prazo vence.
+          Publica direto na aba Resultados, sem passar pelo bot. Some sozinho quando o prazo vence.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
           <div className="space-y-1.5">
-            <Label htmlFor="sinal-legenda" className="text-xs font-bold uppercase tracking-wider">
+            <Label
+              htmlFor="resultado-legenda"
+              className="text-xs font-bold uppercase tracking-wider"
+            >
               Legenda{" "}
               <span className="font-normal normal-case text-muted-foreground">(opcional)</span>
             </Label>
             <Input
-              id="sinal-legenda"
+              id="resultado-legenda"
               value={legenda}
               onChange={(e) => setLegenda(e.target.value)}
               placeholder="Ex.: Green na Bet365"
@@ -130,11 +133,11 @@ export function EnviarSinal() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="sinal-horas" className="text-xs font-bold uppercase tracking-wider">
+            <Label htmlFor="resultado-horas" className="text-xs font-bold uppercase tracking-wider">
               Validade
             </Label>
             <select
-              id="sinal-horas"
+              id="resultado-horas"
               value={horas}
               onChange={(e) => setHoras(Number(e.target.value))}
               className="h-9 w-full sm:w-36 rounded-sm border border-border bg-background px-3 text-sm"
@@ -150,7 +153,7 @@ export function EnviarSinal() {
 
         <div className="space-y-2">
           <label
-            htmlFor="sinal-arquivos"
+            htmlFor="resultado-arquivos"
             className="flex min-h-[88px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-sm border border-dashed border-border bg-muted/20 px-4 py-5 text-center transition-colors hover:border-primary/40 hover:bg-primary/5"
           >
             <Upload className="h-5 w-5 text-muted-foreground" />
@@ -163,7 +166,7 @@ export function EnviarSinal() {
               png, jpeg ou webp · até {MAX_ARQUIVOS} por vez
             </span>
             <input
-              id="sinal-arquivos"
+              id="resultado-arquivos"
               ref={inputRef}
               type="file"
               accept="image/png,image/jpeg,image/webp"
@@ -207,7 +210,7 @@ export function EnviarSinal() {
               Enviando...
             </>
           ) : (
-            "Publicar na aba Sinais"
+            "Publicar na aba Resultados"
           )}
         </Button>
       </CardContent>

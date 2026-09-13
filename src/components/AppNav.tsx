@@ -2,10 +2,10 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Layers, Radio, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useProfile } from "@/hooks/useProfile";
-import { useDiscordImages } from "@/hooks/useDiscordImages";
+import { useContagemHoje } from "@/hooks/useResultados";
 
 /** Rotas que fazem parte do app logado — a barra só aparece nelas. */
-const APP_ROUTES = ["/app", "/sinais", "/admin"] as const;
+const APP_ROUTES = ["/app", "/resultados", "/admin"] as const;
 
 /**
  * Altura da barra no mobile, em px. Exportada porque o espaçador precisa bater
@@ -22,7 +22,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { to: "/app", label: "Estúdio", icon: Layers },
-  { to: "/sinais", label: "Sinais", icon: Radio },
+  { to: "/resultados", label: "Resultados", icon: Radio },
   { to: "/admin", label: "Admin", icon: ShieldAlert, adminOnly: true },
 ];
 
@@ -86,17 +86,16 @@ function NavTab({ tab, active }: { tab: TabDef; active: boolean }) {
       {active && <span aria-hidden="true" className="absolute top-0 h-[2px] w-10 bg-primary" />}
       <span className="relative">
         <Icon className="h-5 w-5" />
-        {tab.to === "/sinais" && <SignalBadge />}
+        {tab.to === "/resultados" && <ResultadoBadge />}
       </span>
       {tab.label}
     </Link>
   );
 }
 
-/** Contador de sinais vivos. Silencioso quando não há nenhum. */
-function SignalBadge() {
-  const { data } = useDiscordImages();
-  const count = data?.length ?? 0;
+/** Quantos resultados saíram hoje. Silencioso quando não houve nenhum. */
+function ResultadoBadge() {
+  const count = useContagemHoje();
   if (count === 0) return null;
 
   return (
@@ -136,7 +135,7 @@ export function AppNavInline() {
           >
             <Icon className="h-3.5 w-3.5" />
             {tab.label}
-            {tab.to === "/sinais" && <InlineSignalCount />}
+            {tab.to === "/resultados" && <ContagemInline />}
           </Link>
         );
       })}
@@ -144,9 +143,8 @@ export function AppNavInline() {
   );
 }
 
-function InlineSignalCount() {
-  const { data } = useDiscordImages();
-  const count = data?.length ?? 0;
+function ContagemInline() {
+  const count = useContagemHoje();
   if (count === 0) return null;
 
   return (

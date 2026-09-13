@@ -1,11 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { useDiscordImages } from "@/hooks/useDiscordImages";
+import { useResultados } from "@/hooks/useResultados";
 import { Card } from "@/components/ui/card";
 import { ImageIcon, Clock, ArrowRight, Loader2 } from "lucide-react";
 import { formatTimeAgo, formatCountdown } from "@/lib/time";
 
-export function LatestSignals() {
-  const { data: images, isLoading } = useDiscordImages();
+export function UltimosResultados() {
+  const { data: images, isLoading } = useResultados();
 
   // Don't render the section if no images and not loading
   if (!isLoading && (!images || images.length === 0)) {
@@ -23,7 +23,7 @@ export function LatestSignals() {
             <ImageIcon className="w-3 h-3 text-primary" />
           </div>
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Últimos Sinais
+            Últimos Resultados
           </h3>
           {images && images.length > 0 && (
             <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm">
@@ -32,7 +32,7 @@ export function LatestSignals() {
           )}
         </div>
         <Link
-          to="/sinais"
+          to="/resultados"
           className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
         >
           Ver todos
@@ -51,7 +51,7 @@ export function LatestSignals() {
       {!isLoading && displayImages.length > 0 && (
         <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin">
           {displayImages.map((img) => (
-            <Link key={img.id} to="/sinais" className="group shrink-0 w-[120px] cursor-pointer">
+            <Link key={img.id} to="/resultados" className="group shrink-0 w-[120px] cursor-pointer">
               <Card className="overflow-hidden border-border/60 bg-card hover:border-primary/30 transition-all duration-200 rounded-sm relative">
                 {/* Accent line on hover */}
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-accent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left z-10" />
@@ -59,7 +59,7 @@ export function LatestSignals() {
                 <div className="aspect-square overflow-hidden bg-muted">
                   <img
                     src={img.image_url}
-                    alt="Sinal"
+                    alt="Resultado"
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                   />

@@ -55,7 +55,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AppNavInline } from "@/components/AppNav";
-import { EnviarSinal } from "@/components/admin/EnviarSinal";
+import { EnviarResultado } from "@/components/admin/EnviarResultado";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -341,7 +341,7 @@ function AdminPage() {
       </header>
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        <EnviarSinal />
+        <EnviarResultado />
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-4">
           <div className="flex items-center gap-2">

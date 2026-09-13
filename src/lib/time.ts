@@ -1,6 +1,6 @@
 /**
- * Formatação de tempo dos sinais. Existia duplicada em LatestSignals.tsx e
- * sinais.tsx com textos que divergiam ("5min" vs "há 5min", "Exp." vs "Expirado"),
+ * Formatação de tempo dos resultados. Existia duplicada em UltimosResultados.tsx e
+ * resultados.tsx com textos que divergiam ("5min" vs "há 5min", "Exp." vs "Expirado"),
  * então a mesma imagem aparecia rotulada de dois jeitos na mesma tela.
  *
  * `compact` serve o carrossel estreito do editor; o padrão serve a galeria.
@@ -30,12 +30,12 @@ export function formatCountdown(expiresAt: string, compact = false): string {
   if (h > 0) return `${h}h ${m}m`;
 
   // Abaixo de uma hora os segundos passam a importar para quem está decidindo
-  // se ainda dá tempo de usar o sinal.
+  // se ainda dá tempo de usar o resultado.
   const s = Math.floor((diff % 60_000) / 1_000);
   return compact ? `${m}m` : `${m}m ${s}s`;
 }
 
-/** true quando o sinal ainda está dentro da validade. */
+/** true quando o resultado ainda está dentro da validade. */
 export function isLive(expiresAt: string): boolean {
   return new Date(expiresAt).getTime() > Date.now();
 }

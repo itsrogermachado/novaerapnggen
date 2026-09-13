@@ -42,10 +42,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { safeLogError } from "@/lib/log";
+import { useImportarResultados } from "@/hooks/useImportarResultados";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/app")({
   component: Index,
+  // /app?resultados=id1,id2 — como a escolha vai na URL, o link é compartilhável e
+  // sobrevive a um recarregamento, sem precisar de store global.
+  validateSearch: (search: Record<string, unknown>): { resultados?: string } => ({
+    resultados:
+      typeof search.resultados === "string" && search.resultados ? search.resultados : undefined,
+  }),
 });
 
 import { Format, LibraryItem, Foreground, LogoState, CanvasState } from "@/types/canvas";
@@ -61,7 +68,7 @@ import { MiniCanvas } from "@/components/canvas/MiniCanvas";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { Header } from "@/components/Header";
 import { RandomizerPanel } from "@/components/RandomizerPanel";
-import { LatestSignals } from "@/components/LatestSignals";
+import { UltimosResultados } from "@/components/UltimosResultados";
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -82,6 +89,12 @@ function sanitizeFilename(name: string): string {
 
 function Index() {
   const navigate = useNavigate();
+  const { resultados: resultadosParaImportar } = Route.useSearch();
+
+  // Tira ?resultados= da URL depois de importar, para um F5 não reimportar tudo.
+  const limparParametroResultados = useCallback(() => {
+    navigate({ to: "/app", search: {}, replace: true });
+  }, [navigate]);
   const { user, loading } = useAuth();
 
   const [isActive, setIsActive] = useState<boolean | null>(null);
@@ -224,6 +237,16 @@ function Index() {
       setFormat,
       setSelectedId,
     },
+  });
+
+  // Resultados escolhidos em /resultados entram como destaques, pelo mesmo caminho de
+  // um upload manual.
+  useImportarResultados({
+    ids: resultadosParaImportar,
+    setHighlightLibrary,
+    setForegrounds,
+    saveToHistory,
+    aoConcluir: limparParametroResultados,
   });
 
   // Auto-arrange foregrounds when their count or format changes
@@ -1024,7 +1047,7 @@ function Index() {
       <main className="max-w-7xl mx-auto p-4 grid lg:grid-cols-[380px_1fr] gap-6">
         {/* Controls Panel */}
         <Card className="p-5 space-y-6 h-fit order-2 lg:order-1 bg-card border-border/80 shadow-lg transition-all duration-200 animate-slide-in-left rounded-sm">
-          <LatestSignals />
+          <UltimosResultados />
 
           {/* Active Layer Editor */}
           {selectedId && (
@@ -1392,6 +1415,7 @@ function Index() {
           <div className="flex flex-col items-center gap-4 w-full max-w-sm lg:max-w-md mx-auto relative">
             <div
               ref={previewRef}
+              data-canvas="preview"
               className={`relative ${aspectClass} w-full bg-muted/45 border border-border/90 rounded-sm overflow-hidden shadow-2xl transition-all duration-500 select-none touch-none`}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
