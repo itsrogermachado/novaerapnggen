@@ -17,7 +17,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "recuperar">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,6 +31,19 @@ function AuthPage() {
     setBusy(true);
     try {
       const trimmedEmail = email.trim().toLowerCase();
+
+      if (mode === "recuperar") {
+        const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+          redirectTo: `${window.location.origin}/auth`,
+        });
+        if (error) throw error;
+        // Mensagem propositalmente igual exista ou não a conta: dizer "e-mail não
+        // encontrado" entrega quem é membro para quem estiver testando endereços.
+        toast.success("Se este e-mail tiver conta, o link de redefinição chega em instantes.");
+        setMode("login");
+        return;
+      }
+
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email: trimmedEmail,
@@ -89,7 +102,11 @@ function AuthPage() {
           Estúdio de Resultados
         </h1>
         <p className="animate-slide-up stagger-3 text-sm text-muted-foreground mb-6">
-          {mode === "login" ? "Entre para acessar a ferramenta" : "Crie sua conta de membro"}
+          {mode === "login"
+            ? "Entre para acessar a ferramenta"
+            : mode === "signup"
+              ? "Crie sua conta de membro"
+              : "Enviamos um link para você criar uma senha nova"}
         </p>
 
         <form onSubmit={submit} className="space-y-4">
@@ -114,27 +131,29 @@ function AuthPage() {
             </div>
           </div>
 
-          <div className="animate-slide-up stagger-4 space-y-1.5">
-            <Label
-              htmlFor="password"
-              className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-            >
-              Senha
-            </Label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-background border-border text-foreground pl-10 py-5 rounded-sm focus-visible:ring-primary/50 focus-visible:border-primary"
-                placeholder="Mínimo 6 caracteres"
-              />
+          {mode !== "recuperar" && (
+            <div className="animate-slide-up stagger-4 space-y-1.5">
+              <Label
+                htmlFor="password"
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
+              >
+                Senha
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-background border-border text-foreground pl-10 py-5 rounded-sm focus-visible:ring-primary/50 focus-visible:border-primary"
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <Button
             type="submit"
@@ -148,19 +167,32 @@ function AuthPage() {
               </span>
             ) : mode === "login" ? (
               "Entrar"
-            ) : (
+            ) : mode === "signup" ? (
               "Cadastrar"
+            ) : (
+              "Enviar link de redefinição"
             )}
           </Button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => setMode(mode === "login" ? "signup" : "login")}
-          className="animate-slide-up stagger-6 mt-5 text-sm text-primary hover:text-primary/80 transition-colors hover:underline w-full text-center cursor-pointer font-semibold"
-        >
-          {mode === "login" ? "Não tem conta? Cadastre-se" : "Já tem uma conta? Entrar"}
-        </button>
+        <div className="animate-slide-up stagger-6 mt-5 flex flex-col items-center gap-1">
+          {mode === "login" && (
+            <button
+              type="button"
+              onClick={() => setMode("recuperar")}
+              className="min-h-[44px] w-full text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline"
+            >
+              Esqueci minha senha
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setMode(mode === "login" ? "signup" : "login")}
+            className="min-h-[44px] w-full text-center text-sm font-semibold text-primary transition-colors hover:text-primary/80 hover:underline"
+          >
+            {mode === "login" ? "Não tem conta? Cadastre-se" : "Já tem uma conta? Entrar"}
+          </button>
+        </div>
       </Card>
     </div>
   );

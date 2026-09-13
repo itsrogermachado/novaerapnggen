@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, temSessaoLocal } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,10 +58,19 @@ import { AppNavInline } from "@/components/AppNav";
 import { EnviarResultado } from "@/components/admin/EnviarResultado";
 
 export const Route = createFileRoute("/admin")({
+  // Sem sessão a rota nem monta. Antes a página renderizava inteira no servidor
+  // e só então um useEffect redirecionava no cliente — no celular dava para ver
+  // o esqueleto de uma tela que não era sua antes de ser mandado embora.
+  beforeLoad: () => {
+    if (typeof window === "undefined") return;
+    if (!temSessaoLocal()) {
+      throw redirect({ to: "/auth" });
+    }
+  },
   component: AdminPage,
 });
 
-type TokenDuration = "1m" | "24h" | "7d" | "30d";
+type TokenDuration = "24h" | "7d" | "30d";
 
 interface Profile {
   id: string;
@@ -152,9 +161,7 @@ function AdminPage() {
 
   const getExpiresAtDate = (duration: TokenDuration): Date => {
     const d = new Date();
-    if (duration === "1m") {
-      d.setMinutes(d.getMinutes() + 1);
-    } else if (duration === "24h") {
+    if (duration === "24h") {
       d.setHours(d.getHours() + 24);
     } else if (duration === "7d") {
       d.setDate(d.getDate() + 7);
@@ -381,120 +388,213 @@ function AdminPage() {
                 Nenhum usuário encontrado.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-sm border border-border bg-background/50">
-                <Table>
-                  <TableHeader className="bg-background border-b border-border">
-                    <TableRow>
-                      <TableHead className="text-muted-foreground font-semibold py-4">
-                        E-mail
-                      </TableHead>
-                      <TableHead className="text-muted-foreground font-semibold py-4">
-                        Tipo
-                      </TableHead>
-                      <TableHead className="text-muted-foreground font-semibold py-4">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-muted-foreground font-semibold py-4">
-                        Expiração do Acesso
-                      </TableHead>
-                      <TableHead className="text-muted-foreground font-semibold py-4">
-                        Registrado Em
-                      </TableHead>
-                      <TableHead className="text-muted-foreground font-semibold py-4 text-right">
-                        Ações
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((u) => {
-                      const status = getUserStatus(u);
-                      return (
-                        <TableRow
-                          key={u.id}
-                          className="border-b border-border hover:bg-muted/50 transition-colors"
-                        >
-                          <TableCell className="font-medium text-foreground py-4">
-                            {u.email || "Sem E-mail"}
-                          </TableCell>
-                          <TableCell className="py-4">
-                            {u.is_admin ? (
-                              <span className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                                <ShieldAlert className="w-3.5 h-3.5" />
-                                Admin
+              <>
+                <div className="hidden overflow-x-auto rounded-sm border border-border bg-background/50 lg:block">
+                  <Table>
+                    <TableHeader className="bg-background border-b border-border">
+                      <TableRow>
+                        <TableHead className="text-muted-foreground font-semibold py-4">
+                          E-mail
+                        </TableHead>
+                        <TableHead className="text-muted-foreground font-semibold py-4">
+                          Tipo
+                        </TableHead>
+                        <TableHead className="text-muted-foreground font-semibold py-4">
+                          Status
+                        </TableHead>
+                        <TableHead className="text-muted-foreground font-semibold py-4">
+                          Expiração do Acesso
+                        </TableHead>
+                        <TableHead className="text-muted-foreground font-semibold py-4">
+                          Registrado Em
+                        </TableHead>
+                        <TableHead className="text-muted-foreground font-semibold py-4 text-right">
+                          Ações
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.map((u) => {
+                        const status = getUserStatus(u);
+                        return (
+                          <TableRow
+                            key={u.id}
+                            className="border-b border-border hover:bg-muted/50 transition-colors"
+                          >
+                            <TableCell className="font-medium text-foreground py-4">
+                              {u.email || "Sem E-mail"}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              {u.is_admin ? (
+                                <span className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                                  <ShieldAlert className="w-3.5 h-3.5" />
+                                  Admin
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                  <Users className="w-3.5 h-3.5" />
+                                  Membro
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-bold border ${status.badgeClass}`}
+                              >
+                                {status.label}
                               </span>
-                            ) : (
-                              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                                <Users className="w-3.5 h-3.5" />
-                                Membro
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-bold border ${status.badgeClass}`}
-                            >
-                              {status.label}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs py-4">
-                            {u.is_admin ? "Vitalício" : formatDate(u.expires_at)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs py-4">
-                            {formatDate(u.created_at)}
-                          </TableCell>
-                          <TableCell className="py-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {!u.is_admin && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => setApproveUser(u)}
-                                    className="h-8 px-2 text-primary hover:bg-primary/10 hover:text-primary cursor-pointer border border-transparent hover:border-primary/20"
-                                    title="Aprovar/Renovar Acesso"
-                                  >
-                                    <Check className="w-4 h-4 mr-1" />
-                                    Aprovar
-                                  </Button>
-                                  {u.status !== "revoked" && (
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs py-4">
+                              {u.is_admin ? "Vitalício" : formatDate(u.expires_at)}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs py-4">
+                              {formatDate(u.created_at)}
+                            </TableCell>
+                            <TableCell className="py-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {!u.is_admin && (
+                                  <>
                                     <Button
                                       size="sm"
                                       variant="ghost"
-                                      onClick={() => handleRevokeAccess(u.id)}
-                                      className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
-                                      title="Revogar Acesso"
+                                      onClick={() => setApproveUser(u)}
+                                      className="h-8 px-2 text-primary hover:bg-primary/10 hover:text-primary cursor-pointer border border-transparent hover:border-primary/20"
+                                      title="Aprovar/Renovar Acesso"
                                     >
-                                      <Ban className="w-4 h-4" />
+                                      <Check className="w-4 h-4 mr-1" />
+                                      Aprovar
                                     </Button>
-                                  )}
+                                    {u.status !== "revoked" && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleRevokeAccess(u.id)}
+                                        className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+                                        title="Revogar Acesso"
+                                      >
+                                        <Ban className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    setAdminChangeTarget({ profile: u, targetRole: !u.is_admin })
+                                  }
+                                  className={`h-8 w-8 p-0 cursor-pointer ${
+                                    u.is_admin
+                                      ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                                  }`}
+                                  title={
+                                    u.is_admin ? "Remover de Administrador" : "Tornar Administrador"
+                                  }
+                                >
+                                  <Shield className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* No celular a tabela virava rolagem horizontal apertada, com os
+                  botões de ação fora da tela. Mesma informação, empilhada. */}
+                <ul className="flex flex-col gap-3 lg:hidden">
+                  {filteredUsers.map((u) => {
+                    const status = getUserStatus(u);
+                    return (
+                      <li
+                        key={u.id}
+                        className="rounded-sm border border-border bg-background/50 p-3.5"
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold">
+                              {u.email || "Sem e-mail"}
+                            </p>
+                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              {u.is_admin ? (
+                                <>
+                                  <ShieldAlert className="h-3 w-3 text-primary" />
+                                  <span className="font-semibold text-primary">Admin</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Users className="h-3 w-3" />
+                                  Membro
                                 </>
                               )}
+                            </p>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-sm border px-2 py-0.5 text-[11px] font-bold ${status.badgeClass}`}
+                          >
+                            {status.label}
+                          </span>
+                        </div>
 
+                        <dl className="mb-3 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                          <dt className="text-muted-foreground">Expira</dt>
+                          <dt className="text-muted-foreground">Registrado</dt>
+                          <dd className="font-mono tabular-nums">
+                            {u.is_admin ? "Vitalício" : formatDate(u.expires_at)}
+                          </dd>
+                          <dd className="font-mono tabular-nums">{formatDate(u.created_at)}</dd>
+                        </dl>
+
+                        <div className="flex flex-wrap gap-2">
+                          {!u.is_admin && (
+                            <>
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  setAdminChangeTarget({ profile: u, targetRole: !u.is_admin })
-                                }
-                                className={`h-8 w-8 p-0 cursor-pointer ${
-                                  u.is_admin
-                                    ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                                }`}
-                                title={
-                                  u.is_admin ? "Remover de Administrador" : "Tornar Administrador"
-                                }
+                                onClick={() => setApproveUser(u)}
+                                className="h-11 flex-1 rounded-sm bg-primary text-xs font-bold text-primary-foreground hover:bg-primary/90"
                               >
-                                <Shield className="w-4 h-4" />
+                                <Check className="mr-1.5 h-4 w-4" />
+                                Aprovar
                               </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                              {u.status !== "revoked" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleRevokeAccess(u.id)}
+                                  className="h-11 w-11 shrink-0 rounded-sm border-destructive/30 p-0 text-destructive"
+                                  aria-label={`Revogar acesso de ${u.email ?? "usuário"}`}
+                                >
+                                  <Ban className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setAdminChangeTarget({ profile: u, targetRole: !u.is_admin })
+                            }
+                            className={`h-11 shrink-0 rounded-sm p-0 ${u.is_admin ? "flex-1 border-destructive/30 px-3 text-xs font-bold text-destructive" : "w-11 border-border text-muted-foreground"}`}
+                            aria-label={
+                              u.is_admin
+                                ? `Remover ${u.email ?? "usuário"} de administrador`
+                                : `Tornar ${u.email ?? "usuário"} administrador`
+                            }
+                          >
+                            <Shield className="h-4 w-4" />
+                            {u.is_admin && <span className="ml-1.5">Remover admin</span>}
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             )}
           </CardContent>
         </Card>
@@ -525,7 +625,6 @@ function AdminPage() {
                   <SelectValue placeholder="Selecione o tempo..." />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
-                  <SelectItem value="1m">1 Minuto (Teste)</SelectItem>
                   <SelectItem value="24h">24 Horas</SelectItem>
                   <SelectItem value="7d">7 Dias</SelectItem>
                   <SelectItem value="30d">30 Dias</SelectItem>

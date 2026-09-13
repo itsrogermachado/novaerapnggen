@@ -2,6 +2,9 @@ import { useState, useCallback, useEffect } from "react";
 import { CanvasState } from "@/types/canvas";
 import { getStateSignature } from "@/lib/layout-utils";
 
+/** Quantos passos de desfazer o editor guarda. */
+const MAX_HISTORICO = 20;
+
 export function useCanvasHistory({
   currentState,
   setters,
@@ -37,7 +40,11 @@ export function useCanvasHistory({
         }
       }
       const newPast = [...prev, currentState];
-      if (newPast.length > 50) {
+      // Cada estado segura referências a HTMLImageElement (fundo, logo e cada
+      // destaque), e a Linha do Tempo renderiza uma <img> por elemento de cada
+      // estado. Com 50 isso vira centenas de imagens vivas ao mesmo tempo, o que
+      // no celular pesa de verdade. 20 passos cobrem o uso real com folga.
+      while (newPast.length > MAX_HISTORICO) {
         newPast.shift();
       }
       return newPast;

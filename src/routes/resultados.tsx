@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, temSessaoLocal } from "@/lib/auth";
 import { useResultados, PERIODOS, type Periodo } from "@/hooks/useResultados";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +22,15 @@ import { formatTimeAgo, formatCountdown } from "@/lib/time";
 import { AppNavInline } from "@/components/AppNav";
 
 export const Route = createFileRoute("/resultados")({
+  // Sem sessão a rota nem monta. Antes a página renderizava inteira no servidor
+  // e só então um useEffect redirecionava no cliente — no celular dava para ver
+  // o esqueleto de uma tela que não era sua antes de ser mandado embora.
+  beforeLoad: () => {
+    if (typeof window === "undefined") return;
+    if (!temSessaoLocal()) {
+      throw redirect({ to: "/auth" });
+    }
+  },
   component: ResultadosPage,
   head: () => ({
     meta: [{ title: "Nova Era — Resultados" }],

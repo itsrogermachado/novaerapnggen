@@ -520,3 +520,27 @@ lovable-badge,
   border: 2px solid var(--color-background);
   box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
 }
+
+/* ─── EXCLUIR NAS BIBLIOTECAS ───
+   Um botão de 44px sobre uma miniatura de 92px cobre o centro dela: no toque,
+   tentar SELECIONAR um fundo acabava APAGANDO ele. A regra abaixo separa os
+   dois mundos.
+
+   Com mouse, o comportamento antigo continua: aparece no hover.
+   No toque, onde não existe hover, o botão só existe quando a biblioteca está
+   em modo de gerenciar — acionado por um botão explícito. Errar aqui apaga
+   arquivo, então uma tocada a mais é barata perto do estrago. */
+.btn-excluir {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .group:hover .btn-excluir {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+[data-gerenciando="true"] .btn-excluir {
+  opacity: 1;
+  pointer-events: auto;
+}

@@ -25,6 +25,10 @@ export function formatCountdown(expiresAt: string, compact = false): string {
   const diff = new Date(expiresAt).getTime() - Date.now();
   if (diff <= 0) return compact ? "Exp." : "Expirado";
 
+  // Com retenção de 30 dias, contar em horas produzia coisas como "719h 59m".
+  const dias = Math.floor(diff / 864e5);
+  if (dias >= 2) return `${dias}d`;
+
   const h = Math.floor(diff / 3_600_000);
   const m = Math.floor((diff % 3_600_000) / 60_000);
   if (h > 0) return `${h}h ${m}m`;

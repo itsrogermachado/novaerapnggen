@@ -81,13 +81,26 @@ console.log("\n[mobile] excluir visível no toque");
   });
   await page.waitForTimeout(1200);
   const btn = page.getByTitle("Excluir fundo").first();
-  ok((await btn.count()) > 0, "botão de excluir existe");
-  if (await btn.count()) {
-    const op = await btn.evaluate((el) => getComputedStyle(el).opacity);
-    const bb = await btn.boundingBox();
-    ok(op === "1", `visível sem hover (opacity=${op})`);
-    ok(bb && bb.height >= 44, `alvo ${bb ? Math.round(bb.height) : "?"}px`);
-  }
+  ok((await btn.count()) > 0, "botão de excluir existe no DOM");
+
+  // Com o modo desligado, ele não pode interceptar toque na miniatura: tocar no
+  // meio de um fundo tem que SELECIONAR, nunca apagar.
+  const opDesligado = await btn.evaluate((el) => getComputedStyle(el).pointerEvents);
+  ok(
+    opDesligado === "none",
+    `sem modo gerenciar, não recebe toque (pointer-events=${opDesligado})`,
+  );
+  await page.locator('img[alt="Fundo teste"]').first().click();
+  await page.waitForTimeout(500);
+  ok((await page.getByTitle("Excluir fundo").count()) > 0, "tocar na miniatura não apagou o fundo");
+
+  // Ligando o modo, o botão passa a valer.
+  await page.getByRole("button", { name: "Gerenciar" }).first().click();
+  await page.waitForTimeout(300);
+  const op = await btn.evaluate((el) => getComputedStyle(el).opacity);
+  const bb = await btn.boundingBox();
+  ok(op === "1", `com modo gerenciar, fica visível (opacity=${op})`);
+  ok(bb && bb.height >= 40, `alvo ${bb ? Math.round(bb.height) : "?"}px`);
   await ctx.close();
 }
 
@@ -95,6 +108,9 @@ console.log("\n[mobile] sliders com alvo de 44px");
 {
   const { ctx, page } = await openApp(b, "/app", { viewport: PHONE, logos: LG });
   await page.waitForTimeout(1200);
+  // A biblioteca de logos vive na aba Logos desde que o painel virou abas.
+  await page.getByRole("tab", { name: "Logos" }).click();
+  await page.waitForTimeout(400);
   await page.locator('img[alt="Logo teste"]').first().click();
   await page.waitForTimeout(800);
   const sl = page.locator('input[type="range"]').first();

@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, temSessaoLocal } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -46,8 +46,18 @@ import { useImportarResultados } from "@/hooks/useImportarResultados";
 import { useProfile } from "@/hooks/useProfile";
 import { comprimirImagem, TIPOS_ACEITOS, ImagemInvalidaError } from "@/lib/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/app")({
+  // Sem sessão a rota nem monta. Antes a página renderizava inteira no servidor
+  // e só então um useEffect redirecionava no cliente — no celular dava para ver
+  // o esqueleto de uma tela que não era sua antes de ser mandado embora.
+  beforeLoad: () => {
+    if (typeof window === "undefined") return;
+    if (!temSessaoLocal()) {
+      throw redirect({ to: "/auth" });
+    }
+  },
   component: Index,
   // /app?resultados=id1,id2 — como a escolha vai na URL, o link é compartilhável e
   // sobrevive a um recarregamento, sem precisar de store global.
@@ -174,6 +184,9 @@ function Index() {
     { id: string; url: string; img: HTMLImageElement }[]
   >([]);
 
+  // Modo de gerenciar as bibliotecas: no toque é ele que revela os botões de
+  // excluir, que de outra forma cobririam o centro das miniaturas.
+  const [gerenciandoBiblioteca, setGerenciandoBiblioteca] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [exportScale, setExportScale] = useState<number>(1);
 
@@ -1129,258 +1142,345 @@ function Index() {
             </div>
           )}
 
-          {/* Formato */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Palette className="w-4 h-4 text-primary" />
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Formato
-              </Label>
-            </div>
-            <Select
-              value={format}
-              onValueChange={(v) => {
-                saveToHistory();
-                setFormat(v as Format);
-              }}
-            >
-              <SelectTrigger className="bg-background border-border hover:border-primary/40 text-foreground rounded-sm transition-all duration-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border text-foreground rounded-sm shadow-xl">
-                <SelectItem value="feed" className="rounded-sm">
-                  {FORMATS.feed.label}
-                </SelectItem>
-                <SelectItem value="story" className="rounded-sm">
-                  {FORMATS.story.label}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Painel em abas: antes era um scroll único com formato, três
+              bibliotecas e os randomizadores empilhados, o que no celular punha
+              o que interessa a centenas de pixels de distância. */}
+          <Tabs defaultValue="fundos" className="w-full">
+            <TabsList className="grid h-auto w-full grid-cols-4 rounded-sm bg-muted/50 p-1">
+              <TabsTrigger
+                value="fundos"
+                className="min-h-[44px] rounded-sm px-1 text-[10px] font-bold uppercase tracking-tight data-[state=active]:bg-card data-[state=active]:text-primary sm:text-[11px] sm:tracking-wide"
+              >
+                Fundos
+              </TabsTrigger>
+              <TabsTrigger
+                value="logos"
+                className="min-h-[44px] rounded-sm px-1 text-[10px] font-bold uppercase tracking-tight data-[state=active]:bg-card data-[state=active]:text-primary sm:text-[11px] sm:tracking-wide"
+              >
+                Logos
+              </TabsTrigger>
+              <TabsTrigger
+                value="destaques"
+                className="min-h-[44px] rounded-sm px-1 text-[10px] font-bold uppercase tracking-tight data-[state=active]:bg-card data-[state=active]:text-primary sm:text-[11px] sm:tracking-wide"
+              >
+                Destaques
+              </TabsTrigger>
+              <TabsTrigger
+                value="ajustes"
+                className="min-h-[44px] rounded-sm px-1 text-[10px] font-bold uppercase tracking-tight data-[state=active]:bg-card data-[state=active]:text-primary sm:text-[11px] sm:tracking-wide"
+              >
+                Ajustes
+              </TabsTrigger>
+            </TabsList>
 
-          <hr className="border-border/60" />
-
-          {/* Background library */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-primary" />
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Biblioteca de Fundos
-                </Label>
-              </div>
-              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-sm bg-background hover:bg-primary/10 text-foreground hover:border-primary/30 hover:text-primary transition-all duration-200 font-bold">
-                {uploadingBg ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                ) : (
-                  <Upload className="w-3.5 h-3.5 text-muted-foreground" />
-                )}
-                <span>Adicionar</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingBg}
-                  onChange={(e) => e.target.files?.[0] && handleBgUpload(e.target.files[0])}
-                />
-              </label>
-            </div>
-            {bgLib.length === 0 ? (
-              <div className="border border-dashed border-border/80 rounded-sm p-6 text-center space-y-2 bg-muted/10">
-                <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
-                <div>
-                  <p className="text-xs font-semibold text-foreground">Nenhum fundo salvo</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Faça upload de imagens de fundo para começar.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto p-0.5">
-                {bgLib.map((b) => (
-                  <div key={b.id} className="relative group">
-                    <button
-                      onClick={() => {
-                        saveToHistory();
-                        selectBackground(b);
-                      }}
-                      className={`block w-full aspect-square rounded-sm overflow-hidden border transition-all duration-300 relative ${bgUrl === b.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
-                    >
-                      <img
-                        src={b.signed_url || b.image_url}
-                        alt={b.name}
-                        className={`w-full h-full object-cover ${bgUrl === b.image_url ? "opacity-100" : "opacity-85"}`}
-                      />
-                      {bgUrl === b.image_url && (
-                        <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
-                          <Check className="w-3 h-3" />
-                        </div>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => promptDeleteBackground(b.id, b.name)}
-                      className="absolute top-1 right-1 flex h-11 w-11 items-center justify-center rounded-sm bg-destructive/90 text-destructive-foreground opacity-100 shadow-lg transition hover:bg-destructive [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
-                      title="Excluir fundo"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+            <TabsContent value="fundos" className="mt-4">
+              {/* Background library */}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-primary" />
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Biblioteca de Fundos
+                    </Label>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <hr className="border-border/60" />
-
-          {/* Logo library */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-primary" />
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Biblioteca de Logos
-                </Label>
-              </div>
-              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
-                {uploadingLogo ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                ) : (
-                  <Upload className="w-3.5 h-3.5 text-muted-foreground" />
-                )}
-                <span>Adicionar</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingLogo}
-                  onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
-                />
-              </label>
-            </div>
-            {logoLib.length === 0 ? (
-              <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
-                <Layers className="w-8 h-8 text-muted-foreground/50 mx-auto" />
-                <div>
-                  <p className="text-xs font-semibold text-foreground">Nenhuma logo salva</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Faça upload de suas logos corporativas.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setGerenciandoBiblioteca((v) => !v)}
+                    aria-pressed={gerenciandoBiblioteca}
+                    className={`inline-flex min-h-[36px] items-center rounded-sm border px-2.5 text-xs font-bold transition-colors lg:hidden ${
+                      gerenciandoBiblioteca
+                        ? "border-destructive bg-destructive/10 text-destructive"
+                        : "border-border bg-background text-muted-foreground"
+                    }`}
+                  >
+                    {gerenciandoBiblioteca ? "Concluir" : "Gerenciar"}
+                  </button>
+                  <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-sm bg-background hover:bg-primary/10 text-foreground hover:border-primary/30 hover:text-primary transition-all duration-200 font-bold">
+                    {uploadingBg ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                    <span>Adicionar</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingBg}
+                      onChange={(e) => e.target.files?.[0] && handleBgUpload(e.target.files[0])}
+                    />
+                  </label>
                 </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto p-0.5">
-                {logoLib.map((l) => (
-                  <div key={l.id} className="relative group">
-                    <button
-                      onClick={() => {
-                        saveToHistory();
-                        selectLogo(l);
-                      }}
-                      className={`block w-full aspect-square rounded-sm overflow-hidden border transition-all duration-300 bg-muted/40 relative ${logo?.url === l.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
-                    >
-                      <img
-                        src={l.signed_url || l.image_url}
-                        alt={l.name}
-                        className={`w-full h-full object-contain p-1.5 ${logo?.url === l.image_url ? "opacity-100" : "opacity-85"}`}
-                      />
-                      {logo?.url === l.image_url && (
-                        <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
-                          <Check className="w-3 h-3" />
-                        </div>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => promptDeleteLogo(l.id, l.name)}
-                      className="absolute top-1 right-1 flex h-11 w-11 items-center justify-center rounded-sm bg-destructive/90 text-destructive-foreground opacity-100 shadow-lg transition hover:bg-destructive [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
-                      title="Excluir logo"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <hr className="border-border/60" />
-
-          {/* Foreground images */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-primary" />
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Imagens em Destaque
-                </Label>
-              </div>
-              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
-                <Plus className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>Adicionar</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) {
-                      handleForegroundsUpload(e.target.files);
-                      e.target.value = ""; // Reset input to allow re-uploading same file
-                    }
-                  }}
-                />
-              </label>
-            </div>
-            {highlightLibrary.length === 0 ? (
-              <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
-                <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
-                <div>
-                  <p className="text-xs font-semibold text-foreground">Sem imagens em destaque</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Adicione imagens para arrastar e redimensionar livremente no canvas.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-0.5">
-                {highlightLibrary.map((f) => {
-                  const isActive = foregrounds.some((active) => active.id === f.id);
-                  return (
-                    <div key={f.id} className="relative group">
-                      <button
-                        onClick={() => toggleForeground(f)}
-                        className={`block w-full aspect-square rounded-sm overflow-hidden bg-muted/50 border transition-all relative ${isActive ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
-                      >
-                        <img
-                          src={f.url}
-                          alt=""
-                          className={`w-full h-full object-contain p-1 ${isActive ? "opacity-100" : "opacity-85"}`}
-                        />
-                        {isActive && (
-                          <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
-                            <Check className="w-3 h-3" />
-                          </div>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => deleteFromHighlightLibrary(f.id)}
-                        className="absolute top-1 right-1 flex h-10 w-10 items-center justify-center rounded-sm bg-destructive/90 text-destructive-foreground opacity-100 shadow-lg transition hover:bg-destructive [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                {bgLib.length === 0 ? (
+                  <div className="border border-dashed border-border/80 rounded-sm p-6 text-center space-y-2 bg-muted/10">
+                    <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Nenhum fundo salvo</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Faça upload de imagens de fundo para começar.
+                      </p>
                     </div>
-                  );
-                })}
+                  </div>
+                ) : (
+                  <div
+                    data-gerenciando={gerenciandoBiblioteca}
+                    className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto p-0.5 lg:grid lg:max-h-[200px] lg:snap-none lg:grid-cols-3 lg:overflow-x-visible lg:overflow-y-auto"
+                  >
+                    {bgLib.map((b) => (
+                      <div
+                        key={b.id}
+                        className="group relative w-[92px] shrink-0 snap-start lg:w-auto lg:shrink"
+                      >
+                        <button
+                          onClick={() => {
+                            saveToHistory();
+                            selectBackground(b);
+                          }}
+                          className={`block w-full aspect-square rounded-sm overflow-hidden border transition-all duration-300 relative ${bgUrl === b.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
+                        >
+                          <img
+                            src={b.signed_url || b.image_url}
+                            alt={b.name}
+                            className={`w-full h-full object-cover ${bgUrl === b.image_url ? "opacity-100" : "opacity-85"}`}
+                          />
+                          {bgUrl === b.image_url && (
+                            <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
+                              <Check className="w-3 h-3" />
+                            </div>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => promptDeleteBackground(b.id, b.name)}
+                          className="btn-excluir absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-sm bg-destructive text-destructive-foreground shadow-lg transition hover:bg-destructive/90"
+                          title="Excluir fundo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </TabsContent>
 
-          <hr className="border-border/60" />
+            <TabsContent value="logos" className="mt-4">
+              {/* Logo library */}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-primary" />
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Biblioteca de Logos
+                    </Label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGerenciandoBiblioteca((v) => !v)}
+                    aria-pressed={gerenciandoBiblioteca}
+                    className={`inline-flex min-h-[36px] items-center rounded-sm border px-2.5 text-xs font-bold transition-colors lg:hidden ${
+                      gerenciandoBiblioteca
+                        ? "border-destructive bg-destructive/10 text-destructive"
+                        : "border-border bg-background text-muted-foreground"
+                    }`}
+                  >
+                    {gerenciandoBiblioteca ? "Concluir" : "Gerenciar"}
+                  </button>
+                  <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
+                    {uploadingLogo ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                    <span>Adicionar</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingLogo}
+                      onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
+                    />
+                  </label>
+                </div>
+                {logoLib.length === 0 ? (
+                  <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
+                    <Layers className="w-8 h-8 text-muted-foreground/50 mx-auto" />
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Nenhuma logo salva</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Faça upload de suas logos corporativas.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    data-gerenciando={gerenciandoBiblioteca}
+                    className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto p-0.5 lg:grid lg:max-h-[200px] lg:snap-none lg:grid-cols-3 lg:overflow-x-visible lg:overflow-y-auto"
+                  >
+                    {logoLib.map((l) => (
+                      <div
+                        key={l.id}
+                        className="group relative w-[92px] shrink-0 snap-start lg:w-auto lg:shrink"
+                      >
+                        <button
+                          onClick={() => {
+                            saveToHistory();
+                            selectLogo(l);
+                          }}
+                          className={`block w-full aspect-square rounded-sm overflow-hidden border transition-all duration-300 bg-muted/40 relative ${logo?.url === l.image_url ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
+                        >
+                          <img
+                            src={l.signed_url || l.image_url}
+                            alt={l.name}
+                            className={`w-full h-full object-contain p-1.5 ${logo?.url === l.image_url ? "opacity-100" : "opacity-85"}`}
+                          />
+                          {logo?.url === l.image_url && (
+                            <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
+                              <Check className="w-3 h-3" />
+                            </div>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => promptDeleteLogo(l.id, l.name)}
+                          className="btn-excluir absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-sm bg-destructive text-destructive-foreground shadow-lg transition hover:bg-destructive/90"
+                          title="Excluir logo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
 
-          <RandomizerPanel
-            onRandomizeBackground={randomizeBackground}
-            onRandomizeForegrounds={randomizeForegrounds}
-            onRandomizeAll={randomizeAll}
-          />
+            <TabsContent value="destaques" className="mt-4">
+              {/* Foreground images */}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-primary" />
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Imagens em Destaque
+                    </Label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGerenciandoBiblioteca((v) => !v)}
+                    aria-pressed={gerenciandoBiblioteca}
+                    className={`inline-flex min-h-[36px] items-center rounded-sm border px-2.5 text-xs font-bold transition-colors lg:hidden ${
+                      gerenciandoBiblioteca
+                        ? "border-destructive bg-destructive/10 text-destructive"
+                        : "border-border bg-background text-muted-foreground"
+                    }`}
+                  >
+                    {gerenciandoBiblioteca ? "Concluir" : "Gerenciar"}
+                  </button>
+                  <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1.5 border border-border rounded-xl bg-background hover:bg-accent text-foreground hover:border-primary/30 transition-all duration-200 font-semibold shadow-sm">
+                    <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Adicionar</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          handleForegroundsUpload(e.target.files);
+                          e.target.value = ""; // Reset input to allow re-uploading same file
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                {highlightLibrary.length === 0 ? (
+                  <div className="border border-dashed border-border/80 rounded-2xl p-6 text-center space-y-2 bg-muted/10">
+                    <ImageIcon className="w-8 h-8 text-muted-foreground/50 mx-auto" />
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">
+                        Sem imagens em destaque
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Adicione imagens para arrastar e redimensionar livremente no canvas.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    data-gerenciando={gerenciandoBiblioteca}
+                    className="flex snap-x snap-mandatory gap-2 overflow-x-auto p-0.5 lg:grid lg:max-h-[200px] lg:snap-none lg:grid-cols-4 lg:overflow-x-visible lg:overflow-y-auto"
+                  >
+                    {highlightLibrary.map((f) => {
+                      const isActive = foregrounds.some((active) => active.id === f.id);
+                      return (
+                        <div
+                          key={f.id}
+                          className="group relative w-[76px] shrink-0 snap-start lg:w-auto lg:shrink"
+                        >
+                          <button
+                            onClick={() => toggleForeground(f)}
+                            className={`block w-full aspect-square rounded-sm overflow-hidden bg-muted/50 border transition-all relative ${isActive ? "border-primary scale-[0.98] ring-2 ring-primary/20" : "border-border/80 hover:scale-[1.03]"}`}
+                          >
+                            <img
+                              src={f.url}
+                              alt=""
+                              className={`w-full h-full object-contain p-1 ${isActive ? "opacity-100" : "opacity-85"}`}
+                            />
+                            {isActive && (
+                              <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
+                                <Check className="w-3 h-3" />
+                              </div>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => deleteFromHighlightLibrary(f.id)}
+                            className="btn-excluir absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-sm bg-destructive text-destructive-foreground shadow-lg transition hover:bg-destructive/90"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="ajustes" className="mt-4 space-y-6">
+              {/* Formato */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-primary" />
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Formato
+                  </Label>
+                </div>
+                <Select
+                  value={format}
+                  onValueChange={(v) => {
+                    saveToHistory();
+                    setFormat(v as Format);
+                  }}
+                >
+                  <SelectTrigger className="bg-background border-border hover:border-primary/40 text-foreground rounded-sm transition-all duration-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border text-foreground rounded-sm shadow-xl">
+                    <SelectItem value="feed" className="rounded-sm">
+                      {FORMATS.feed.label}
+                    </SelectItem>
+                    <SelectItem value="story" className="rounded-sm">
+                      {FORMATS.story.label}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <RandomizerPanel
+                onRandomizeBackground={randomizeBackground}
+                onRandomizeForegrounds={randomizeForegrounds}
+                onRandomizeAll={randomizeAll}
+              />
+            </TabsContent>
+          </Tabs>
         </Card>
 
         {/* Canvas & Visual History Wrapper */}

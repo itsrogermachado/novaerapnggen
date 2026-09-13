@@ -34,3 +34,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export const useAuth = () => useContext(Ctx);
+
+/**
+ * Existe sessão guardada neste navegador?
+ *
+ * Serve para o `beforeLoad` das rotas protegidas decidir na hora, sem esperar o
+ * AuthProvider montar. Só olha se HÁ token, nunca se ele é válido — quem valida
+ * é o servidor, via RLS. É um atalho de navegação, não uma trava de segurança.
+ */
+export function temSessaoLocal(): boolean {
+  if (typeof window === "undefined") return true; // no servidor, deixa passar
+  try {
+    const ref = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const bruto = window.localStorage.getItem(`sb-${ref}-auth-token`);
+    if (!bruto) return false;
+    const sessao = JSON.parse(bruto);
+    return !!sessao?.access_token;
+  } catch {
+    // localStorage bloqueado (aba anônima, cookies desligados): não dá para
+    // afirmar que não há sessão, então deixa a página decidir.
+    return true;
+  }
+}
