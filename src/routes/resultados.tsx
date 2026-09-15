@@ -134,7 +134,7 @@ function ResultadosPage() {
               <div>
                 <h1 className="text-sm sm:text-base font-black tracking-tight">Resultados</h1>
                 <p className="text-[10px] text-muted-foreground font-medium hidden sm:block uppercase tracking-wider">
-                  Últimas 24 horas
+                  Últimos 30 dias
                 </p>
               </div>
             </div>

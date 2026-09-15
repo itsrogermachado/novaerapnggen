@@ -83,7 +83,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    // suppressHydrationWarning: o script de tema abaixo liga a classe "dark" no <html>
+    // antes de o React assumir a página. A diferença é de propósito (evita piscar claro
+    // no tema escuro), então o aviso de "HTML diferente do servidor" é desligado só aqui.
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <HeadContent />
         <script

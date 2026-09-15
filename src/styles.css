@@ -544,3 +544,85 @@ lovable-badge,
   opacity: 1;
   pointer-events: auto;
 }
+
+/* ─── PÁGINA 404: CANVAS VAZIO ───
+   Imita a tela de composição do Estúdio sem nenhuma camada: guias finas, marcas
+   de corte laranja nos cantos e a borda tracejada "andando" devagar, como a
+   seleção de um editor de imagem. É o único movimento da página. */
+.canvas-404 {
+  display: grid;
+  place-items: center;
+  background-color: var(--color-card);
+  /* Guias do canvas: 4 colunas e 5 linhas, a mesma proporção do feed (4:5). */
+  background-image:
+    linear-gradient(color-mix(in oklch, var(--color-border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--color-border) 70%, transparent) 1px,
+      transparent 1px
+    );
+  background-size:
+    100% 20%,
+    25% 100%;
+}
+
+/* Borda tracejada: os quatro lados são desenhados com gradientes para poderem "andar". */
+.canvas-404::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --traco-404: color-mix(in oklch, var(--color-muted-foreground) 65%, transparent);
+  background:
+    linear-gradient(90deg, var(--traco-404) 50%, transparent 50%) 0 0 / 12px 1.5px repeat-x,
+    linear-gradient(90deg, var(--traco-404) 50%, transparent 50%) 0 100% / 12px 1.5px repeat-x,
+    linear-gradient(0deg, var(--traco-404) 50%, transparent 50%) 0 0 / 1.5px 12px repeat-y,
+    linear-gradient(0deg, var(--traco-404) 50%, transparent 50%) 100% 0 / 1.5px 12px repeat-y;
+  animation: formigas-404 1.4s linear infinite;
+}
+
+@keyframes formigas-404 {
+  to {
+    background-position:
+      12px 0,
+      -12px 100%,
+      0 -12px,
+      100% 12px;
+  }
+}
+
+/* Marcas de corte nos quatro cantos, um pouco para fora da tela, como numa prova de impressão. */
+.canvas-404::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  pointer-events: none;
+  --corte-404: var(--color-primary);
+  background:
+    linear-gradient(var(--corte-404), var(--corte-404)) 0 0 / 18px 2px no-repeat,
+    linear-gradient(var(--corte-404), var(--corte-404)) 0 0 / 2px 18px no-repeat,
+    linear-gradient(var(--corte-404), var(--corte-404)) 100% 0 / 18px 2px no-repeat,
+    linear-gradient(var(--corte-404), var(--corte-404)) 100% 0 / 2px 18px no-repeat,
+    linear-gradient(var(--corte-404), var(--corte-404)) 0 100% / 18px 2px no-repeat,
+    linear-gradient(var(--corte-404), var(--corte-404)) 0 100% / 2px 18px no-repeat,
+    linear-gradient(var(--corte-404), var(--corte-404)) 100% 100% / 18px 2px no-repeat,
+    linear-gradient(var(--corte-404), var(--corte-404)) 100% 100% / 2px 18px no-repeat;
+}
+
+/* O 404 vazado: só o contorno das letras, na fonte dos títulos. */
+.numero-404 {
+  font-family: "Archivo", "Space Grotesk", system-ui, sans-serif;
+  font-weight: 900;
+  font-size: clamp(3.5rem, 18vw, 6rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: transparent;
+  -webkit-text-stroke: 2px var(--color-foreground);
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-404::before {
+    animation: none;
+  }
+}

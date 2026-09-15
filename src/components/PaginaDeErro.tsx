@@ -1,4 +1,4 @@
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { Layers, RotateCw, ArrowLeft } from "lucide-react";
 import { safeLogError } from "@/lib/log";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -11,7 +11,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
  * Postgres, que não ajudam em nada quem está olhando e ajudam demais quem está
  * bisbilhotando. Em desenvolvimento o erro vai para o console.
  */
-export function PaginaDeErro({ error, reset }: { error: Error; reset: () => void }) {
+// Recebe o erro no formato que o roteador entrega (a versão nova do roteador pode
+// mandar qualquer coisa como "erro", não só um objeto Error).
+export function PaginaDeErro({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   safeLogError("Erro de rota:", error);
 

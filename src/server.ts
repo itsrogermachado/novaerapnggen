@@ -88,15 +88,41 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
+// Cabeçalhos de proteção colocados em todas as respostas do site.
+// - frame-ancestors: só o próprio site e o editor do Lovable podem exibir o site dentro de
+//   um quadro (iframe). Isso bloqueia o golpe de "clique escondido", em que outro site
+//   mostra o nosso por baixo de botões falsos, sem quebrar a prévia do editor.
+// - Permissions-Policy: o site não usa câmera, microfone nem localização, então nenhum
+//   script consegue pedir esses acessos em nome dele.
+const CABECALHOS_DE_SEGURANCA: Record<string, string> = {
+  "Content-Security-Policy":
+    "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev https://*.lovable.app",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+};
+
+// Devolve a mesma resposta com os cabeçalhos de proteção.
+// Copia para uma resposta nova porque algumas respostas chegam com cabeçalhos travados.
+function comCabecalhosDeSeguranca(response: Response): Response {
+  const headers = new Headers(response.headers);
+  for (const [nome, valor] of Object.entries(CABECALHOS_DE_SEGURANCA)) {
+    headers.set(nome, valor);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return comCabecalhosDeSeguranca(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
-      return brandedErrorResponse();
+      return comCabecalhosDeSeguranca(brandedErrorResponse());
     }
   },
 };

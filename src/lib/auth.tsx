@@ -15,9 +15,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((evento, s) => {
       setSession(s);
       setLoading(false);
+      // Reforço para o link de "Esqueci minha senha": se o Supabase avisar que a pessoa
+      // voltou para trocar a senha e ela caiu em outra página, leva para o formulário.
+      // (O caminho normal é o próprio link já apontar para /auth?novaSenha=1.)
+      if (evento === "PASSWORD_RECOVERY" && !window.location.search.includes("novaSenha=1")) {
+        window.location.assign("/auth?novaSenha=1");
+      }
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);

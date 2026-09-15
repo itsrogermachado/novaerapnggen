@@ -1,4 +1,4 @@
-import { launch, openApp, PHONE } from "./harness.mjs";
+import { launch, openApp, PHONE, DESKTOP, profileFixture } from "./harness.mjs";
 const b = await launch();
 let falhas = 0;
 const ok = (c, m) => {
@@ -23,14 +23,27 @@ console.log("\n[mobile] 404 — deslogado");
     loggedIn: false,
   });
   await page.waitForTimeout(700);
-  ok(await page.getByText("Erro 404").isVisible(), "identifica como 404");
+  ok(
+    await page.getByRole("heading", { name: /Esta página não existe/i }).isVisible(),
+    "título diz que a página não existe (e leitor de tela ouve 'Erro 404')",
+  );
+  ok(await page.getByText("404", { exact: true }).isVisible(), "404 grande no canvas vazio");
+  ok(await page.getByText("1080 × 1350").isVisible(), "canvas no formato de feed");
+  // Sem rolar: no celular o botão principal precisa aparecer já na primeira tela.
+  const principal = await page.getByRole("link", { name: /Entrar na plataforma/i }).boundingBox();
+  ok(
+    principal && principal.y + principal.height <= 844,
+    `botão principal visível sem rolar (y=${principal ? Math.round(principal.y) : "?"})`,
+  );
   ok(await page.getByRole("link", { name: /Entrar na plataforma/i }).isVisible(), "oferece entrar");
   ok(
     (await page.getByRole("link", { name: /Voltar ao estúdio/i }).count()) === 0,
     "não oferece estúdio a quem não entrou",
   );
-  const bb = await page.getByRole("link", { name: /Entrar na plataforma/i }).boundingBox();
-  ok(bb && bb.height >= 44, `alvo ${bb ? Math.round(bb.height) : "?"}px`);
+  ok(
+    principal && principal.height >= 44,
+    `alvo ${principal ? Math.round(principal.height) : "?"}px`,
+  );
   ok(
     !(await page.locator("body").innerText()).includes("rota-que-nao-existe"),
     "não ecoa o endereço tentado",
@@ -55,6 +68,28 @@ console.log("\n[mobile] 404 — logado");
     (await page.locator('nav[data-nav="mobile"]').count()) === 0,
     "sem barra de abas numa rota inexistente",
   );
+  ok(
+    (await page.getByRole("link", { name: /painel admin/i }).count()) === 0,
+    "membro comum não vê atalho do painel admin",
+  );
+  await ctx.close();
+}
+
+console.log("\n[desktop] 404 — admin logado");
+{
+  const { ctx, page } = await openApp(b, "/xyz", {
+    viewport: DESKTOP,
+    profile: profileFixture({ is_admin: true }),
+  });
+  await page.waitForTimeout(1200);
+  ok(
+    await page.getByRole("link", { name: /painel admin/i }).isVisible(),
+    "admin vê atalho do painel admin",
+  );
+  const canvas = await page.getByText("1080 × 1350").boundingBox();
+  const titulo = await page.getByRole("heading", { name: /Esta página não existe/i }).boundingBox();
+  ok(canvas && titulo && canvas.x > titulo.x, "no computador o canvas fica à direita do texto");
+  await page.screenshot({ path: "s4-404-admin-desktop.png" });
   await ctx.close();
 }
 

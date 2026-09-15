@@ -7,7 +7,15 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const aqui = dirname(fileURLToPath(import.meta.url));
-const arquivos = ["t-fase1", "t-fase2", "t-resultados", "t-paginacao", "t-mobile", "t-404-abas"];
+const arquivos = [
+  "t-fase1",
+  "t-fase2",
+  "t-resultados",
+  "t-paginacao",
+  "t-mobile",
+  "t-404-abas",
+  "t-senha",
+];
 
 let falhas = 0;
 for (const nome of arquivos) {

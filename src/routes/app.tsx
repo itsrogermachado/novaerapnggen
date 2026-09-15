@@ -81,6 +81,11 @@ import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { Header } from "@/components/Header";
 import { RandomizerPanel } from "@/components/RandomizerPanel";
 import { UltimosResultados } from "@/components/UltimosResultados";
+
+// Tamanho máximo aceito pelo armazenamento (o mesmo limite configurado no banco).
+const LIMITE_FUNDO_BYTES = 10 * 1024 * 1024;
+const LIMITE_LOGO_BYTES = 5 * 1024 * 1024;
+
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -343,11 +348,24 @@ function Index() {
   const uploadToBucket = async (bucket: "backgrounds" | "logos", file: File) => {
     if (!user) throw new Error("Não autenticado");
 
+    // O armazenamento só aceita png, jpeg e webp (fundos até 10 MB, logos até 5 MB).
+    // Conferir aqui antes de enviar troca o erro técnico do servidor por uma mensagem clara.
+    if (!TIPOS_ACEITOS.has(file.type)) {
+      throw new ImagemInvalidaError("Formato não aceito. Use png, jpeg ou webp.");
+    }
+
     // Foto de celular chega com 3-5MB e milhares de pixels de lado, para virar
-    // um fundo de 1080px. Logo precisa de transparência, então continua PNG.
+    // um fundo de 1080px. Logo precisa de transparência, então vai no formato original.
     const ehLogo = bucket === "logos";
     const conteudo = ehLogo ? file : await comprimirImagem(file, { maxLado: 2160, qualidade: 0.9 });
-    const ext = ehLogo ? file.name.split(".").pop() || "png" : "webp";
+    const limiteBytes = ehLogo ? LIMITE_LOGO_BYTES : LIMITE_FUNDO_BYTES;
+    if (conteudo.size > limiteBytes) {
+      throw new ImagemInvalidaError(
+        `Imagem muito grande. O limite é ${limiteBytes / 1024 / 1024} MB.`,
+      );
+    }
+    // A extensão vem do tipo real do arquivo, e não do nome que a pessoa deu a ele.
+    const ext = ehLogo ? file.type.split("/")[1] : "webp";
     const tipo = ehLogo ? file.type : "image/webp";
 
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
@@ -1204,7 +1222,7 @@ function Index() {
                     <span>Adicionar</span>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/png,image/jpeg,image/webp"
                       className="hidden"
                       disabled={uploadingBg}
                       onChange={(e) => e.target.files?.[0] && handleBgUpload(e.target.files[0])}
@@ -1294,7 +1312,7 @@ function Index() {
                     <span>Adicionar</span>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/png,image/jpeg,image/webp"
                       className="hidden"
                       disabled={uploadingLogo}
                       onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
