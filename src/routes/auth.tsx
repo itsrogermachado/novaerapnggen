@@ -171,6 +171,25 @@ function AuthPage() {
     if (!loading && user && !novaSenha) navigate({ to: "/app" });
   }, [user, loading, navigate, novaSenha]);
 
+  const entrarComGoogle = async () => {
+    setBusy(true);
+    try {
+      const resultado = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (resultado.error) {
+        toast.error("Não foi possível entrar com o Google. Tente de novo.");
+        setBusy(false);
+        return;
+      }
+      if (resultado.redirected) return; // navegador abriu o Google
+      // Sessão já definida: o efeito acima leva para o Estúdio.
+    } catch {
+      toast.error("Não foi possível entrar com o Google. Tente de novo.");
+      setBusy(false);
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
