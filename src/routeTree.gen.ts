@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiDiscordSincronizarRouteImport } from './routes/api/discord/sincronizar'
 
 const ResultadosRoute = ResultadosRouteImport.update({
   id: '/resultados',
@@ -40,6 +41,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDiscordSincronizarRoute = ApiDiscordSincronizarRouteImport.update({
+  id: '/api/discord/sincronizar',
+  path: '/api/discord/sincronizar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/resultados': typeof ResultadosRoute
+  '/api/discord/sincronizar': typeof ApiDiscordSincronizarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/resultados': typeof ResultadosRoute
+  '/api/discord/sincronizar': typeof ApiDiscordSincronizarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/resultados': typeof ResultadosRoute
+  '/api/discord/sincronizar': typeof ApiDiscordSincronizarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/app' | '/auth' | '/resultados'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/app'
+    | '/auth'
+    | '/resultados'
+    | '/api/discord/sincronizar'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/app' | '/auth' | '/resultados'
-  id: '__root__' | '/' | '/admin' | '/app' | '/auth' | '/resultados'
+  to:
+    | '/'
+    | '/admin'
+    | '/app'
+    | '/auth'
+    | '/resultados'
+    | '/api/discord/sincronizar'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/app'
+    | '/auth'
+    | '/resultados'
+    | '/api/discord/sincronizar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +105,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRoute
   AuthRoute: typeof AuthRoute
   ResultadosRoute: typeof ResultadosRoute
+  ApiDiscordSincronizarRoute: typeof ApiDiscordSincronizarRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/discord/sincronizar': {
+      id: '/api/discord/sincronizar'
+      path: '/api/discord/sincronizar'
+      fullPath: '/api/discord/sincronizar'
+      preLoaderRoute: typeof ApiDiscordSincronizarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRoute,
   AuthRoute: AuthRoute,
   ResultadosRoute: ResultadosRoute,
+  ApiDiscordSincronizarRoute: ApiDiscordSincronizarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

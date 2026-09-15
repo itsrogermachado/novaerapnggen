@@ -1,13 +1,5 @@
 {
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "eslint.config.js"],
-  // TEMPORÁRIO — remover na Fase 4 (API + bot do Discord).
-  // src/routes/api/discord-images.ts importa `createAPIFileRoute` de
-  // "@tanstack/react-start/api", subpath que não existe na versão instalada
-  // (1.167.50). O gerador de rotas não reconhece o arquivo, então ele nunca entra
-  // no build e o endpoint responde 404 — o código está inerte, não em uso.
-  // Fica excluído só do typecheck para que `tsc --noEmit` volte a ser uma rede de
-  // proteção confiável. Ao reescrever a rota na Fase 4, apague estas linhas.
-  "exclude": ["src/routes/api/discord-images.ts"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

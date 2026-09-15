@@ -6,9 +6,3 @@ pnpm-lock.yaml
 package-lock.json
 bun.lock
 routeTree.gen.ts
-
-# TEMPORÁRIO — remover na Fase 4 (API + bot do Discord).
-# Arquivos do pipeline do bot, fora do escopo do trabalho de site. Serão
-# reescritos na Fase 4; até lá ficam de fora para o lint ser utilizável.
-src/routes/api/
-supabase/functions/

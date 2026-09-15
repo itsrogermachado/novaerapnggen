@@ -84,6 +84,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:e2e": "node tests/run.mjs",
+    "test:unit": "node --test tests/discord-resultados.test.mjs",
     "check": "tsc --noEmit && eslint ."
   },
   "sideEffects": false,

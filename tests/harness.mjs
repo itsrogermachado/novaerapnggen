@@ -6,6 +6,7 @@
  * criada, nenhuma linha é escrita. O que roda é o app de verdade: SSR,
  * hidratação, router, CSS.
  */
+import { existsSync } from "node:fs";
 import { chromium } from "playwright";
 
 export const BASE = "http://127.0.0.1:5199";
@@ -187,5 +188,9 @@ export async function openApp(browser, path, opts = {}) {
 }
 
 export async function launch() {
-  return chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+  // O Chromium fixo abaixo é o da máquina Linux onde a suíte foi criada. Em outra
+  // máquina (Windows, por exemplo) esse caminho não existe, então usa o Chromium que
+  // o próprio Playwright instala (npx playwright install chromium).
+  const chromiumLinux = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+  return chromium.launch(existsSync(chromiumLinux) ? { executablePath: chromiumLinux } : {});
 }
