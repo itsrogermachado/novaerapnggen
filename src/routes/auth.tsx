@@ -347,6 +347,45 @@ function AuthPage() {
               </Button>
             </form>
 
+            {mode !== "recuperar" && (
+              <>
+                <div className="animate-slide-up stagger-5 mt-5 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-border/60" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    ou
+                  </span>
+                  <div className="h-px flex-1 bg-border/60" />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={entrarComGoogle}
+                  disabled={busy}
+                  className="animate-slide-up stagger-5 mt-4 w-full py-6 rounded-sm border-border font-bold cursor-pointer hover:bg-muted"
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 mr-2" aria-hidden="true">
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.04c1.62 0 3.06.56 4.2 1.64l3.12-3.12C17.46 1.8 14.96.75 12 .75 7.65.75 3.98 3.24 2.19 6.86l3.66 2.84C6.73 6.94 9.1 5.04 12 5.04z"
+                    />
+                    <path
+                      fill="#4285F4"
+                      d="M23.25 12.26c0-.8-.07-1.56-.21-2.3H12v4.51h6.32c-.27 1.46-1.09 2.7-2.32 3.53l3.54 2.75c2.08-1.92 3.71-4.76 3.71-8.49z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.85 14.29a7.06 7.06 0 0 1 0-4.58L2.19 6.86a11.26 11.26 0 0 0 0 10.28l3.66-2.85z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23.25c3.04 0 5.59-1 7.45-2.72l-3.54-2.75c-.99.66-2.26 1.06-3.91 1.06-2.9 0-5.27-1.9-6.15-4.55l-3.66 2.85C3.98 20.76 7.65 23.25 12 23.25z"
+                    />
+                  </svg>
+                  {mode === "login" ? "Entrar com Google" : "Cadastrar com Google"}
+                </Button>
+              </>
+            )}
+
             <div className="animate-slide-up stagger-6 mt-5 flex flex-col items-center gap-1">
               {mode === "login" && (
                 <button
