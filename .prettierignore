@@ -6,3 +6,7 @@ pnpm-lock.yaml
 package-lock.json
 bun.lock
 routeTree.gen.ts
+# Gerados pelo Lovable ("do not edit"): ele reescreve do jeito dele a cada mudança.
+src/integrations/supabase/types.ts
+src/integrations/supabase/previewAuthStorage.ts
+src/integrations/lovable/index.ts

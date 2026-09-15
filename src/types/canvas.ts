@@ -1,3 +1,5 @@
+import type { Lugar } from "@/lib/composicao";
+
 export type Format = "feed" | "story";
 
 export type LibraryItem = {
@@ -34,6 +36,10 @@ export type CanvasState = {
   logo: LogoState;
 
   format: Format;
+  // Modelo aberto: lugares reservados para os destaques e o nome do modelo.
+  // Entram no histórico para o Ctrl+Z desfazer também a abertura de um modelo.
+  lugares?: Lugar[] | null;
+  modeloNome?: string | null;
 };
 
 export interface ElementLayouts {

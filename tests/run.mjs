@@ -15,6 +15,7 @@ const arquivos = [
   "t-mobile",
   "t-404-abas",
   "t-senha",
+  "t-composicao",
 ];
 
 let falhas = 0;

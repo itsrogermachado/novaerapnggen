@@ -22,6 +22,8 @@ export function useCanvasHistory({
     setLogo: (v: CanvasState["logo"]) => void;
     setFormat: (v: CanvasState["format"]) => void;
     setSelectedId: (v: string | null) => void;
+    setLugares: (v: NonNullable<CanvasState["lugares"]> | null) => void;
+    setModeloNome: (v: string | null) => void;
   };
 }) {
   const [past, setPast] = useState<CanvasState[]>([]);
@@ -66,6 +68,8 @@ export function useCanvasHistory({
     setters.setForegrounds(previous.foregrounds);
     setters.setLogo(previous.logo);
     setters.setFormat(previous.format);
+    setters.setLugares(previous.lugares ?? null);
+    setters.setModeloNome(previous.modeloNome ?? null);
   }, [past, currentState, setters]);
 
   const redo = useCallback(() => {
@@ -82,6 +86,8 @@ export function useCanvasHistory({
     setters.setForegrounds(next.foregrounds);
     setters.setLogo(next.logo);
     setters.setFormat(next.format);
+    setters.setLugares(next.lugares ?? null);
+    setters.setModeloNome(next.modeloNome ?? null);
   }, [future, currentState, setters]);
 
   const goToHistoryState = useCallback(
@@ -104,6 +110,9 @@ export function useCanvasHistory({
       setters.setForegrounds(targetState.foregrounds);
       setters.setLogo(targetState.logo);
       setters.setFormat(targetState.format);
+      // Estados antigos não tinham modelo: sem o campo, é tela sem modelo.
+      setters.setLugares(targetState.lugares ?? null);
+      setters.setModeloNome(targetState.modeloNome ?? null);
       setters.setSelectedId(null);
     },
     [past, future, currentState, setters],

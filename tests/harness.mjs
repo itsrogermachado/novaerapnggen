@@ -12,6 +12,8 @@ import { chromium } from "playwright";
 export const BASE = "http://127.0.0.1:5199";
 export const PROJECT_REF = "ejixsmqkyeltkqntvcpp";
 const SUPA = `https://${PROJECT_REF}.supabase.co`;
+/** Começo dos endereços de imagem do armazenamento público (o app só aceita estes). */
+export const STORAGE = `${SUPA}/storage/v1/object/public/`;
 
 export const PHONE = { width: 390, height: 844 }; // iPhone 14/15
 export const DESKTOP = { width: 1440, height: 900 };
@@ -85,6 +87,13 @@ export async function openApp(browser, path, opts = {}) {
     profileFails = false,
     backgrounds = [],
     logos = [],
+    // Modelos salvos (tabela modelos). A lista é a mesma durante todo o contexto, então
+    // sobrevive a recarregar a página, como no banco de verdade.
+    modelos = [],
+    // Endereços do armazenamento que devem responder 404 (imagem apagada ou vencida).
+    imagensSumidas = [],
+    // Atraso das imagens do armazenamento, para testar o que termina antes de quê.
+    atrasoStorageMs = 0,
   } = opts;
 
   // isMobile/hasTouch fazem o Chromium reportar hover:none e pointer:coarse,
@@ -145,12 +154,72 @@ export async function openApp(browser, path, opts = {}) {
       }
       return route.fulfill(json(lista.slice(offset, offset + limit)));
     }
+    if (table === "modelos") {
+      const req = route.request();
+      const metodo = req.method();
+      const idAlvo = url.searchParams.get("id")?.replace(/^eq\./, "");
+      const single = (req.headers()["accept"] || "").includes("pgrst.object");
+      if (metodo === "GET") {
+        const ordenados = [...modelos].sort((a, b) =>
+          b.atualizado_em.localeCompare(a.atualizado_em),
+        );
+        return route.fulfill(json(ordenados));
+      }
+      if (metodo === "POST") {
+        const corpo = JSON.parse(req.postData() || "{}");
+        const linhas = (Array.isArray(corpo) ? corpo : [corpo]).map((c) => ({
+          id: `mod-${modelos.length + 1}-${Date.now()}`,
+          user_id: USER.id,
+          criado_em: new Date().toISOString(),
+          atualizado_em: new Date().toISOString(),
+          ...c,
+        }));
+        // Mesma regra do índice único do banco: nome repetido na conta é recusado.
+        const repetido = linhas.some((l) =>
+          modelos.some((m) => m.nome.trim().toLowerCase() === l.nome.trim().toLowerCase()),
+        );
+        if (repetido) return route.fulfill(json({ code: "23505", message: "duplicate" }, 409));
+        modelos.push(...linhas);
+        return route.fulfill(json(single ? linhas[0] : linhas, 201));
+      }
+      if (metodo === "PATCH") {
+        const corpo = JSON.parse(req.postData() || "{}");
+        const alvo = modelos.find((m) => m.id === idAlvo);
+        if (alvo) Object.assign(alvo, corpo);
+        return route.fulfill(json(alvo ? [alvo] : []));
+      }
+      if (metodo === "DELETE") {
+        const i = modelos.findIndex((m) => m.id === idAlvo);
+        if (i >= 0) modelos.splice(i, 1);
+        return route.fulfill(json([]));
+      }
+    }
     if (table === "backgrounds") return route.fulfill(json(backgrounds));
     if (table === "logos") return route.fulfill(json(logos));
     if (url.pathname.includes("/rpc/is_user_active")) {
       return route.fulfill(json(profile.is_admin || profile.status === "approved"));
     }
     return route.fulfill(json([]));
+  });
+
+  // --- Supabase Storage (imagens públicas): um SVG colorido por endereço ---
+  await ctx.route(`${SUPA}/storage/v1/object/public/**`, async (route) => {
+    const endereco = route.request().url();
+    if (atrasoStorageMs) await new Promise((r) => setTimeout(r, atrasoStorageMs));
+    if (imagensSumidas.includes(endereco)) {
+      return route.fulfill({ status: 404, contentType: "text/plain", body: "not found" });
+    }
+    // Cor tirada do próprio endereço, para imagens diferentes parecerem diferentes.
+    let soma = 0;
+    for (const c of endereco) soma = (soma * 31 + c.charCodeAt(0)) >>> 0;
+    const cor = (soma & 0xffffff).toString(16).padStart(6, "0");
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500"><rect width="400" height="500" fill="#${cor}"/></svg>`;
+    return route.fulfill({
+      status: 200,
+      contentType: "image/svg+xml",
+      headers: { "access-control-allow-origin": "*" },
+      body: svg,
+    });
   });
 
   // --- Supabase Auth ---

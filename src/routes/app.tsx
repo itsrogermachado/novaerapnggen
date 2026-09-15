@@ -35,6 +35,7 @@ import {
   Check,
   RefreshCw,
   ShieldAlert,
+  X,
   Undo2,
   Redo2,
   Palette,
@@ -46,6 +47,20 @@ import { useImportarResultados } from "@/hooks/useImportarResultados";
 import { useProfile } from "@/hooks/useProfile";
 import { comprimirImagem, TIPOS_ACEITOS, ImagemInvalidaError } from "@/lib/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MenuModelos } from "@/components/MenuModelos";
+import {
+  cabeNoLimite,
+  lerRascunho,
+  montarModelo,
+  montarRascunho,
+  posicoesDosDestaques,
+  type ItemBiblioteca,
+  type Lugar,
+  type Modelo,
+  type Rascunho,
+  type TelaAtual,
+} from "@/lib/composicao";
+import { apagarRascunho, BASE_STORAGE, gravarRascunho, lerRascunhoSalvo } from "@/lib/rascunho";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/app")({
@@ -94,6 +109,29 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     img.onerror = reject;
     img.src = url;
   });
+}
+
+/**
+ * Onde os destaques ficam: nos lugares do modelo aberto ou, sem modelo (ou com mais
+ * destaques que lugares), na organização automática. Avisa quando reorganizou.
+ * Só a altura da logo (y) importa para achar o espaço livre abaixo dela.
+ */
+function posicoesComAviso(
+  quantidade: number,
+  logoY: number | null,
+  isStory: boolean,
+  lugares: Lugar[] | null,
+) {
+  const logoParaConta = logoY === null ? null : ({ y: logoY } as LogoState);
+  const { fgMinY, fgMaxY } = getForegroundSpace(logoParaConta, isStory);
+  const automaticas = getForegroundCoordinates(quantidade, 0, fgMinY, fgMaxY);
+  const { coords, reorganizou } = posicoesDosDestaques(quantidade, lugares, automaticas);
+  if (reorganizou && lugares) {
+    toast.info(
+      `O modelo tem ${lugares.length} ${lugares.length === 1 ? "lugar" : "lugares"}; com ${quantidade} destaques, reorganizei automaticamente. Ctrl+Z desfaz.`,
+    );
+  }
+  return coords;
 }
 
 function sanitizeFilename(name: string): string {
@@ -189,6 +227,18 @@ function Index() {
     { id: string; url: string; img: HTMLImageElement }[]
   >([]);
 
+  // Modelo aberto: lugares reservados para os destaques e o nome do modelo.
+  const [lugares, setLugares] = useState<Lugar[] | null>(null);
+  const [modeloNome, setModeloNome] = useState<string | null>(null);
+  // Arquivos originais das imagens enviadas do computador, por id. É deles que o
+  // rascunho guarda uma cópia, porque o endereço blob: some ao recarregar a página.
+  const arquivosRef = useRef(new Map<string, Blob>());
+  // Vira true quando a tentativa de restaurar o rascunho terminou (com ou sem rascunho).
+  // Antes disso nada é gravado, para a tela vazia do começo não apagar o rascunho bom.
+  const [rascunhoPronto, setRascunhoPronto] = useState(false);
+  // Pede ao efeito de reorganizar que não mexa uma vez: as posições restauradas valem.
+  const pularRearranjo = useRef(false);
+
   // Modo de gerenciar as bibliotecas: no toque é ele que revela os botões de
   // excluir, que de outra forma cobririam o centro das miniaturas.
   const [gerenciandoBiblioteca, setGerenciandoBiblioteca] = useState(false);
@@ -223,7 +273,7 @@ function Index() {
     historyEnabled,
     setHistoryEnabled,
   } = useCanvasHistory({
-    currentState: { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, format },
+    currentState: { bgUrl, bgUrlSigned, bgImg, foregrounds, logo, format, lugares, modeloNome },
     setters: {
       setBgUrl,
       setBgUrlSigned,
@@ -232,13 +282,17 @@ function Index() {
       setLogo,
       setFormat,
       setSelectedId,
+      setLugares,
+      setModeloNome,
     },
   });
 
   // Resultados escolhidos em /resultados entram como destaques, pelo mesmo caminho de
   // um upload manual.
   useImportarResultados({
-    ids: resultadosParaImportar,
+    // Só importa depois de restaurar o rascunho; senão a restauração, que termina
+    // depois, apagaria os prints recém-importados.
+    ids: rascunhoPronto ? resultadosParaImportar : undefined,
     setHighlightLibrary,
     setForegrounds,
     saveToHistory,
@@ -254,13 +308,26 @@ function Index() {
   // posição da logo entra apenas como referência de espaço.
   const logoRef = useRef(logo);
   logoRef.current = logo;
+  // Com um modelo aberto, os destaques ocupam os lugares dele (ver posicoesDosDestaques).
+  // Fica numa referência, e não nas dependências do efeito: assim desfazer (Ctrl+Z) a
+  // abertura de um modelo não reorganiza as posições que o desfazer acabou de trazer.
+  const lugaresRef = useRef(lugares);
+  lugaresRef.current = lugares;
 
   useEffect(() => {
+    // Restauração do rascunho: as posições salvas valem, não reorganiza desta vez.
+    if (pularRearranjo.current) {
+      pularRearranjo.current = false;
+      return;
+    }
     if (foregrounds.length === 0) return;
 
-    const isStory = format === "story";
-    const { fgMinY, fgMaxY } = getForegroundSpace(logoRef.current, isStory);
-    const coords = getForegroundCoordinates(foregrounds.length, 0, fgMinY, fgMaxY);
+    const coords = posicoesComAviso(
+      foregrounds.length,
+      logoRef.current?.y ?? null,
+      format === "story",
+      lugaresRef.current,
+    );
 
     setForegrounds((p) => {
       const hasChanged = p.some((fg, idx) => {
@@ -529,6 +596,7 @@ function Index() {
       try {
         const img = await loadImage(url);
         const newId = crypto.randomUUID();
+        arquivosRef.current.set(newId, file);
         items.push({ id: newId, url, img });
       } catch {
         console.warn("Falha ao carregar imagem de destaque:", url);
@@ -562,6 +630,7 @@ function Index() {
     const isActive = foregrounds.some((f) => f.id === id);
     if (isActive) saveToHistory();
     setHighlightLibrary((p) => p.filter((i) => i.id !== id));
+    arquivosRef.current.delete(id);
     removeForeground(id);
   };
 
@@ -572,6 +641,250 @@ function Index() {
   const removeForeground = (id: string) => {
     setForegrounds((p) => p.filter((f) => f.id !== id));
     if (selectedId === id) setSelectedId(null);
+  };
+
+  // ─── Salvar e reabrir a tela (rascunho automático e modelos) ───
+
+  // Descreve a tela atual no formato das regras de composicao.ts.
+  // Imagem do computador vira "arquivo"; imagem com endereço (aba Resultados) vira "url".
+  const telaAtual = (): TelaAtual => ({
+    formato: format,
+    fundo: bgUrl,
+    logo: logo ? { url: logo.url, x: logo.x, y: logo.y, size: logo.size } : null,
+    biblioteca: highlightLibrary.map(
+      (i): ItemBiblioteca =>
+        arquivosRef.current.has(i.id)
+          ? { id: i.id, origem: "arquivo" }
+          : { id: i.id, origem: "url", url: i.url },
+    ),
+    destaques: foregrounds.map((f) => ({
+      id: f.id,
+      x: f.x,
+      y: f.y,
+      size: f.size,
+      proporcao: f.img.width > 0 ? f.img.height / f.img.width : 1,
+    })),
+    lugares,
+    modeloNome,
+  });
+
+  // Carrega uma imagem sem derrubar nada se ela não existir mais (devolve null).
+  const carregarOuNada = (url: string) => loadImage(url).catch(() => null);
+
+  // Limpa a tela para começar do zero e apaga o rascunho. As bibliotecas continuam,
+  // e o Ctrl+Z traz a tela de volta.
+  const novaComposicao = () => {
+    saveToHistory();
+    setBgUrl(null);
+    setBgUrlSigned(null);
+    setBgImg(null);
+    setLogo(null);
+    setForegrounds([]);
+    setLugares(null);
+    setModeloNome(null);
+    setSelectedId(null);
+    if (user) void apagarRascunho(user.id);
+    toast.success("Tela limpa. Pode começar a nova composição.");
+  };
+  // O aviso de "continuando de onde parou" é criado antes da tela voltar; pela referência
+  // ele sempre chama a versão mais nova desta função.
+  const novaComposicaoRef = useRef(novaComposicao);
+  novaComposicaoRef.current = novaComposicao;
+
+  // Coloca na tela o que um rascunho guardou. Imagem que não existe mais é pulada.
+  const aplicarRascunho = async (r: Rascunho, arquivos: Record<string, Blob>) => {
+    const [imgFundo, imgLogo, itens] = await Promise.all([
+      r.fundo ? carregarOuNada(r.fundo) : null,
+      r.logo ? carregarOuNada(r.logo.url) : null,
+      Promise.all(
+        r.biblioteca.map(async (item) => {
+          if (item.origem === "arquivo") {
+            const arquivo = arquivos[item.id];
+            if (!arquivo) return null;
+            const url = URL.createObjectURL(arquivo);
+            const img = await carregarOuNada(url);
+            if (!img) return null;
+            arquivosRef.current.set(item.id, arquivo);
+            return { id: item.id, url, img };
+          }
+          const img = await carregarOuNada(item.url!);
+          return img ? { id: item.id, url: item.url!, img } : null;
+        }),
+      ),
+    ]);
+
+    const biblioteca = itens.filter((i): i is NonNullable<typeof i> => i !== null);
+    const porId = new Map(biblioteca.map((i) => [i.id, i]));
+    const destaques = r.destaques.flatMap((d) => {
+      const item = porId.get(d.id);
+      return item ? [{ ...item, x: d.x, y: d.y, size: d.size }] : [];
+    });
+
+    // Conta o que ficou para trás (print vencido, fundo apagado da biblioteca...).
+    const faltaram =
+      (r.fundo && !imgFundo ? 1 : 0) +
+      (r.logo && !imgLogo ? 1 : 0) +
+      (r.biblioteca.length - biblioteca.length);
+
+    // As posições salvas valem: o efeito de reorganizar só é avisado se for rodar.
+    if (destaques.length > 0 || r.formato !== format) pularRearranjo.current = true;
+
+    setFormat(r.formato);
+    if (imgFundo && r.fundo) {
+      setBgImg(imgFundo);
+      setBgUrl(r.fundo);
+      setBgUrlSigned(r.fundo);
+    }
+    if (imgLogo && r.logo) setLogo({ ...r.logo, signedUrl: r.logo.url, img: imgLogo });
+    setHighlightLibrary(biblioteca);
+    setForegrounds(destaques);
+    setLugares(r.lugares);
+    setModeloNome(r.lugares ? r.modeloNome : null);
+
+    const voltouAlgo = !!imgFundo || !!imgLogo || biblioteca.length > 0 || !!r.lugares;
+    if (voltouAlgo) {
+      toast("Continuando de onde você parou", {
+        action: { label: "Começar do zero", onClick: () => novaComposicaoRef.current() },
+      });
+    }
+    if (faltaram > 0) {
+      toast.warning(
+        faltaram === 1
+          ? "1 imagem não está mais disponível e ficou de fora."
+          : `${faltaram} imagens não estão mais disponíveis e ficaram de fora.`,
+      );
+    }
+  };
+
+  // Ao abrir o Estúdio: procura o rascunho desta conta e coloca a tela de volta.
+  // Só depois libera a gravação automática e a importação de /resultados.
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) return;
+    let cancelado = false;
+    (async () => {
+      const salvo = await lerRascunhoSalvo(userId);
+      const rascunho = salvo ? lerRascunho(salvo.rascunho, BASE_STORAGE) : null;
+      if (rascunho && salvo && !cancelado) await aplicarRascunho(rascunho, salvo.arquivos ?? {});
+      if (!cancelado) setRascunhoPronto(true);
+    })();
+    return () => {
+      cancelado = true;
+    };
+    // Roda uma vez por conta; aplicarRascunho usa só setters e referências.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // Gravação automática do rascunho: 800 ms depois da última mudança na tela.
+  // Arrastar um destaque muda a tela várias vezes por segundo; a espera junta tudo
+  // numa gravação só.
+  const avisouLimite = useRef(false);
+  useEffect(() => {
+    if (!rascunhoPronto || !userId) return;
+    const espera = setTimeout(() => {
+      const tela = telaAtual();
+
+      // Imagens do computador: as que estão na tela têm prioridade no limite de espaço.
+      const ativos = new Set(foregrounds.map((f) => f.id));
+      const candidatos = [...tela.biblioteca]
+        .filter((i) => i.origem === "arquivo")
+        .sort((a, b) => Number(ativos.has(b.id)) - Number(ativos.has(a.id)))
+        .map((i) => ({ id: i.id, tamanho: arquivosRef.current.get(i.id)?.size ?? 0 }));
+      const cabem = new Set(cabeNoLimite(candidatos));
+      if (cabem.size < candidatos.length && !avisouLimite.current) {
+        avisouLimite.current = true;
+        toast.warning(
+          "Imagens demais do computador para lembrar ao recarregar (até 20 imagens e 50 MB). As que passarem ficam de fora.",
+        );
+      }
+
+      const biblioteca = tela.biblioteca.filter((i) => i.origem === "url" || cabem.has(i.id));
+      const guardados = new Set(biblioteca.map((i) => i.id));
+      const arquivos: Record<string, Blob> = {};
+      for (const id of cabem) arquivos[id] = arquivosRef.current.get(id)!;
+
+      void gravarRascunho(userId, {
+        rascunho: montarRascunho({
+          ...tela,
+          biblioteca,
+          destaques: tela.destaques.filter((d) => guardados.has(d.id)),
+        }),
+        arquivos,
+      });
+    }, 800);
+    return () => clearTimeout(espera);
+    // telaAtual lê exatamente estes estados.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    rascunhoPronto,
+    userId,
+    format,
+    bgUrl,
+    logo,
+    foregrounds,
+    highlightLibrary,
+    lugares,
+    modeloNome,
+  ]);
+
+  // Abre um modelo salvo: formato, fundo, logo e os lugares dos destaques.
+  // Os destaques que já estão na tela vão para os lugares, em ordem.
+  const abrirModelo = async (modelo: Modelo, nome: string) => {
+    const [imgFundo, imgLogo] = await Promise.all([
+      modelo.fundo ? carregarOuNada(modelo.fundo) : null,
+      modelo.logo ? carregarOuNada(modelo.logo.url) : null,
+    ]);
+
+    saveToHistory();
+    setFormat(modelo.formato);
+    if (imgFundo && modelo.fundo) {
+      setBgImg(imgFundo);
+      setBgUrl(modelo.fundo);
+      setBgUrlSigned(modelo.fundo);
+    } else {
+      setBgImg(null);
+      setBgUrl(null);
+      setBgUrlSigned(null);
+    }
+    setLogo(
+      imgLogo && modelo.logo ? { ...modelo.logo, signedUrl: modelo.logo.url, img: imgLogo } : null,
+    );
+    setLugares(modelo.lugares);
+    setModeloNome(nome);
+    setSelectedId(null);
+
+    // Posiciona agora o que já está na tela (o efeito só age quando a quantidade muda).
+    if (foregrounds.length > 0) {
+      const coords = posicoesComAviso(
+        foregrounds.length,
+        modelo.logo?.y ?? null,
+        modelo.formato === "story",
+        modelo.lugares,
+      );
+      setForegrounds((atuais) => atuais.map((f, i) => ({ ...f, ...coords[i] })));
+    }
+
+    const faltaram = (modelo.fundo && !imgFundo ? 1 : 0) + (modelo.logo && !imgLogo ? 1 : 0);
+    toast.success(`Modelo "${nome}" aberto`);
+    if (faltaram > 0) {
+      toast.warning("O fundo ou a logo deste modelo foi apagado da biblioteca e ficou de fora.");
+    }
+  };
+
+  // Fecha o modelo: some com os lugares e os destaques voltam à organização automática.
+  const fecharModelo = () => {
+    saveToHistory();
+    setLugares(null);
+    setModeloNome(null);
+    if (foregrounds.length > 0) {
+      const coords = posicoesComAviso(
+        foregrounds.length,
+        logo?.y ?? null,
+        format === "story",
+        null,
+      );
+      setForegrounds((atuais) => atuais.map((f, i) => ({ ...f, ...coords[i] })));
+    }
   };
 
   // Randomizers
@@ -1509,6 +1822,42 @@ function Index() {
         <div className="order-1 w-full lg:order-2">
           {/* Canvas Preview Area */}
           <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 lg:max-w-md">
+            {/* Menu Modelos e, com um modelo aberto, o selo com o nome e os lugares ocupados. */}
+            <div className="flex w-full flex-wrap items-center gap-2">
+              <MenuModelos
+                podeSalvar={!!bgUrl || !!logo || foregrounds.length > 0 || !!lugares?.length}
+                montarModelo={() => montarModelo(telaAtual())}
+                modeloAberto={modeloNome}
+                aoAbrir={(modelo, nome) => void abrirModelo(modelo, nome)}
+                aoNovaComposicao={novaComposicao}
+              />
+              {lugares && modeloNome && (
+                <div
+                  data-selo="modelo"
+                  className="flex h-11 min-w-0 flex-1 items-center gap-1 rounded-sm border border-primary/30 bg-primary/5 pl-3 text-xs"
+                >
+                  {/* O nome encolhe com reticências; o contador de lugares fica sempre inteiro. */}
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="text-muted-foreground">Modelo: </span>
+                    <span className="font-bold">{modeloNome}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    {Math.min(foregrounds.length, lugares.length)}/{lugares.length}{" "}
+                    {lugares.length === 1 ? "lugar" : "lugares"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={fecharModelo}
+                    aria-label="Fechar modelo"
+                    title="Fechar modelo"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div
               ref={previewRef}
               data-canvas="preview"
@@ -1533,6 +1882,28 @@ function Index() {
                   </p>
                 </div>
               )}
+
+              {/* Lugares ainda vazios do modelo aberto: contorno tracejado numerado.
+                  Só aparecem aqui na pré-visualização; a imagem baixada é desenhada a
+                  partir dos destaques e nunca inclui estes contornos. */}
+              {lugares?.slice(foregrounds.length).map((l, i) => (
+                <div
+                  key={`lugar-${foregrounds.length + i}`}
+                  data-lugar-vazio
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: `${l.x * 100}%`,
+                    top: `${l.y * 100}%`,
+                    width: `${l.size * 100}%`,
+                    aspectRatio: `1 / ${l.proporcao}`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                  className="pointer-events-none flex items-center justify-center rounded-sm border-2 border-dashed border-primary/80 bg-background/40 text-lg font-black tabular-nums text-primary"
+                >
+                  {foregrounds.length + i + 1}
+                </div>
+              ))}
 
               {/* Draggable Highlights */}
               {foregrounds.map((fg) => (

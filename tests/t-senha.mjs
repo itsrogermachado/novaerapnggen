@@ -54,7 +54,10 @@ console.log("\n[mobile] link vencido (sem sessão)");
   );
   await page.getByRole("button", { name: "Voltar ao login" }).click();
   await page.waitForTimeout(500);
-  ok(await page.getByRole("button", { name: "Entrar" }).isVisible(), "volta para o login normal");
+  ok(
+    await page.getByRole("button", { name: "Entrar", exact: true }).isVisible(),
+    "volta para o login normal",
+  );
   ok(!page.url().includes("novaSenha"), "tira a marca do endereço");
   await ctx.close();
 }
