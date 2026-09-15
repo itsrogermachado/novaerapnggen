@@ -4,10 +4,10 @@ import { useAuth } from "@/lib/auth";
 import { useProfile } from "@/hooks/useProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-// Aparência dos botões: 52px de altura (toque confortável no celular) e um anel
-// laranja bem visível quando a pessoa navega pelo teclado.
+// Aparência dos botões: 52px de altura (toque confortável no celular), texto numa
+// linha só e um anel laranja bem visível quando a pessoa navega pelo teclado.
 const BOTAO =
-  "flex min-h-[52px] items-center justify-center gap-2 rounded-sm px-5 text-sm font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "flex min-h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-sm px-5 text-sm font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 const BOTAO_CHEIO = `${BOTAO} bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90`;
 const BOTAO_VAZADO = `${BOTAO} border border-border text-foreground hover:border-primary/60 hover:text-primary`;
 
@@ -82,7 +82,9 @@ export function PaginaNaoEncontrada() {
             <CanvasVazio />
           </div>
 
-          <div className="mx-auto w-full max-w-md lg:order-1 lg:mx-0">
+          {/* Botões lado a lado a partir do tablet: cada um cresce a partir do tamanho do
+              próprio texto; se não couberem juntos, o segundo desce para a linha de baixo. */}
+          <div className="mx-auto w-full max-w-lg lg:order-1 lg:mx-0">
             <h1 className="mb-4 text-balance text-4xl font-black leading-[0.95] tracking-tight sm:text-5xl">
               <span className="sr-only">Erro 404: </span>
               Esta página não existe.
@@ -99,12 +101,12 @@ export function PaginaNaoEncontrada() {
               <div className="h-[116px] animate-shimmer rounded-sm border border-border/40 bg-muted/30" />
             ) : user ? (
               <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Link to="/app" className={`${BOTAO_CHEIO} sm:flex-1`}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Link to="/app" className={`${BOTAO_CHEIO} sm:flex-auto`}>
                     <ArrowLeft className="h-4 w-4" />
                     Voltar ao estúdio
                   </Link>
-                  <Link to="/resultados" className={`${BOTAO_VAZADO} sm:flex-1`}>
+                  <Link to="/resultados" className={`${BOTAO_VAZADO} sm:flex-auto`}>
                     <Radio className="h-4 w-4" />
                     Ver resultados
                   </Link>
@@ -121,12 +123,12 @@ export function PaginaNaoEncontrada() {
                 )}
               </div>
             ) : (
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link to="/auth" className={`${BOTAO_CHEIO} sm:flex-1`}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <Link to="/auth" className={`${BOTAO_CHEIO} sm:flex-auto`}>
                   <LogIn className="h-4 w-4" />
                   Entrar na plataforma
                 </Link>
-                <Link to="/" className={`${BOTAO_VAZADO} sm:flex-1`}>
+                <Link to="/" className={`${BOTAO_VAZADO} sm:flex-auto`}>
                   <ArrowLeft className="h-4 w-4" />
                   Página inicial
                 </Link>

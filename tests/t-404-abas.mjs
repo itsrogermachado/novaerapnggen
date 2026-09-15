@@ -93,6 +93,30 @@ console.log("\n[desktop] 404 — admin logado");
   await ctx.close();
 }
 
+console.log("\n[tablet e desktop] 404 — botões com o texto numa linha só");
+for (const width of [768, 1024, 1440]) {
+  const { ctx, page } = await openApp(b, "/xyz", {
+    viewport: { width, height: 900 },
+    loggedIn: false,
+  });
+  await page.waitForTimeout(700);
+  // Conta as linhas do texto do botão. A altura não serve: duas linhas de texto
+  // ainda cabem nos 52px mínimos do botão, então a quebra passaria despercebida.
+  for (const nome of [/Entrar na plataforma/i, /Página inicial/i]) {
+    const linhas = await page.getByRole("link", { name: nome }).evaluate(async (el) => {
+      await document.fonts.ready;
+      const texto = [...el.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim());
+      const faixa = document.createRange();
+      faixa.selectNodeContents(texto);
+      return faixa.getClientRects().length;
+    });
+    ok(linhas === 1, `${width}px: "${nome.source}" em uma linha (${linhas} linha(s))`);
+  }
+  const larguraExtra = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+  ok(!larguraExtra, `${width}px: sem rolagem lateral`);
+  await ctx.close();
+}
+
 console.log("\n[mobile] painel de controles em abas");
 {
   const { ctx, page } = await openApp(b, "/app", {
