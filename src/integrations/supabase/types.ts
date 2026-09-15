@@ -1,286 +1,296 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       backgrounds: {
         Row: {
-          created_at: string;
-          id: string;
-          image_url: string;
-          name: string;
-          user_id: string;
-        };
+          created_at: string
+          id: string
+          image_url: string
+          name: string
+          user_id: string
+        }
         Insert: {
-          created_at?: string;
-          id?: string;
-          image_url: string;
-          name?: string;
-          user_id: string;
-        };
+          created_at?: string
+          id?: string
+          image_url: string
+          name?: string
+          user_id: string
+        }
         Update: {
-          created_at?: string;
-          id?: string;
-          image_url?: string;
-          name?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          id?: string
+          image_url?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      discord_bot: {
+        Row: {
+          atualizado_em: string
+          channel_id: string | null
+          cron_secret: string
+          id: number
+          ultimo_id: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          channel_id?: string | null
+          cron_secret?: string
+          id?: number
+          ultimo_id?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          channel_id?: string | null
+          cron_secret?: string
+          id?: number
+          ultimo_id?: string | null
+        }
+        Relationships: []
+      }
       discord_images: {
         Row: {
-          id: string;
-          image_url: string;
-          storage_path: string;
-          uploaded_at: string;
-          expires_at: string;
-          discord_message_id: string | null;
-          channel_id: string | null;
-          author: string | null;
-          caption: string | null;
-          source: string;
-          status: string;
-        };
+          author: string | null
+          caption: string | null
+          channel_id: string | null
+          discord_message_id: string | null
+          expires_at: string
+          id: string
+          image_url: string
+          source: string
+          status: string
+          storage_path: string
+          uploaded_at: string
+        }
         Insert: {
-          id?: string;
-          image_url: string;
-          storage_path: string;
-          uploaded_at?: string;
-          expires_at?: string;
-          discord_message_id?: string | null;
-          channel_id?: string | null;
-          author?: string | null;
-          caption?: string | null;
-          source?: string;
-          status?: string;
-        };
+          author?: string | null
+          caption?: string | null
+          channel_id?: string | null
+          discord_message_id?: string | null
+          expires_at?: string
+          id?: string
+          image_url: string
+          source?: string
+          status?: string
+          storage_path: string
+          uploaded_at?: string
+        }
         Update: {
-          id?: string;
-          image_url?: string;
-          storage_path?: string;
-          uploaded_at?: string;
-          expires_at?: string;
-          discord_message_id?: string | null;
-          channel_id?: string | null;
-          author?: string | null;
-          caption?: string | null;
-          source?: string;
-          status?: string;
-        };
-        Relationships: [];
-      };
+          author?: string | null
+          caption?: string | null
+          channel_id?: string | null
+          discord_message_id?: string | null
+          expires_at?: string
+          id?: string
+          image_url?: string
+          source?: string
+          status?: string
+          storage_path?: string
+          uploaded_at?: string
+        }
+        Relationships: []
+      }
       logos: {
         Row: {
-          created_at: string;
-          id: string;
-          image_url: string;
-          name: string;
-          user_id: string;
-        };
+          created_at: string
+          id: string
+          image_url: string
+          name: string
+          user_id: string
+        }
         Insert: {
-          created_at?: string;
-          id?: string;
-          image_url: string;
-          name?: string;
-          user_id: string;
-        };
+          created_at?: string
+          id?: string
+          image_url: string
+          name?: string
+          user_id: string
+        }
         Update: {
-          created_at?: string;
-          id?: string;
-          image_url?: string;
-          name?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          id?: string
+          image_url?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
-          created_at: string;
-          email: string | null;
-          expires_at: string | null;
-          id: string;
-          is_admin: boolean;
-          status: string;
-        };
+          created_at: string
+          email: string | null
+          expires_at: string | null
+          id: string
+          is_admin: boolean
+          status: string
+        }
         Insert: {
-          created_at?: string;
-          email?: string | null;
-          expires_at?: string | null;
-          id: string;
-          is_admin?: boolean;
-          status?: string;
-        };
+          created_at?: string
+          email?: string | null
+          expires_at?: string | null
+          id: string
+          is_admin?: boolean
+          status?: string
+        }
         Update: {
-          created_at?: string;
-          email?: string | null;
-          expires_at?: string | null;
-          id?: string;
-          is_admin?: boolean;
-          status?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "profiles_id_fkey";
-            columns: ["id"];
-            isOneToOne: true;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-    };
+          created_at?: string
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          is_admin?: boolean
+          status?: string
+        }
+        Relationships: []
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
-      check_invite_token: {
-        Args: {
-          token_val: string;
-        };
-        Returns: {
-          is_valid: boolean;
-          expires_at: string;
-          description: string;
-        }[];
-      };
-      is_user_active: {
-        Args: {
-          user_uuid: string;
-        };
-        Returns: boolean;
-      };
-    };
+      check_is_admin: { Args: { user_uuid: string }; Returns: boolean }
+      is_user_active: { Args: { user_uuid: string }; Returns: boolean }
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+      Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R;
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
       }
       ? R
       : never
-    : never;
+    : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+      Insert: infer I
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I;
+        Insert: infer I
       }
       ? I
       : never
-    : never;
+    : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
+      Update: infer U
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U;
+        Update: infer U
       }
       ? U
       : never
-    : never;
+    : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never;
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never;
+    : never
 
 export const Constants = {
   public: {
     Enums: {},
   },
-} as const;
+} as const
