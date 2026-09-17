@@ -23,14 +23,14 @@ node tests/t-mobile.mjs
 
 ## O que cada arquivo cobre
 
-| Arquivo        | Cobertura                                                                                                                                                                                                                                          |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `t-fase1`      | Barra de abas: existe sem dados, alvos de toque, some fora do app, Admin só para admin                                                                                                                                                             |
-| `t-fase2`      | Aba com dados reais, badge, descarte de vencido, estado vazio, lightbox, envio manual                                                                                                                                                              |
-| `t-resultados` | Nome correto na interface, filtro de data, fluxo resultado → canvas                                                                                                                                                                                |
-| `t-paginacao`  | 75 resultados num dia: páginas de 30, acúmulo, fim da lista                                                                                                                                                                                        |
-| `t-mobile`     | Ordem de empilhamento, alcance do botão Baixar, excluir no toque, sliders, desktop preservado                                                                                                                                                      |
-| `t-baixar`     | Baixar um resultado, vários selecionados e o período inteiro; no celular, ida para a galeria (inclusive com o gesto expirado e em levas), aviso quando o aparelho não salva na galeria, e no computador o conteúdo do `.zip`, progresso e cancelar |
+| Arquivo        | Cobertura                                                                                                                                                                                                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `t-fase1`      | Barra de abas: existe sem dados, alvos de toque, some fora do app, Admin só para admin                                                                                                                                                                                                        |
+| `t-fase2`      | Aba com dados reais, badge, descarte de vencido, estado vazio, lightbox, envio manual                                                                                                                                                                                                         |
+| `t-resultados` | Nome correto na interface, filtro de data, fluxo resultado → canvas                                                                                                                                                                                                                           |
+| `t-paginacao`  | 75 resultados num dia: páginas de 30, acúmulo, fim da lista                                                                                                                                                                                                                                   |
+| `t-mobile`     | Ordem de empilhamento, alcance do botão Baixar, excluir no toque, sliders, desktop preservado                                                                                                                                                                                                 |
+| `t-baixar`     | Baixar um resultado, vários e o período inteiro; no celular, ida para a galeria com poucas E com muitas imagens (inclusive com o gesto expirado e em aparelho com limite por envio), aviso quando o aparelho não salva na galeria, e no computador o conteúdo do `.zip`, progresso e cancelar |
 
 Os testes de `node --test` (`npm run test:unit`) cobrem a parte que não precisa de
 navegador: `zip.test.mjs` grava um `.zip` de verdade e manda o Python abrir — se
@@ -49,6 +49,9 @@ cobrir o caminho da galeria:
 - `galeriaRecusa: true` — faz o menu recusar com `NotAllowedError`, que é o que
   o iOS faz quando o toque do usuário já expirou enquanto as imagens baixavam.
   É o caso que o painel "Salvar na galeria" existe para resolver.
+- `limiteDaGaleria: 12` — aparelho que só aceita 12 arquivos por envio. Serve
+  para conferir que o app descobre esse limite sozinho e vai em levas, em vez de
+  desistir e entregar um `.zip`.
 
 ## Como o mock funciona
 

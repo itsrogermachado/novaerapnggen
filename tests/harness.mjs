@@ -101,6 +101,8 @@ export async function openApp(browser, path, opts = {}) {
     // Faz o menu de compartilhar recusar, como o iOS faz quando o toque do
     // usuário já expirou enquanto as imagens baixavam.
     galeriaRecusa = false,
+    // Quantos arquivos o aparelho aceita por envio. null = sem limite.
+    limiteDaGaleria = null,
   } = opts;
 
   // isMobile/hasTouch fazem o Chromium reportar hover:none e pointer:coarse,
@@ -244,19 +246,26 @@ export async function openApp(browser, path, opts = {}) {
   );
 
   if (comGaleria) {
-    await ctx.addInitScript((recusa) => {
-      // Registra o que foi compartilhado para o teste conferir depois.
-      window.__compartilhados = [];
-      navigator.canShare = (dados) => Array.isArray(dados?.files) && dados.files.length > 0;
-      navigator.share = async (dados) => {
-        if (recusa) {
-          const erro = new Error("gesto expirado");
-          erro.name = "NotAllowedError";
-          throw erro;
-        }
-        window.__compartilhados.push((dados.files || []).map((f) => f.name));
-      };
-    }, galeriaRecusa);
+    await ctx.addInitScript(
+      ([recusa, limite]) => {
+        // Registra o que foi compartilhado para o teste conferir depois.
+        window.__compartilhados = [];
+        const cabe = (dados) =>
+          Array.isArray(dados?.files) &&
+          dados.files.length > 0 &&
+          (limite === null || dados.files.length <= limite);
+        navigator.canShare = cabe;
+        navigator.share = async (dados) => {
+          if (recusa || !cabe(dados)) {
+            const erro = new Error(recusa ? "gesto expirado" : "arquivos demais");
+            erro.name = "NotAllowedError";
+            throw erro;
+          }
+          window.__compartilhados.push((dados.files || []).map((f) => f.name));
+        };
+      },
+      [galeriaRecusa, limiteDaGaleria],
+    );
   }
 
   if (loggedIn) {

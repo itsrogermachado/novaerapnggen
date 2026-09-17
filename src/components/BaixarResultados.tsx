@@ -3,15 +3,6 @@ import { Download, Loader2, X, Package, CalendarDays, ImageDown, FileArchive } f
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -23,7 +14,6 @@ import { PERIODOS_DE_DOWNLOAD, useContagensDeDownload, type Periodo } from "@/ho
 import {
   MAX_POR_ZIP,
   type EntregaNaGaleria,
-  type PerguntaDeFormato,
   type ProgressoDownload,
 } from "@/hooks/useBaixarResultados";
 import { aparelhoSalvaNaGaleria } from "@/lib/baixar";
@@ -282,64 +272,5 @@ export function PainelGaleria({
         </button>
       </div>
     </div>
-  );
-}
-
-/**
- * Com muita imagem, pergunta antes: galeria (um toque por leva) ou .zip (um
- * arquivo só, mas precisa descompactar).
- *
- * A pergunta vem antes de baixar qualquer imagem — perguntar depois seria gastar
- * o 4G da pessoa para só então descobrir que ela queria o outro formato.
- */
-export function PerguntaDeFormatoDialogo({
-  pergunta,
-  aoResponder,
-  aoFechar,
-}: {
-  pergunta: PerguntaDeFormato;
-  aoResponder: (escolha: "galeria" | "zip") => void;
-  aoFechar: () => void;
-}) {
-  const quantas = pergunta.resultados.length;
-
-  return (
-    <AlertDialog open onOpenChange={(aberto) => !aberto && aoFechar()}>
-      <AlertDialogContent className="max-w-sm rounded-sm">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="text-base">
-            Como quer levar as {quantas} imagens?
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-sm leading-snug">
-            Na galeria elas ficam junto das suas fotos, mas o celular pede uma confirmação a cada
-            leva. Em .zip vem tudo de uma vez, e você abre em Arquivos para descompactar.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <div className="flex flex-col gap-2">
-          <Button
-            onClick={() => aoResponder("galeria")}
-            data-testid="escolher-galeria"
-            className="h-12 rounded-sm bg-primary font-bold text-primary-foreground hover:bg-primary/90"
-          >
-            <ImageDown className="mr-2 h-4 w-4" />
-            Salvar na galeria
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => aoResponder("zip")}
-            data-testid="escolher-zip"
-            className="h-12 rounded-sm font-bold"
-          >
-            <FileArchive className="mr-2 h-4 w-4" />
-            Baixar em .zip
-          </Button>
-        </div>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel className="h-10 rounded-sm">Cancelar</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }

@@ -209,18 +209,75 @@ export function aparelhoSalvaNaGaleria(): boolean {
 }
 
 /**
+ * Teto de arquivos por envio.
+ *
+ * Não é limite de norma nenhuma — é prudência: entregar mil imagens de uma vez
+ * ao sistema trava o menu de compartilhar. Abaixo disso, quem decide é o
+ * aparelho (veja `maiorEnvioPossivel`).
+ */
+export const TETO_POR_ENVIO = 100;
+
+/**
+ * Quantos arquivos este aparelho topa mandar de uma vez.
+ *
+ * Nenhum navegador publica esse número, então em vez de chutar baixo — o que
+ * transformaria um mês de resultados em dezenas de toques — a gente pergunta:
+ * tenta o lote inteiro e vai pela metade até o aparelho aceitar. Um toque
+ * resolve o dia; dois ou três resolvem o mês.
+ *
+ * `aceita` é injetável para o teste poder simular aparelhos com limites
+ * diferentes sem navegador.
+ */
+export function maiorEnvioPossivel(
+  itens: ArquivoPronto[],
+  {
+    teto = TETO_POR_ENVIO,
+    maxBytes = 150 * 1024 * 1024,
+    aceita = podeCompartilhar,
+  }: {
+    teto?: number;
+    maxBytes?: number;
+    aceita?: (itens: ArquivoPronto[]) => boolean;
+  } = {},
+): number {
+  if (itens.length === 0) return 1;
+
+  // Teto por peso: o aparelho pode aceitar a contagem e engasgar no tamanho.
+  let alto = Math.min(teto, itens.length);
+  let bytes = 0;
+  for (let i = 0; i < alto; i++) {
+    bytes += itens[i].blob.size;
+    if (bytes > maxBytes) {
+      alto = Math.max(1, i);
+      break;
+    }
+  }
+
+  if (aceita(itens.slice(0, alto))) return alto;
+
+  // Busca binária pelo maior que ainda passa. Ir só cortando pela metade daria
+  // 11 num aparelho que aceita 20 — e cada envio a menos é um toque a mais para
+  // quem está salvando o mês inteiro.
+  let baixo = 1;
+  while (alto - baixo > 1) {
+    const meio = Math.floor((baixo + alto) / 2);
+    if (aceita(itens.slice(0, meio))) baixo = meio;
+    else alto = meio;
+  }
+  return baixo;
+}
+
+/**
  * Quebra a lista em envios do tamanho que o menu de compartilhar aguenta.
  *
- * Nenhum navegador diz qual é o limite, e mandar tudo de uma vez trava o menu
- * (ou é recusado sem explicação) quando são dezenas de imagens. Cada envio pede
- * um toque — e é bom que peça: toque novo é gesto novo, que é justamente o que
- * o `navigator.share` exige.
+ * Cada envio pede um toque — e é bom que peça: toque novo é gesto novo, que é
+ * justamente o que o `navigator.share` exige.
  */
 export function dividirParaCompartilhar(
   itens: ArquivoPronto[],
   {
-    maxArquivos = 20,
-    maxBytes = 50 * 1024 * 1024,
+    maxArquivos = TETO_POR_ENVIO,
+    maxBytes = 150 * 1024 * 1024,
   }: { maxArquivos?: number; maxBytes?: number } = {},
 ): ArquivoPronto[][] {
   const lotes: ArquivoPronto[][] = [];

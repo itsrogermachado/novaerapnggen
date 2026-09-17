@@ -10,6 +10,7 @@ import {
   dataCurta,
   dividirParaCompartilhar,
   extensaoDe,
+  maiorEnvioPossivel,
   nomeDoResultado,
   nomeDoZip,
   nomesUnicos,
@@ -162,4 +163,30 @@ test("dividirParaCompartilhar quebra em levas que o menu aguenta", () => {
   );
 
   assert.deepEqual(dividirParaCompartilhar([]), []);
+});
+
+test("maiorEnvioPossivel pergunta ao aparelho em vez de chutar", () => {
+  const itens = (n, tamanho = 10) =>
+    Array.from({ length: n }, () => ({ nome: "x.png", blob: new Blob([new Uint8Array(tamanho)]) }));
+
+  // Aparelho generoso: manda tudo de uma vez, um toque só.
+  assert.equal(maiorEnvioPossivel(itens(60), { aceita: () => true }), 60);
+
+  // Aparelho com limite: acha o limite exato, não um número qualquer abaixo
+  // dele — cada imagem a mais por envio é um toque a menos para o usuário.
+  const ate25 = (lote) => lote.length <= 25;
+  assert.equal(maiorEnvioPossivel(itens(80), { aceita: ate25 }), 25);
+  assert.equal(maiorEnvioPossivel(itens(25), { aceita: ate25 }), 25);
+  assert.equal(maiorEnvioPossivel(itens(80), { aceita: (l) => l.length <= 7 }), 7);
+
+  // Aparelho que só aceita uma por vez ainda funciona — em vez de desistir.
+  assert.equal(maiorEnvioPossivel(itens(30), { aceita: (l) => l.length === 1 }), 1);
+
+  // O teto protege de entregar mil arquivos ao sistema de uma vez.
+  assert.equal(maiorEnvioPossivel(itens(500), { teto: 100, aceita: () => true }), 100);
+
+  // Peso também limita: 10 imagens de 400 bytes com teto de 1000 dá 2.
+  assert.equal(maiorEnvioPossivel(itens(10, 400), { maxBytes: 1000, aceita: () => true }), 2);
+
+  assert.equal(maiorEnvioPossivel([], { aceita: () => true }), 1);
 });

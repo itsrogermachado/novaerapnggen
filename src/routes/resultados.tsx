@@ -6,7 +6,6 @@ import { useBaixarResultados } from "@/hooks/useBaixarResultados";
 import {
   MenuBaixarPeriodo,
   PainelGaleria,
-  PerguntaDeFormatoDialogo,
   ProgressoDoDownload,
 } from "@/components/BaixarResultados";
 import { Button } from "@/components/ui/button";
@@ -65,7 +64,6 @@ function ResultadosPage() {
   const {
     progresso,
     galeria,
-    pergunta,
     ocupado,
     cancelar,
     baixarResultados,
@@ -73,8 +71,6 @@ function ResultadosPage() {
     salvarNaGaleria,
     baixarPendenteComoZip,
     fecharGaleria,
-    responderPergunta,
-    fecharPergunta,
   } = useBaixarResultados();
 
   const alternarSelecao = useCallback((id: string) => {
@@ -371,14 +367,6 @@ function ResultadosPage() {
             aoSalvar={salvarNaGaleria}
             aoBaixarZip={baixarPendenteComoZip}
             aoFechar={fecharGaleria}
-          />
-        )}
-
-        {pergunta && (
-          <PerguntaDeFormatoDialogo
-            pergunta={pergunta}
-            aoResponder={responderPergunta}
-            aoFechar={fecharPergunta}
           />
         )}
 

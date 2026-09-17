@@ -9,6 +9,7 @@ import {
   dividirParaCompartilhar,
   ehAparelhoDeToque,
   extensaoDe,
+  maiorEnvioPossivel,
   nomeDoResultado,
   nomeDoZip,
   tentarCompartilhar,
@@ -20,25 +21,13 @@ import { safeLogError } from "@/lib/log";
 /**
  * Quantos resultados cabem em um .zip antes de começar a segunda parte.
  *
- * O limite é a memória do celular, não o formato: um mês cheio passa de mil
- * prints, e montar isso em um arquivo só derruba a aba. Em partes, o pico fica
- * no tamanho de uma parte — e cada parte já chega inteira no aparelho, em vez de
- * tudo falhar no fim.
+ * Vale só para o caminho do .zip (computador, ou celular que não sabe salvar na
+ * galeria). O limite é a memória: um mês cheio num arquivo só derruba a aba.
  */
 export const MAX_POR_ZIP = 100;
 
-/**
- * Acima disto, no celular, perguntamos antes se é para ir para a galeria ou vir
- * em .zip.
- *
- * A galeria pede um toque a cada envio; com muita imagem isso vira dezenas de
- * toques, e quem quer o mês inteiro talvez prefira um arquivo só. A pergunta vem
- * antes de baixar qualquer imagem para ninguém gastar 4G à toa.
- */
-export const MUITAS_PARA_GALERIA = 40;
-
 /** Quantas imagens buscar ao mesmo tempo. */
-const PARALELAS = 5;
+const PARALELAS = 8;
 
 export type FaseDoDownload = "procurando" | "baixando" | "compactando" | "salvando";
 
@@ -58,8 +47,8 @@ export interface ProgressoDownload {
  * Existe por causa de uma regra do navegador: `navigator.share` só abre com um
  * toque recente. Entre o toque em "Baixar" e as imagens chegarem da rede pode
  * passar tempo demais, e aí o aparelho recusa. Guardando as imagens prontas, o
- * toque em "Salvar na galeria" chama o compartilhamento na hora — gesto novo,
- * imagem em mãos, sem rede no meio.
+ * toque em "Salvar na galeria" chama o menu na hora — gesto novo, imagem em
+ * mãos, sem rede no meio.
  */
 export interface EntregaNaGaleria {
   lotes: ArquivoPronto[][];
@@ -69,14 +58,8 @@ export interface EntregaNaGaleria {
   salvas: number;
   total: number;
   rotulo: string;
-  /** true quando o aparelho recusou o menu na primeira tentativa. */
+  /** true quando o aparelho recusou o menu e o toque precisa ser repetido. */
   precisouDeOutroToque: boolean;
-}
-
-/** Pergunta pendente: muita imagem no celular, galeria ou .zip? */
-export interface PerguntaDeFormato {
-  resultados: Resultado[];
-  rotulo: string;
 }
 
 interface Coleta {
@@ -88,19 +71,28 @@ function esperar(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** Refaz a divisão do que falta, em levas menores. */
+function redividir(entrega: EntregaNaGaleria, maxArquivos: number): EntregaNaGaleria["lotes"] {
+  const restantes = entrega.lotes.slice(entrega.enviados).flat();
+  return [
+    ...entrega.lotes.slice(0, entrega.enviados),
+    ...dividirParaCompartilhar(restantes, { maxArquivos }),
+  ];
+}
+
 /**
  * Traz resultados da aba para o aparelho: um, vários escolhidos, ou um período
  * inteiro.
  *
- * No celular o destino é a galeria, que é onde a foto serve para alguma coisa;
- * o .zip existe para o computador e para quando o aparelho não sabe salvar na
- * galeria — e nesse caso o usuário é avisado, em vez de receber um .zip sem
- * entender por quê.
+ * No celular o destino é sempre a galeria, pouca ou muita imagem — é lá que o
+ * print serve para alguma coisa, e é bem mais rápido do que salvar um .zip e ir
+ * descompactar no Arquivos. O .zip fica para o computador, para o aparelho que
+ * não sabe salvar na galeria (que é avisado do porquê) e para quem preferir:
+ * continua a um toque de distância no painel.
  */
 export function useBaixarResultados() {
   const [progresso, setProgresso] = useState<ProgressoDownload | null>(null);
   const [galeria, setGaleria] = useState<EntregaNaGaleria | null>(null);
-  const [pergunta, setPergunta] = useState<PerguntaDeFormato | null>(null);
   const abortarRef = useRef<AbortController | null>(null);
   // O estado não serve para decidir se já tem download rodando: dois cliques no
   // mesmo instante leem o mesmo `null` antes de o React re-renderizar.
@@ -188,15 +180,13 @@ export function useBaixarResultados() {
 
   /** Empacota o que já está em mãos e manda para a pasta de downloads. */
   const baixarComoZip = useCallback(
-    async (itens: ArquivoPronto[], rotulo: string, signal?: AbortSignal) => {
+    async (itens: ArquivoPronto[], rotulo: string) => {
       const partes = Math.ceil(itens.length / MAX_POR_ZIP);
       for (let p = 0; p < partes; p++) {
-        if (signal?.aborted) return;
         const fatia = itens.slice(p * MAX_POR_ZIP, (p + 1) * MAX_POR_ZIP);
         avancar({ fase: "compactando", parte: p + 1, partes });
 
         const zip = await criarZip(fatia.map((i) => ({ nome: i.nome, dados: i.blob })));
-        if (signal?.aborted) return;
         baixarArquivo({ blob: zip, nome: nomeDoZip(rotulo, p + 1, partes) });
         // Um respiro entre as partes: disparadas juntas, o navegador descarta
         // as últimas.
@@ -215,8 +205,9 @@ export function useBaixarResultados() {
   );
 
   /**
-   * Manda um lote para a galeria. Chamado direto do clique, sem nenhum `await`
-   * antes — é o que mantém o gesto do usuário válido para o `navigator.share`.
+   * Manda a próxima leva para a galeria. Chamado direto do clique, sem nenhum
+   * `await` antes — é o que mantém o gesto do usuário válido para o
+   * `navigator.share`.
    */
   const salvarNaGaleria = useCallback(async () => {
     const atual = galeriaRef.current;
@@ -228,6 +219,18 @@ export function useBaixarResultados() {
     if (fim === "cancelado") return; // o painel fica, dá para tentar de novo
 
     if (fim === "recusado") {
+      // Pode ser leva grande demais para este aparelho, ou gesto expirado. Se
+      // era grande, tenta metade na próxima — em vez de desistir da galeria.
+      if (lote.length > 1) {
+        const menor = Math.max(1, Math.floor(lote.length / 2));
+        guardarGaleria({
+          ...atual,
+          lotes: redividir(atual, menor),
+          precisouDeOutroToque: true,
+        });
+        toast.info("O celular recusou tantas de uma vez — vai em levas menores.");
+        return;
+      }
       toast.error("Este aparelho não abriu o menu para salvar na galeria.");
       guardarGaleria({ ...atual, precisouDeOutroToque: true });
       return;
@@ -245,7 +248,7 @@ export function useBaixarResultados() {
       );
       return;
     }
-    guardarGaleria({ ...atual, enviados, salvas });
+    guardarGaleria({ ...atual, enviados, salvas, precisouDeOutroToque: false });
   }, [guardarGaleria]);
 
   /** Desistiu da galeria: leva o que já foi baixado em .zip. */
@@ -274,23 +277,17 @@ export function useBaixarResultados() {
   }, [baixarComoZip, guardarGaleria]);
 
   const fecharGaleria = useCallback(() => guardarGaleria(null), [guardarGaleria]);
-  const fecharPergunta = useCallback(() => setPergunta(null), []);
 
   /** O trabalho em si: busca as imagens e entrega pelo caminho certo. */
   const entregarLote = useCallback(
-    async (
-      resultados: Resultado[],
-      rotulo: string,
-      signal: AbortSignal,
-      { forcarZip = false }: { forcarZip?: boolean } = {},
-    ) => {
+    async (resultados: Resultado[], rotulo: string, signal: AbortSignal) => {
       const total = resultados.length;
       const nomear = criarNomeador();
       let prontos = 0;
 
       // O caminho é decidido ANTES de buscar imagem: é o que permite avisar na
       // hora certa quando a galeria não é possível.
-      const paraGaleria = !forcarZip && aparelhoSalvaNaGaleria();
+      const paraGaleria = aparelhoSalvaNaGaleria();
 
       setProgresso({
         fase: "baixando",
@@ -302,7 +299,7 @@ export function useBaixarResultados() {
       });
       const contarUma = (parte: number) => () => avancar({ prontos: ++prontos, parte });
 
-      // --- celular: direto para a galeria ---
+      // --- celular: direto para a galeria, pouca ou muita imagem ---
       if (paraGaleria) {
         const coleta = await coletar(resultados, nomear, signal, contarUma(1));
         if (signal.aborted) return;
@@ -315,7 +312,10 @@ export function useBaixarResultados() {
           return;
         }
 
-        const lotes = dividirParaCompartilhar(coleta.itens);
+        // Quantas cabem por envio quem diz é o aparelho, não um número chutado:
+        // é isso que faz um mês inteiro caber em poucos toques.
+        const porEnvio = maiorEnvioPossivel(coleta.itens);
+        const lotes = dividirParaCompartilhar(coleta.itens, { maxArquivos: porEnvio });
         avancar({ fase: "salvando" });
 
         // Tenta já: quando a busca foi rápida, o toque original ainda vale e a
@@ -332,7 +332,7 @@ export function useBaixarResultados() {
           return;
         }
 
-        // Sobrou lote, ou o aparelho recusou (gesto expirado durante a busca),
+        // Sobrou leva, ou o aparelho recusou (gesto expirado durante a busca),
         // ou a pessoa fechou o menu: o painel assume daqui.
         guardarGaleria({
           lotes,
@@ -347,7 +347,7 @@ export function useBaixarResultados() {
       }
 
       // --- computador, ou aparelho que não salva na galeria ---
-      if (!forcarZip && ehAparelhoDeToque()) {
+      if (ehAparelhoDeToque()) {
         toast.warning("Este navegador não salva direto na galeria — vai baixar em .zip.", {
           description: "Abra o arquivo em Arquivos/Downloads para descompactar.",
           duration: 8_000,
@@ -432,42 +432,16 @@ export function useBaixarResultados() {
     }
   }, []);
 
-  /**
-   * Começa a entrega. Com muita imagem no celular, pergunta o formato antes —
-   * a pergunta vem antes de gastar rede, não depois.
-   */
-  const comecar = useCallback(
-    (resultados: Resultado[], rotulo: string) => {
+  /** Baixa resultados que já estão na tela: um, ou os selecionados. */
+  const baixarResultados = useCallback(
+    (resultados: Resultado[], rotulo = "selecionados") => {
       if (resultados.length === 0) {
         toast.info("Nenhum resultado para baixar.");
-        return Promise.resolve();
-      }
-      if (resultados.length > MUITAS_PARA_GALERIA && aparelhoSalvaNaGaleria()) {
-        setPergunta({ resultados, rotulo });
         return Promise.resolve();
       }
       return rodar((signal) => entregarLote(resultados, rotulo, signal));
     },
     [entregarLote, rodar],
-  );
-
-  /** Resposta da pergunta de formato. */
-  const responderPergunta = useCallback(
-    (escolha: "galeria" | "zip") => {
-      const atual = pergunta;
-      setPergunta(null);
-      if (!atual) return Promise.resolve();
-      return rodar((signal) =>
-        entregarLote(atual.resultados, atual.rotulo, signal, { forcarZip: escolha === "zip" }),
-      );
-    },
-    [entregarLote, pergunta, rodar],
-  );
-
-  /** Baixa resultados que já estão na tela: um, ou os selecionados. */
-  const baixarResultados = useCallback(
-    (resultados: Resultado[], rotulo = "selecionados") => comecar(resultados, rotulo),
-    [comecar],
   );
 
   /** Baixa o período inteiro — inclusive o que a lista ainda não carregou. */
@@ -486,12 +460,6 @@ export function useBaixarResultados() {
           toast.info(`Nenhum resultado em "${rotulo}".`);
           return;
         }
-        // A pergunta de formato não cabe aqui dentro (já estamos "ocupados"),
-        // então a listagem termina e a entrega recomeça por `comecar`.
-        if (lista.length > MUITAS_PARA_GALERIA && aparelhoSalvaNaGaleria()) {
-          setPergunta({ resultados: lista, rotulo });
-          return;
-        }
         await entregarLote(lista, rotulo, signal);
       }),
     [avancar, entregarLote, rodar],
@@ -500,7 +468,6 @@ export function useBaixarResultados() {
   return {
     progresso,
     galeria,
-    pergunta,
     ocupado: progresso !== null || galeria !== null,
     cancelar,
     baixarResultados,
@@ -508,7 +475,5 @@ export function useBaixarResultados() {
     salvarNaGaleria,
     baixarPendenteComoZip,
     fecharGaleria,
-    responderPergunta,
-    fecharPergunta,
   };
 }

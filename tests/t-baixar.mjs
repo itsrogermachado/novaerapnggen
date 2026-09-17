@@ -299,7 +299,7 @@ console.log("\n[celular com galeria] gesto expirado vira botão Salvar na galeri
   await ctx.close();
 }
 
-console.log("\n[celular com galeria] lote grande pergunta o formato antes de gastar rede");
+console.log("\n[celular com galeria] MUITAS imagens também vão para a galeria, sem zip");
 {
   const { ctx, page } = await openApp(b, "/resultados", {
     viewport: PHONE,
@@ -308,41 +308,71 @@ console.log("\n[celular com galeria] lote grande pergunta o formato antes de gas
   });
   await page.waitForTimeout(1000);
 
-  // A lista vem de 30 em 30; sem carregar a segunda página, "Selecionar todos"
-  // marcaria só 30 e a pergunta (que começa em 40) nem apareceria.
+  // A lista vem de 30 em 30; sem a segunda página, "Selecionar todos" marcaria
+  // só 30 e o caso de "muitas imagens" nem seria exercitado.
   await page.getByRole("button", { name: "Carregar mais" }).click();
   await page.waitForTimeout(900);
-
   await page.getByRole("button", { name: "Selecionar todos" }).click();
   ok(await page.getByText("45 selecionados").isVisible(), "marcou as 45");
+
   await page.getByRole("button", { name: "Baixar", exact: true }).click();
-  await page.waitForTimeout(500);
-
-  ok(
-    await page.getByTestId("escolher-galeria").isVisible(),
-    "com 45 imagens, pergunta galeria ou .zip",
-  );
-  ok(await page.getByTestId("escolher-zip").isVisible(), "e oferece o .zip na mesma pergunta");
-
-  await page.getByTestId("escolher-galeria").click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(4000);
 
   const enviados = await page.evaluate(() => window.__compartilhados);
-  ok(enviados.length >= 1, "escolher a galeria manda a primeira leva");
+  const nomes = enviados.flat();
+  ok(nomes.length === 45, `as 45 foram para a galeria (${nomes.length})`);
+  ok(enviados.length === 1, `num toque só, sem pergunta no meio (${enviados.length} envio(s))`);
   ok(
-    enviados[0]?.length <= 20,
-    `a leva respeita o limite do menu (${enviados[0]?.length} imagens)`,
+    nomes.every((n) => NOME_DE_IMAGEM.test(n)),
+    "todas como imagem, nenhuma .zip",
   );
-  const painel = page.getByTestId("painel-galeria");
-  ok(await painel.isVisible(), "e o painel fica para as levas seguintes");
+  ok(new Set(nomes).size === nomes.length, "sem imagem repetida");
+  ok(
+    (await page.getByTestId("painel-galeria").count()) === 0,
+    "acabou de uma vez: nada pendente na tela",
+  );
+  await ctx.close();
+}
 
-  // O ponto do painel: o toque nele chama o menu na hora, com gesto novo.
-  await page.waitForTimeout(500);
-  await painel.getByTestId("salvar-na-galeria").click();
-  await page.waitForTimeout(800);
-  const depois = await page.evaluate(() => window.__compartilhados);
-  ok(depois.length === enviados.length + 1, `o toque mandou a leva seguinte (${depois.length})`);
-  ok(depois.flat().length === new Set(depois.flat()).size, "nenhuma imagem foi mandada duas vezes");
+console.log("\n[celular com galeria] aparelho com limite vai em levas, e não em .zip");
+{
+  // Aparelho que só aceita 12 arquivos por envio: 45 imagens = 4 levas.
+  const { ctx, page } = await openApp(b, "/resultados", {
+    viewport: PHONE,
+    signals: sinaisNoStorage(45),
+    comGaleria: true,
+    limiteDaGaleria: 12,
+  });
+  await page.waitForTimeout(1000);
+  await page.getByRole("button", { name: "Carregar mais" }).click();
+  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: "Selecionar todos" }).click();
+  await page.getByRole("button", { name: "Baixar", exact: true }).click();
+  await page.waitForTimeout(4000);
+
+  const primeiro = await page.evaluate(() => window.__compartilhados);
+  ok(primeiro.length === 1, "mandou a primeira leva sozinho");
+  ok(
+    primeiro[0]?.length === 12,
+    `usou o maior envio que o aparelho aceita (${primeiro[0]?.length} de 12)`,
+  );
+
+  const painel = page.getByTestId("painel-galeria");
+  await painel.waitFor({ state: "visible", timeout: 8_000 });
+  ok(true, "o painel assume as levas seguintes");
+
+  // Toca até o fim: tem que salvar as 45, sem repetir e sem virar .zip.
+  for (let i = 0; i < 4; i++) {
+    if ((await painel.count()) === 0) break;
+    await page.waitForTimeout(400);
+    await painel.getByTestId("salvar-na-galeria").click();
+    await page.waitForTimeout(700);
+  }
+
+  const todos = (await page.evaluate(() => window.__compartilhados)).flat();
+  ok(todos.length === 45, `as 45 chegaram na galeria (${todos.length})`);
+  ok(new Set(todos).size === 45, "nenhuma repetida entre as levas");
+  ok((await page.getByTestId("painel-galeria").count()) === 0, "painel fecha ao terminar");
   await ctx.close();
 }
 
