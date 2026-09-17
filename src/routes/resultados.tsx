@@ -1,7 +1,9 @@
 import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuth, temSessaoLocal } from "@/lib/auth";
-import { useResultados, PERIODOS, type Periodo } from "@/hooks/useResultados";
+import { useResultados, PERIODOS, type Periodo, type Resultado } from "@/hooks/useResultados";
+import { useBaixarResultados } from "@/hooks/useBaixarResultados";
+import { MenuBaixarPeriodo, ProgressoDoDownload } from "@/components/BaixarResultados";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -17,6 +19,7 @@ import {
   RefreshCw,
   Check,
   Wand2,
+  Download,
 } from "lucide-react";
 import { formatTimeAgo, formatCountdown } from "@/lib/time";
 import { AppNavInline } from "@/components/AppNav";
@@ -52,8 +55,9 @@ function ResultadosPage() {
   } = useResultados(periodo);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  // Seleção para levar vários resultados de uma vez ao estúdio.
+  // Seleção para levar vários resultados de uma vez ao estúdio — ou baixá-los.
   const [selecionados, setSelecionados] = useState<string[]>([]);
+  const { progresso, ocupado, cancelar, baixarResultados, baixarPeriodo } = useBaixarResultados();
 
   const alternarSelecao = useCallback((id: string) => {
     setSelecionados((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -66,6 +70,25 @@ function ResultadosPage() {
     },
     [navigate],
   );
+
+  const porId = useMemo(() => new Map(images.map((i) => [i.id, i])), [images]);
+  const escolhidos = useMemo(
+    () => selecionados.map((id) => porId.get(id)).filter((r): r is Resultado => Boolean(r)),
+    [selecionados, porId],
+  );
+
+  const baixarUm = useCallback(
+    (resultado: Resultado) => baixarResultados([resultado], "resultado"),
+    [baixarResultados],
+  );
+
+  const rotuloDoPeriodo = PERIODOS.find((p) => p.valor === periodo)?.rotulo ?? "resultados";
+  const todosMarcados = images.length > 0 && selecionados.length === images.length;
+
+  const alternarTodos = useCallback(() => {
+    setSelecionados((p) => (p.length === images.length ? [] : images.map((i) => i.id)));
+  }, [images]);
+
   const [, setTick] = useState(0);
 
   // Redirect unauthenticated users
@@ -185,20 +208,40 @@ function ResultadosPage() {
           ))}
         </div>
 
-        {/* Stats bar */}
-        {images && images.length > 0 && (
-          <div className="animate-fade-in mb-6 flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 rounded-sm border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
-              <ImageIcon className="h-3.5 w-3.5" />
-              {images.length}
-              {hasNextPage ? "+" : ""} {images.length === 1 ? "resultado" : "resultados"}
-            </div>
-            <div className="flex items-center gap-1.5 rounded-sm border border-border/40 bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              Atualiza a cada 30s
-            </div>
+        {/* Contagem e ações em lote. A barra aparece mesmo com a lista vazia:
+            "Baixar tudo" não depende do filtro da tela, e é justamente com o dia
+            vazio que alguém vai querer o mês inteiro. */}
+        <div className="animate-fade-in mb-6 flex flex-wrap items-center gap-2">
+          {images.length > 0 && (
+            <>
+              <div className="flex items-center gap-1.5 rounded-sm border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                <ImageIcon className="h-3.5 w-3.5" />
+                {images.length}
+                {hasNextPage ? "+" : ""} {images.length === 1 ? "resultado" : "resultados"}
+              </div>
+              <div className="hidden items-center gap-1.5 rounded-sm border border-border/40 bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground sm:flex">
+                <Clock className="h-3.5 w-3.5" />
+                Atualiza a cada 30s
+              </div>
+            </>
+          )}
+
+          <div className="ml-auto flex items-center gap-2">
+            {images.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={alternarTodos}
+                aria-pressed={todosMarcados}
+                className="h-10 rounded-sm border-border text-xs font-bold"
+              >
+                <Check className="mr-1.5 h-3.5 w-3.5" />
+                {todosMarcados ? "Limpar seleção" : "Selecionar todos"}
+              </Button>
+            )}
+            <MenuBaixarPeriodo aoEscolher={baixarPeriodo} ocupado={ocupado} />
           </div>
-        )}
+        </div>
 
         {/* Loading state */}
         {isLoading && (
@@ -255,35 +298,51 @@ function ResultadosPage() {
           </div>
         )}
 
-        {/* Barra de ação da seleção */}
-        {selecionados.length > 0 && (
+        {/* Barra de ação da seleção. Some enquanto um download roda — as duas
+            barras ficam no mesmo canto da tela e uma cobriria a outra. */}
+        {selecionados.length > 0 && !ocupado && (
           <div
             className="fixed inset-x-0 z-40 px-4 animate-fade-in"
             style={{ bottom: "calc(56px + env(safe-area-inset-bottom, 0px) + 12px)" }}
           >
-            <div className="mx-auto flex max-w-lg items-center gap-2 rounded-sm border border-primary/30 bg-card/95 p-2 shadow-2xl backdrop-blur-sm">
-              <span className="pl-2 text-xs font-bold tabular-nums">
-                {selecionados.length} {selecionados.length === 1 ? "selecionado" : "selecionados"}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelecionados([])}
-                className="ml-auto h-9 text-xs text-muted-foreground"
-              >
-                Limpar
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => usarNoEstudio(selecionados)}
-                className="h-9 rounded-sm bg-primary font-bold text-primary-foreground hover:bg-primary/90"
-              >
-                <Wand2 className="mr-1.5 h-3.5 w-3.5" />
-                Usar no estúdio
-              </Button>
+            <div className="mx-auto max-w-lg rounded-sm border border-primary/30 bg-card/95 p-2 shadow-2xl backdrop-blur-sm">
+              <div className="flex items-center gap-2 px-1 pb-2">
+                <span className="text-xs font-bold tabular-nums">
+                  {selecionados.length} {selecionados.length === 1 ? "selecionado" : "selecionados"}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelecionados([])}
+                  className="ml-auto h-8 text-xs text-muted-foreground"
+                >
+                  Limpar
+                </Button>
+              </div>
+              {/* Em duas linhas: no celular os dois botões lado a lado com a
+                  contagem não cabem sem virar alvo pequeno demais. */}
+              <div className="flex items-stretch gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => baixarResultados(escolhidos, rotuloDoPeriodo)}
+                  className="h-11 flex-1 rounded-sm border-primary/40 bg-primary/5 font-bold text-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  <Download className="mr-1.5 h-4 w-4" />
+                  Baixar
+                </Button>
+                <Button
+                  onClick={() => usarNoEstudio(selecionados)}
+                  className="h-11 flex-1 rounded-sm bg-primary font-bold text-primary-foreground hover:bg-primary/90"
+                >
+                  <Wand2 className="mr-1.5 h-4 w-4" />
+                  Usar no estúdio
+                </Button>
+              </div>
             </div>
           </div>
         )}
+
+        {progresso && <ProgressoDoDownload progresso={progresso} aoCancelar={cancelar} />}
 
         {/* Image grid */}
         {images && images.length > 0 && (
@@ -320,19 +379,33 @@ function ResultadosPage() {
                   <Check className="h-5 w-5" strokeWidth={3} />
                 </button>
 
-                {/* Atalho para levar só este resultado */}
-                <button
-                  type="button"
-                  aria-label="Usar este resultado no estúdio"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    usarNoEstudio([img.id]);
-                  }}
-                  className="absolute right-2 top-2 z-20 flex h-11 items-center gap-1.5 rounded-sm border-2 border-white/70 bg-black/35 px-2.5 text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition-colors hover:bg-primary hover:border-primary"
-                >
-                  <Wand2 className="h-4 w-4" />
-                  Usar
-                </button>
+                {/* Atalhos do resultado: baixar só este, ou levá-lo ao estúdio.
+                    Sempre visíveis — no toque não existe hover. */}
+                <div className="absolute right-2 top-2 z-20 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    aria-label="Baixar este resultado"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      baixarUm(img);
+                    }}
+                    className="flex h-11 w-11 items-center justify-center rounded-sm border-2 border-white/70 bg-black/35 text-white backdrop-blur-sm transition-colors hover:border-primary hover:bg-primary"
+                  >
+                    <Download className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Usar este resultado no estúdio"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      usarNoEstudio([img.id]);
+                    }}
+                    className="flex h-11 items-center gap-1.5 rounded-sm border-2 border-white/70 bg-black/35 px-2.5 text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition-colors hover:border-primary hover:bg-primary"
+                  >
+                    <Wand2 className="h-4 w-4" />
+                    Usar
+                  </button>
+                </div>
 
                 {/* Image */}
                 <div className="aspect-[4/3] overflow-hidden bg-muted">
@@ -411,17 +484,30 @@ function ResultadosPage() {
             onClick={(e) => e.stopPropagation()}
           />
 
-          {/* Usar no estúdio, direto do lightbox */}
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              usarNoEstudio([images[lightboxIndex].id]);
-            }}
-            className="absolute bottom-24 left-1/2 z-10 h-11 -translate-x-1/2 rounded-sm bg-primary px-5 font-bold text-primary-foreground hover:bg-primary/90"
-          >
-            <Wand2 className="mr-2 h-4 w-4" />
-            Usar no estúdio
-          </Button>
+          {/* Baixar e usar no estúdio, direto do lightbox */}
+          <div className="absolute bottom-24 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                baixarUm(images[lightboxIndex]);
+              }}
+              className="h-11 rounded-sm border-white/40 bg-white/10 px-5 font-bold text-white backdrop-blur-md hover:bg-white/20 hover:text-white"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Baixar
+            </Button>
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                usarNoEstudio([images[lightboxIndex].id]);
+              }}
+              className="h-11 rounded-sm bg-primary px-5 font-bold text-primary-foreground hover:bg-primary/90"
+            >
+              <Wand2 className="mr-2 h-4 w-4" />
+              Usar no estúdio
+            </Button>
+          </div>
 
           {/* Info bar */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-5 py-2.5 rounded-sm bg-white/10 backdrop-blur-md text-white text-sm font-medium">

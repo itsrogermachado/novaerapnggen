@@ -14,6 +14,7 @@ const arquivos = [
   "t-paginacao",
   "t-mobile",
   "t-404-abas",
+  "t-baixar",
   "t-senha",
   "t-composicao",
 ];
