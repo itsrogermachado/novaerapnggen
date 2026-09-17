@@ -1,7 +1,16 @@
-import { useState } from "react";
-import { Download, Loader2, X, Package, CalendarDays } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Download, Loader2, X, Package, CalendarDays, ImageDown, FileArchive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +20,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PERIODOS_DE_DOWNLOAD, useContagensDeDownload, type Periodo } from "@/hooks/useResultados";
-import { MAX_POR_ZIP, type ProgressoDownload } from "@/hooks/useBaixarResultados";
+import {
+  MAX_POR_ZIP,
+  type EntregaNaGaleria,
+  type PerguntaDeFormato,
+  type ProgressoDownload,
+} from "@/hooks/useBaixarResultados";
+import { aparelhoSalvaNaGaleria } from "@/lib/baixar";
+
+/**
+ * true quando este aparelho salva imagem direto na galeria.
+ *
+ * A resposta só existe no navegador, então começa em `false` e é corrigida
+ * depois de montar — se fosse lida na renderização, o servidor e o cliente
+ * escreveriam textos diferentes e a hidratação reclamaria.
+ */
+function useSalvaNaGaleria(): boolean {
+  const [sim, setSim] = useState(false);
+  useEffect(() => setSim(aparelhoSalvaNaGaleria()), []);
+  return sim;
+}
 
 /**
  * Menu "Baixar tudo": o dia, a semana e o mês.
@@ -29,6 +57,7 @@ export function MenuBaixarPeriodo({
 }) {
   const [aberto, setAberto] = useState(false);
   const contagens = useContagensDeDownload(aberto);
+  const naGaleria = useSalvaNaGaleria();
 
   return (
     <DropdownMenu open={aberto} onOpenChange={setAberto} modal={false}>
@@ -80,7 +109,9 @@ export function MenuBaixarPeriodo({
 
         <DropdownMenuSeparator />
         <p className="px-2 py-1.5 text-[11px] leading-snug text-muted-foreground">
-          Mais de um resultado vem num arquivo .zip. Acima de {MAX_POR_ZIP}, em partes.
+          {naGaleria
+            ? "As imagens vão direto para a galeria do celular."
+            : `Mais de um resultado vem num arquivo .zip. Acima de ${MAX_POR_ZIP}, em partes.`}
         </p>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -161,5 +192,154 @@ export function ProgressoDoDownload({
         />
       </div>
     </div>
+  );
+}
+
+/**
+ * Painel "Salvar na galeria".
+ *
+ * Existe por uma regra do navegador, não por gosto: `navigator.share` só abre
+ * com um toque recente, e o toque original já morreu enquanto as imagens
+ * baixavam. Aqui as imagens já estão em mãos, então o toque neste botão abre o
+ * menu na hora — e é de lá que sai "Salvar imagem" na galeria.
+ *
+ * Também é o que resolve lote grande: o menu não aguenta dezenas de arquivos de
+ * uma vez, então vai em levas, uma por toque.
+ */
+export function PainelGaleria({
+  entrega,
+  aoSalvar,
+  aoBaixarZip,
+  aoFechar,
+}: {
+  entrega: EntregaNaGaleria;
+  aoSalvar: () => void;
+  aoBaixarZip: () => void;
+  aoFechar: () => void;
+}) {
+  const { lotes, enviados, salvas, total, precisouDeOutroToque } = entrega;
+  const restam = lotes.length - enviados;
+  const proximo = lotes[enviados]?.length ?? 0;
+  const emLevas = lotes.length > 1;
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="painel-galeria"
+      className="animate-fade-in fixed inset-x-0 z-[60] px-4"
+      style={{ bottom: "calc(56px + env(safe-area-inset-bottom, 0px) + 12px)" }}
+    >
+      <div className="mx-auto max-w-lg rounded-sm border border-primary/40 bg-card/95 p-3 shadow-2xl backdrop-blur-sm">
+        <div className="flex items-start gap-2">
+          <ImageDown className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold">
+              {salvas > 0
+                ? `${salvas} de ${total} ${total === 1 ? "imagem salva" : "imagens salvas"}`
+                : `${total} ${total === 1 ? "imagem pronta" : "imagens prontas"}`}
+            </p>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              {precisouDeOutroToque
+                ? "Toque abaixo para abrir o menu e escolher Salvar imagem."
+                : emLevas
+                  ? `O celular salva algumas por vez — faltam ${restam} ${restam === 1 ? "leva" : "levas"}.`
+                  : "Toque para salvar na galeria."}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={aoFechar}
+            aria-label="Fechar"
+            className="h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+
+        <Button
+          onClick={aoSalvar}
+          data-testid="salvar-na-galeria"
+          className="mt-2.5 h-12 w-full rounded-sm bg-primary text-sm font-bold text-primary-foreground hover:bg-primary/90"
+        >
+          <ImageDown className="mr-2 h-4 w-4" />
+          Salvar na galeria
+          {emLevas && (
+            <span className="ml-1.5 font-normal opacity-80">
+              ({enviados + 1} de {lotes.length} · {proximo} {proximo === 1 ? "imagem" : "imagens"})
+            </span>
+          )}
+        </Button>
+
+        <button
+          type="button"
+          onClick={aoBaixarZip}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 py-1 text-[11px] font-semibold text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          <FileArchive className="h-3 w-3" />
+          {salvas > 0 ? "Baixar o restante em .zip" : "Baixar em .zip"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Com muita imagem, pergunta antes: galeria (um toque por leva) ou .zip (um
+ * arquivo só, mas precisa descompactar).
+ *
+ * A pergunta vem antes de baixar qualquer imagem — perguntar depois seria gastar
+ * o 4G da pessoa para só então descobrir que ela queria o outro formato.
+ */
+export function PerguntaDeFormatoDialogo({
+  pergunta,
+  aoResponder,
+  aoFechar,
+}: {
+  pergunta: PerguntaDeFormato;
+  aoResponder: (escolha: "galeria" | "zip") => void;
+  aoFechar: () => void;
+}) {
+  const quantas = pergunta.resultados.length;
+
+  return (
+    <AlertDialog open onOpenChange={(aberto) => !aberto && aoFechar()}>
+      <AlertDialogContent className="max-w-sm rounded-sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-base">
+            Como quer levar as {quantas} imagens?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-sm leading-snug">
+            Na galeria elas ficam junto das suas fotos, mas o celular pede uma confirmação a cada
+            leva. Em .zip vem tudo de uma vez, e você abre em Arquivos para descompactar.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="flex flex-col gap-2">
+          <Button
+            onClick={() => aoResponder("galeria")}
+            data-testid="escolher-galeria"
+            className="h-12 rounded-sm bg-primary font-bold text-primary-foreground hover:bg-primary/90"
+          >
+            <ImageDown className="mr-2 h-4 w-4" />
+            Salvar na galeria
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => aoResponder("zip")}
+            data-testid="escolher-zip"
+            className="h-12 rounded-sm font-bold"
+          >
+            <FileArchive className="mr-2 h-4 w-4" />
+            Baixar em .zip
+          </Button>
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel className="h-10 rounded-sm">Cancelar</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

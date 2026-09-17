@@ -218,6 +218,158 @@ console.log("\n[celular] baixar funciona no toque");
   await ctx.close();
 }
 
+console.log("\n[celular com galeria] um resultado vai direto para a galeria");
+{
+  const { ctx, page } = await openApp(b, "/resultados", {
+    viewport: PHONE,
+    signals: sinaisNoStorage(4),
+    comGaleria: true,
+  });
+  await page.waitForTimeout(800);
+
+  await page.getByRole("button", { name: "Baixar este resultado" }).first().click();
+  await page.waitForTimeout(1500);
+
+  const enviados = await page.evaluate(() => window.__compartilhados);
+  ok(enviados.length === 1, `abriu o menu de salvar uma vez (${enviados.length})`);
+  ok(
+    enviados[0]?.length === 1 && NOME_DE_IMAGEM.test(enviados[0][0]),
+    "mandou a imagem, e não um .zip: " + JSON.stringify(enviados[0]),
+  );
+  ok(
+    !enviados.flat().some((n) => n.endsWith(".zip")),
+    "nada de .zip quando o aparelho salva na galeria",
+  );
+  await ctx.close();
+}
+
+console.log("\n[celular com galeria] vários selecionados também vão para a galeria");
+{
+  const { ctx, page } = await openApp(b, "/resultados", {
+    viewport: PHONE,
+    signals: sinaisNoStorage(6),
+    comGaleria: true,
+  });
+  await page.waitForTimeout(800);
+
+  await page.getByRole("button", { name: "Selecionar todos" }).click();
+  await page.getByRole("button", { name: "Baixar", exact: true }).click();
+  await page.waitForTimeout(2000);
+
+  const enviados = await page.evaluate(() => window.__compartilhados);
+  ok(enviados.length === 1, "uma leva só para 6 imagens");
+  ok(enviados[0]?.length === 6, `as 6 imagens foram juntas (${enviados[0]?.length})`);
+  ok(
+    enviados[0]?.every((n) => NOME_DE_IMAGEM.test(n)),
+    "todas como imagem: " + JSON.stringify(enviados[0]?.slice(0, 2)),
+  );
+  await ctx.close();
+}
+
+console.log("\n[celular com galeria] gesto expirado vira botão Salvar na galeria");
+{
+  // galeriaRecusa imita o iOS recusando o menu porque o toque do usuário já
+  // morreu enquanto as imagens baixavam. Antes, isso virava .zip em silêncio.
+  const { ctx, page } = await openApp(b, "/resultados", {
+    viewport: PHONE,
+    signals: sinaisNoStorage(3),
+    comGaleria: true,
+    galeriaRecusa: true,
+  });
+  await page.waitForTimeout(800);
+
+  await page.getByRole("button", { name: "Selecionar todos" }).click();
+  await page.getByRole("button", { name: "Baixar", exact: true }).click();
+
+  const painel = page.getByTestId("painel-galeria");
+  await painel.waitFor({ state: "visible", timeout: 8_000 });
+  ok(true, "aparece o painel com as imagens prontas");
+  ok(
+    await painel.getByTestId("salvar-na-galeria").isVisible(),
+    'o botão "Salvar na galeria" está lá para o segundo toque',
+  );
+  ok(
+    await painel.getByText(/Baixar em \.zip/).isVisible(),
+    "e o .zip continua oferecido como alternativa",
+  );
+
+  const alvo = await painel.getByTestId("salvar-na-galeria").boundingBox();
+  ok(alvo && alvo.height >= 44, `alvo de toque ${alvo ? Math.round(alvo.height) : "?"}px`);
+  await page.screenshot({ path: "s6-galeria-celular.png" });
+  await ctx.close();
+}
+
+console.log("\n[celular com galeria] lote grande pergunta o formato antes de gastar rede");
+{
+  const { ctx, page } = await openApp(b, "/resultados", {
+    viewport: PHONE,
+    signals: sinaisNoStorage(45),
+    comGaleria: true,
+  });
+  await page.waitForTimeout(1000);
+
+  // A lista vem de 30 em 30; sem carregar a segunda página, "Selecionar todos"
+  // marcaria só 30 e a pergunta (que começa em 40) nem apareceria.
+  await page.getByRole("button", { name: "Carregar mais" }).click();
+  await page.waitForTimeout(900);
+
+  await page.getByRole("button", { name: "Selecionar todos" }).click();
+  ok(await page.getByText("45 selecionados").isVisible(), "marcou as 45");
+  await page.getByRole("button", { name: "Baixar", exact: true }).click();
+  await page.waitForTimeout(500);
+
+  ok(
+    await page.getByTestId("escolher-galeria").isVisible(),
+    "com 45 imagens, pergunta galeria ou .zip",
+  );
+  ok(await page.getByTestId("escolher-zip").isVisible(), "e oferece o .zip na mesma pergunta");
+
+  await page.getByTestId("escolher-galeria").click();
+  await page.waitForTimeout(3000);
+
+  const enviados = await page.evaluate(() => window.__compartilhados);
+  ok(enviados.length >= 1, "escolher a galeria manda a primeira leva");
+  ok(
+    enviados[0]?.length <= 20,
+    `a leva respeita o limite do menu (${enviados[0]?.length} imagens)`,
+  );
+  const painel = page.getByTestId("painel-galeria");
+  ok(await painel.isVisible(), "e o painel fica para as levas seguintes");
+
+  // O ponto do painel: o toque nele chama o menu na hora, com gesto novo.
+  await page.waitForTimeout(500);
+  await painel.getByTestId("salvar-na-galeria").click();
+  await page.waitForTimeout(800);
+  const depois = await page.evaluate(() => window.__compartilhados);
+  ok(depois.length === enviados.length + 1, `o toque mandou a leva seguinte (${depois.length})`);
+  ok(depois.flat().length === new Set(depois.flat()).size, "nenhuma imagem foi mandada duas vezes");
+  await ctx.close();
+}
+
+console.log("\n[celular sem galeria] avisa antes de entregar .zip");
+{
+  const { ctx, page } = await openApp(b, "/resultados", {
+    viewport: PHONE,
+    signals: sinaisNoStorage(3),
+  });
+  await page.waitForTimeout(800);
+
+  await page.getByRole("button", { name: "Selecionar todos" }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Baixar", exact: true }).click(),
+  ]);
+  ok(
+    await page
+      .getByText(/não salva direto na galeria/i)
+      .first()
+      .isVisible(),
+    "explica por que veio .zip em vez de ir para a galeria",
+  );
+  ok(download.suggestedFilename().endsWith(".zip"), "e o .zip vem mesmo assim");
+  await ctx.close();
+}
+
 console.log("\n[celular] a barra de seleção não cobre nem é coberta");
 {
   const { ctx, page } = await openApp(b, "/resultados", {

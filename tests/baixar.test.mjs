@@ -8,6 +8,7 @@ import {
   apelido,
   criarNomeador,
   dataCurta,
+  dividirParaCompartilhar,
   extensaoDe,
   nomeDoResultado,
   nomeDoZip,
@@ -120,4 +121,45 @@ test("nomeDoZip numera as partes e nunca some com o período", () => {
 test("dataCurta usa o fuso do aparelho, não o UTC", () => {
   const d = new Date(2026, 0, 5, 23, 59);
   assert.equal(dataCurta(d), "2026-01-05");
+});
+
+test("dividirParaCompartilhar quebra em levas que o menu aguenta", () => {
+  const item = (tamanho) => ({ nome: "x.png", blob: new Blob([new Uint8Array(tamanho)]) });
+
+  // Pouca coisa vai numa leva só — um toque, e acabou.
+  assert.equal(dividirParaCompartilhar(Array.from({ length: 5 }, () => item(10))).length, 1);
+
+  // Estoura pela quantidade.
+  const porQuantidade = dividirParaCompartilhar(
+    Array.from({ length: 45 }, () => item(10)),
+    {
+      maxArquivos: 20,
+    },
+  );
+  assert.deepEqual(
+    porQuantidade.map((l) => l.length),
+    [20, 20, 5],
+  );
+
+  // Estoura pelo tamanho antes de estourar pela quantidade.
+  const porTamanho = dividirParaCompartilhar(
+    Array.from({ length: 6 }, () => item(400)),
+    {
+      maxArquivos: 20,
+      maxBytes: 1000,
+    },
+  );
+  assert.deepEqual(
+    porTamanho.map((l) => l.length),
+    [2, 2, 2],
+  );
+
+  // Uma imagem maior que o teto não pode sumir: vai sozinha na leva dela.
+  const gigante = dividirParaCompartilhar([item(5000), item(10)], { maxBytes: 1000 });
+  assert.deepEqual(
+    gigante.map((l) => l.length),
+    [1, 1],
+  );
+
+  assert.deepEqual(dividirParaCompartilhar([]), []);
 });

@@ -3,7 +3,12 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuth, temSessaoLocal } from "@/lib/auth";
 import { useResultados, PERIODOS, type Periodo, type Resultado } from "@/hooks/useResultados";
 import { useBaixarResultados } from "@/hooks/useBaixarResultados";
-import { MenuBaixarPeriodo, ProgressoDoDownload } from "@/components/BaixarResultados";
+import {
+  MenuBaixarPeriodo,
+  PainelGaleria,
+  PerguntaDeFormatoDialogo,
+  ProgressoDoDownload,
+} from "@/components/BaixarResultados";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -57,7 +62,20 @@ function ResultadosPage() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   // Seleção para levar vários resultados de uma vez ao estúdio — ou baixá-los.
   const [selecionados, setSelecionados] = useState<string[]>([]);
-  const { progresso, ocupado, cancelar, baixarResultados, baixarPeriodo } = useBaixarResultados();
+  const {
+    progresso,
+    galeria,
+    pergunta,
+    ocupado,
+    cancelar,
+    baixarResultados,
+    baixarPeriodo,
+    salvarNaGaleria,
+    baixarPendenteComoZip,
+    fecharGaleria,
+    responderPergunta,
+    fecharPergunta,
+  } = useBaixarResultados();
 
   const alternarSelecao = useCallback((id: string) => {
     setSelecionados((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -343,6 +361,26 @@ function ResultadosPage() {
         )}
 
         {progresso && <ProgressoDoDownload progresso={progresso} aoCancelar={cancelar} />}
+
+        {/* Imagens prontas, esperando o toque que as manda para a galeria. Só
+            aparece quando não tem download rodando — as duas barras ficam no
+            mesmo canto da tela. */}
+        {galeria && !progresso && (
+          <PainelGaleria
+            entrega={galeria}
+            aoSalvar={salvarNaGaleria}
+            aoBaixarZip={baixarPendenteComoZip}
+            aoFechar={fecharGaleria}
+          />
+        )}
+
+        {pergunta && (
+          <PerguntaDeFormatoDialogo
+            pergunta={pergunta}
+            aoResponder={responderPergunta}
+            aoFechar={fecharPergunta}
+          />
+        )}
 
         {/* Image grid */}
         {images && images.length > 0 && (

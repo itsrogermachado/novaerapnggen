@@ -23,19 +23,32 @@ node tests/t-mobile.mjs
 
 ## O que cada arquivo cobre
 
-| Arquivo        | Cobertura                                                                                                                                                  |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `t-fase1`      | Barra de abas: existe sem dados, alvos de toque, some fora do app, Admin só para admin                                                                     |
-| `t-fase2`      | Aba com dados reais, badge, descarte de vencido, estado vazio, lightbox, envio manual                                                                      |
-| `t-resultados` | Nome correto na interface, filtro de data, fluxo resultado → canvas                                                                                        |
-| `t-paginacao`  | 75 resultados num dia: páginas de 30, acúmulo, fim da lista                                                                                                |
-| `t-mobile`     | Ordem de empilhamento, alcance do botão Baixar, excluir no toque, sliders, desktop preservado                                                              |
-| `t-baixar`     | Baixar um resultado, vários selecionados e o período inteiro; nome dos arquivos, conteúdo do `.zip`, progresso e cancelar, tudo no computador e no celular |
+| Arquivo        | Cobertura                                                                                                                                                                                                                                          |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `t-fase1`      | Barra de abas: existe sem dados, alvos de toque, some fora do app, Admin só para admin                                                                                                                                                             |
+| `t-fase2`      | Aba com dados reais, badge, descarte de vencido, estado vazio, lightbox, envio manual                                                                                                                                                              |
+| `t-resultados` | Nome correto na interface, filtro de data, fluxo resultado → canvas                                                                                                                                                                                |
+| `t-paginacao`  | 75 resultados num dia: páginas de 30, acúmulo, fim da lista                                                                                                                                                                                        |
+| `t-mobile`     | Ordem de empilhamento, alcance do botão Baixar, excluir no toque, sliders, desktop preservado                                                                                                                                                      |
+| `t-baixar`     | Baixar um resultado, vários selecionados e o período inteiro; no celular, ida para a galeria (inclusive com o gesto expirado e em levas), aviso quando o aparelho não salva na galeria, e no computador o conteúdo do `.zip`, progresso e cancelar |
 
 Os testes de `node --test` (`npm run test:unit`) cobrem a parte que não precisa de
 navegador: `zip.test.mjs` grava um `.zip` de verdade e manda o Python abrir — se
 só o nosso código conseguisse ler o arquivo, não adiantaria nada — e
 `baixar.test.mjs` cobre as regras de nome de arquivo.
+
+## Simulando o celular que salva na galeria
+
+O Chromium de teste não tem `navigator.share`, então por padrão o app acha que
+está num aparelho que só sabe baixar `.zip`. `openApp` aceita duas opções para
+cobrir o caminho da galeria:
+
+- `comGaleria: true` — injeta `navigator.share`/`canShare` e guarda em
+  `window.__compartilhados` os nomes de arquivo de cada envio, para o teste
+  conferir que foi imagem, e não `.zip`.
+- `galeriaRecusa: true` — faz o menu recusar com `NotAllowedError`, que é o que
+  o iOS faz quando o toque do usuário já expirou enquanto as imagens baixavam.
+  É o caso que o painel "Salvar na galeria" existe para resolver.
 
 ## Como o mock funciona
 

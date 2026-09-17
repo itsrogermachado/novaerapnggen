@@ -94,6 +94,13 @@ export async function openApp(browser, path, opts = {}) {
     imagensSumidas = [],
     // Atraso das imagens do armazenamento, para testar o que termina antes de quê.
     atrasoStorageMs = 0,
+    // Simula um celular que sabe salvar na galeria (Web Share com arquivos).
+    // O Chromium de teste não tem navigator.share, então sem isto o app acha
+    // que está num aparelho que só sabe baixar .zip.
+    comGaleria = false,
+    // Faz o menu de compartilhar recusar, como o iOS faz quando o toque do
+    // usuário já expirou enquanto as imagens baixavam.
+    galeriaRecusa = false,
   } = opts;
 
   // isMobile/hasTouch fazem o Chromium reportar hover:none e pointer:coarse,
@@ -235,6 +242,22 @@ export async function openApp(browser, path, opts = {}) {
   await ctx.route("**/api/discord-images*", (route) =>
     route.fulfill({ status: 404, contentType: "text/html", body: "Not Found" }),
   );
+
+  if (comGaleria) {
+    await ctx.addInitScript((recusa) => {
+      // Registra o que foi compartilhado para o teste conferir depois.
+      window.__compartilhados = [];
+      navigator.canShare = (dados) => Array.isArray(dados?.files) && dados.files.length > 0;
+      navigator.share = async (dados) => {
+        if (recusa) {
+          const erro = new Error("gesto expirado");
+          erro.name = "NotAllowedError";
+          throw erro;
+        }
+        window.__compartilhados.push((dados.files || []).map((f) => f.name));
+      };
+    }, galeriaRecusa);
+  }
 
   if (loggedIn) {
     await ctx.addInitScript(
